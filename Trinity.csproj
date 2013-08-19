@@ -1,0 +1,185 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>8.0.30703</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{BE009560-23A6-4A75-8D9A-D1C651F18E17}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Trinity</RootNamespace>
+    <AssemblyName>Trinity</AssemblyName>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\x64\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DebugType>full</DebugType>
+    <PlatformTarget>x64</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisIgnoreBuiltInRuleSets>true</CodeAnalysisIgnoreBuiltInRuleSets>
+    <CodeAnalysisIgnoreBuiltInRules>true</CodeAnalysisIgnoreBuiltInRules>
+    <CodeAnalysisFailOnMissingRules>false</CodeAnalysisFailOnMissingRules>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
+    <OutputPath>bin\x64\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>x64</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisIgnoreBuiltInRuleSets>true</CodeAnalysisIgnoreBuiltInRuleSets>
+    <CodeAnalysisIgnoreBuiltInRules>false</CodeAnalysisIgnoreBuiltInRules>
+    <CodeAnalysisFailOnMissingRules>false</CodeAnalysisFailOnMissingRules>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="MathNet.Numerics, Version=2.6.0.29, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\..\_IRIC\CODE\Math.Net Numerics\Net40\MathNet.Numerics.dll</HintPath>
+    </Reference>
+    <Reference Include="pwiz.CommonUtil">
+      <HintPath>..\Libraries\ProteoWizard 3.0.4624\pwiz.CommonUtil.dll</HintPath>
+    </Reference>
+    <Reference Include="pwiz_bindings_cli">
+      <HintPath>..\Libraries\ProteoWizard 3.0.4624\pwiz_bindings_cli.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Align.cs" />
+    <Compile Include="Digestion.cs" />
+    <Compile Include="Morpheus\AminoAcidMasses.cs" />
+    <Compile Include="Morpheus\AminoAcidPolymer.cs" />
+    <Compile Include="ContaminantMasses.cs" />
+    <Compile Include="DBOptions.cs" />
+    <Compile Include="DBSearcher.cs" />
+    <Compile Include="Fragment.cs" />
+    <Compile Include="FragmentDictionary.cs" />
+    <Compile Include="GraphML.cs" />
+    <Compile Include="Morpheus\InitiatorMethionineBehavior.cs" />
+    <Compile Include="Morpheus\MassTolerance.cs" />
+    <Compile Include="Morpheus\MassType.cs" />
+    <Compile Include="MaxQuant\ArrayUtils.cs" />
+    <Compile Include="MaxQuant\MaxQuantPeak.cs" />
+    <Compile Include="MaxQuant\PeakDetection.cs" />
+    <Compile Include="MaxQuant\RawFileWrapper.cs" />
+    <Compile Include="MaxQuant\Spectrum.cs" />
+    <Compile Include="Morpheus\Modification.cs" />
+    <Compile Include="Morpheus\ModificationDictionary.cs" />
+    <Compile Include="Morpheus\ModificationType.cs" />
+    <Compile Include="Structures\MsMsPeak.cs" />
+    <Compile Include="MSSearcher.cs" />
+    <Compile Include="Structures\Peptide.cs" />
+    <Compile Include="Structures\PeptideMatchess.cs" />
+    <Compile Include="PeptideSearcher.cs" />
+    <Compile Include="Structures\PeptideSpectrumMatch.cs" />
+    <Compile Include="Structures\PeptideSpectrumMatches.cs" />
+    <Compile Include="Structures\Precursor.cs" />
+    <Compile Include="Morpheus\Product.cs" />
+    <Compile Include="Morpheus\ProductCaps.cs" />
+    <Compile Include="Morpheus\Spectra.cs" />
+    <Compile Include="Structures\ProductSpectrum.cs" />
+    <Compile Include="Structures\MS1Spectrum.cs" />
+    <Compile Include="Morpheus\ProductType.cs" />
+    <Compile Include="Morpheus\ProductTypes.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Propheus.cs" />
+    <Compile Include="Morpheus\Protease.cs" />
+    <Compile Include="Morpheus\ProteaseDictionary.cs" />
+    <Compile Include="Morpheus\Protein.cs" />
+    <Compile Include="ProteinFastaReader.cs" />
+    <Compile Include="ProteinSearcher.cs" />
+    <Compile Include="Structures\Queries.cs" />
+    <Compile Include="Structures\Query.cs" />
+    <Compile Include="Structures\Results.cs" />
+    <Compile Include="Structures\Sample.cs" />
+    <Compile Include="Structures\Track.cs" />
+    <Compile Include="Morpheus\Terminus.cs" />
+    <Compile Include="Structures\Tracks.cs" />
+    <Compile Include="Samples\MhcSample.cs" />
+    <Compile Include="Samples\SettePeptideSample.cs" />
+    <Compile Include="UnitTest\NoEnzymeDigestUnitTest.cs" />
+    <Compile Include="UnitTest\RawStatsUnitTest.cs" />
+    <Compile Include="UnitTest\Tests.cs" />
+    <Compile Include="Samples\YeastSample.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Configuration\amino_acids.tsv">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="app.config" />
+    <None Include="Configuration\contaminents.tsv">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Configuration\fragments.tsv">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Configuration\modifications.tsv">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Configuration\molecular_masses.tsv">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="packages.config" />
+    <None Include="Configuration\product_caps.tsv">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Configuration\product_types.tsv">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Configuration\proteases.tsv">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="UnitTest\proteins.fasta">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ConSol\ConSol.csproj">
+      <Project>{40AAE3FB-98BA-41EC-8120-DAF55D313285}</Project>
+      <Name>ConSol</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Trinity_Gpu\Trinity_Gpu.csproj">
+      <Project>{0F49C15B-592E-4371-878B-17E8B3299A9B}</Project>
+      <Name>Trinity_Gpu</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Utilities\Proteomics.Utilities.csproj">
+      <Project>{37EE0D82-2AE8-4212-A111-A0FACF576965}</Project>
+      <Name>Proteomics.Utilities</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>
