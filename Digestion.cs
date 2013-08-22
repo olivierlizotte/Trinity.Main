@@ -84,7 +84,10 @@ namespace Trinity
                     yield return item;
             }
 
-            while (CumulMatch.TryDequeue(out item)) ;
+            while (CumulMatch.TryDequeue(out item))
+            {
+                yield return item;
+            }
         }
 
         public IEnumerable<Tuple<Peptide, int>> DigestProteomeOnTheFly(List<Protein> proteins, bool allowSNP, Queries AllQueries)
@@ -96,10 +99,10 @@ namespace Trinity
             //dicOfPeptideSequences = new Dictionary<string, List<Protein>>();
             //double minimumMonoisotopicPeakOffset = dbOptions.precursorMonoisotopicPeakCorrection ? dbOptions.minimumPrecursorMonoisotopicPeakOffset : 0;
             //double maximumMonoisotopicPeakOffset = dbOptions.precursorMonoisotopicPeakCorrection ? dbOptions.maximumPrecursorMonoisotopicPeakOffset : 0;
-            foreach (Peptide peptide in ProteinSearcher.ProteinDigest(options, proteins, allowSNP, options.DecoyFusion))
+            foreach (Peptide peptide in ProteinSearcher.ProteinDigest(options, proteins, allowSNP))
             {
                 int firstIndex = AllQueries.BinarySearch(MassTolerance.MzFloor(peptide.MonoisotopicMass, options.precursorMassTolerance));
-                if (firstIndex < AllQueries.Count)
+                if (firstIndex >= 0 && firstIndex < AllQueries.Count)
                     yield return new Tuple<Peptide, int>(peptide, firstIndex);
                 //foreach (Peptide peptide in ProteinSearcher.ProteinDigestNoEnzyme(dbOptions, proteins, AllQueries))
                 //if (!TargetPeptides.Contains(peptide.BaseSequence))
@@ -107,7 +110,7 @@ namespace Trinity
                 foreach (Peptide modPeptide in peptide.GetVariablyModifiedPeptides(options.variableModifications, options.maximumVariableModificationIsoforms))
                 {
                     firstIndex = AllQueries.BinarySearch(MassTolerance.MzFloor(modPeptide.MonoisotopicMass, options.precursorMassTolerance));
-                    if (firstIndex < AllQueries.Count)
+                    if (firstIndex >= 0 && firstIndex < AllQueries.Count)
                         yield return new Tuple<Peptide, int>(modPeptide, firstIndex);
                 }
 

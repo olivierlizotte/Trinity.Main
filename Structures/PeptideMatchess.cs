@@ -28,10 +28,10 @@ namespace Trinity
                 sorts.Add(ComparePeptideScore);
                 sorts.Add(CompareProteinScore);
                 //sorts.Add(CompareProductScore);
-                sorts.Add(CompareCumulPrecursorScore);
-                sorts.Add(CompareCumulPrecursorOptimizedScore);
-                sorts.Add(CompareBestPrecursorScore);
-                sorts.Add(CompareBestPrecursorOptimizedScore);
+//                sorts.Add(CompareCumulPrecursorScore);
+//                sorts.Add(CompareCumulPrecursorOptimizedScore);
+//                sorts.Add(CompareBestPrecursorScore);
+//                sorts.Add(CompareBestPrecursorOptimizedScore);
                 sorts.Add(CompareScore);
                 //sorts.Add(CompareNbCluster);
                 //sorts.Add(ComparePrecursorMassError);
@@ -92,7 +92,7 @@ namespace Trinity
         }
         public static int CompareScore(PeptideMatch left, PeptideMatch right)
         {
-            return -left.ScoreFct().CompareTo(right.ScoreFct());
+            return -left.ProbabilityScore().CompareTo(right.ProbabilityScore());
         }
         public static int CompareNbCluster(PeptideMatch left, PeptideMatch right)
         {

@@ -46,7 +46,7 @@ namespace Trinity
                     match.obsMz += pr.Calculate(match.obsMz);
                     match.mass_diff = match.theoMz - match.obsMz;
                 }
-                psm.Initialize(result.dbOptions, psm.AllProductMatches);
+                psm.Initialize(result.dbOptions, psm.AllProductMatches, psm.Query.spectrum.MostIntensePeak);
 
                 foreach (MsMsPeak peak in psm.Query.spectrum.Peaks)
                     peak.MZ += pr.Calculate(peak.MZ);
@@ -115,7 +115,9 @@ namespace Trinity
             double stdev = Numerics.StandardDeviation(errorProduct);
             Console.WriteLine("Computed Product Variance = " + variance + "          STDev = " + stdev);
             if (variance < stdev)
-                variance = stdev;
+                variance = stdev * 3;
+            else
+                variance *= 3;
 
             int nbRemovedProduct = 0;
             foreach (PeptideSpectrumMatch psm in allPSMs)
@@ -141,7 +143,7 @@ namespace Trinity
                         precursor.psms.RemoveAt(i);
                     else
                     {
-                        precursor.psms[i].Initialize(result.dbOptions, precursor.psms[i].AllProductMatches);
+                        precursor.psms[i].Initialize(result.dbOptions, precursor.psms[i].AllProductMatches, precursor.psms[i].Query.spectrum.MostIntensePeak);
                         i++;
                     }
                 }
@@ -169,7 +171,9 @@ namespace Trinity
             double stdev    = Numerics.StandardDeviation(errorPrecursor);
             Console.WriteLine("Computed Precursor Variance = " + variance + "          STDev = " + stdev);
             if (variance < stdev)
-                variance = stdev;
+                variance = stdev * 3;
+            else
+                variance *= 3;
 
             int nbRemovedPSM = 0;
             foreach (Precursor precursor in result.precursors)

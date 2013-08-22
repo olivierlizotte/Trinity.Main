@@ -47,7 +47,7 @@ namespace Trinity.UnitTest
             }
             precursors.Sort();
 
-            Queries queries = new Queries(precursors.ToArray());
+            Queries queries = new Queries(dbOptions, precursors.ToArray());
             Digestion ps = new Digestion(dbOptions);
             List<Protein> lProt = new List<Protein>();
             lProt.Add(proteins[0]); 

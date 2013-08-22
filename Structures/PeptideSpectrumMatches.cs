@@ -17,7 +17,7 @@ namespace Trinity
         public PeptideSpectrumMatches() { }
         public PeptideSpectrumMatches(IEnumerable<PeptideSpectrumMatch> list) : base(list) { }
 
-        public void OptimizePSMScoreRatios(double desired_fdr)
+        public void OptimizePSMScoreRatios(DBOptions options, double desired_fdr)
         {
             List<PeptideSpectrumMatch> sortedPrecursorPrecision = new List<PeptideSpectrumMatch>(this);
             sortedPrecursorPrecision.Sort(PeptideSpectrumMatches.ComparePrecursorScore);
@@ -36,15 +36,15 @@ namespace Trinity
             double ratioPeptideScore = FDRizer<PeptideSpectrumMatch>.ComputeAtFDR(sortedPeptides, desired_fdr).Count / (double)this.Count;
 
             double totalRatios = ratioPrecursorPrecision + ratioFragments + ratioIntensities + ratioPeptideScore;
-            PeptideSpectrumMatch.dPrecursor = ratioPrecursorPrecision / totalRatios;
-            PeptideSpectrumMatch.dMatchingProductFraction = ratioFragments / totalRatios;
-            PeptideSpectrumMatch.dIntensityFraction = ratioIntensities / totalRatios;
-            PeptideSpectrumMatch.dPeptideScore = ratioPeptideScore / totalRatios;
+            options.dPrecursor                 = ratioPrecursorPrecision   / totalRatios;
+            options.dMatchingProductFraction   = ratioFragments            / totalRatios;
+            options.dIntensityFraction         = ratioIntensities          / totalRatios;
+            options.dPeptideScore              = ratioPeptideScore         / totalRatios;
             Console.WriteLine("New score ratios   ------------------------------------- ");
-            Console.WriteLine("    PeptideSpectrumMatch.dPrecursor: " + PeptideSpectrumMatch.dPrecursor);
-            Console.WriteLine("    PeptideSpectrumMatch.dMatchingProductFraction: " + PeptideSpectrumMatch.dMatchingProductFraction);
-            Console.WriteLine("    PeptideSpectrumMatch.dIntensityFraction: " + PeptideSpectrumMatch.dIntensityFraction);
-            Console.WriteLine("    PeptideSpectrumMatch.dPeptideScore: " + PeptideSpectrumMatch.dPeptideScore);
+            Console.WriteLine("    PeptideSpectrumMatch.dPrecursor:                     " + options.dPrecursor);
+            Console.WriteLine("    PeptideSpectrumMatch.dMatchingProductFraction:       " + options.dMatchingProductFraction);
+            Console.WriteLine("    PeptideSpectrumMatch.dIntensityFraction:             " + options.dIntensityFraction);
+            Console.WriteLine("    PeptideSpectrumMatch.dPeptideScore:                  " + options.dPeptideScore);
             Console.WriteLine("-------------------------------------------------------- ");
         }
         public static int CompareMatchingIntensityFraction(PeptideSpectrumMatch left, PeptideSpectrumMatch right)

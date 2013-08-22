@@ -16,7 +16,7 @@ namespace Trinity
         public Precursors() { }
         private FDRizer<Precursor> uptimizer;
 
-        public void OptimizePSMScoreRatios(double desired_fdr)
+        public void OptimizePSMScoreRatios(DBOptions options, double desired_fdr)
         {
             List<Precursor> sortedPrecursorPrecision = new List<Precursor>(this);
             sortedPrecursorPrecision.Sort(Precursor.ComparePrecursorScore);
@@ -35,15 +35,15 @@ namespace Trinity
             double ratioPeptideScore = FDRizer<Precursor>.ComputeAtFDR(sortedPeptides, desired_fdr).Count / (double)this.Count;
 
             double totalRatios = ratioPrecursorPrecision + ratioFragments + ratioIntensities + ratioPeptideScore;
-            PeptideSpectrumMatch.dPrecursor                 = ratioPrecursorPrecision   / totalRatios;
-            PeptideSpectrumMatch.dMatchingProductFraction   = ratioFragments            / totalRatios;
-            PeptideSpectrumMatch.dIntensityFraction         = ratioIntensities          / totalRatios;
-            PeptideSpectrumMatch.dPeptideScore              = ratioPeptideScore         / totalRatios;
+            options.dPrecursor                  = ratioPrecursorPrecision   / totalRatios;
+            options.dMatchingProductFraction    = ratioFragments            / totalRatios;
+            options.dIntensityFraction          = ratioIntensities          / totalRatios;
+            options.dPeptideScore               = ratioPeptideScore         / totalRatios;
             Console.WriteLine("New score ratios   ------------------------------------- ");
-            Console.WriteLine("    PeptideSpectrumMatch.dPrecursor: " + PeptideSpectrumMatch.dPrecursor);
-            Console.WriteLine("    PeptideSpectrumMatch.dMatchingProductFraction: " + PeptideSpectrumMatch.dMatchingProductFraction);
-            Console.WriteLine("    PeptideSpectrumMatch.dIntensityFraction: " + PeptideSpectrumMatch.dIntensityFraction);
-            Console.WriteLine("    PeptideSpectrumMatch.dPeptideScore: " + PeptideSpectrumMatch.dPeptideScore);
+            Console.WriteLine("    PeptideSpectrumMatch.dPrecursor:                     " + options.dPrecursor);
+            Console.WriteLine("    PeptideSpectrumMatch.dMatchingProductFraction:       " + options.dMatchingProductFraction);
+            Console.WriteLine("    PeptideSpectrumMatch.dIntensityFraction:             " + options.dIntensityFraction);
+            Console.WriteLine("    PeptideSpectrumMatch.dPeptideScore:                  " + options.dPeptideScore);
             Console.WriteLine("-------------------------------------------------------- ");
         }
 
@@ -70,7 +70,7 @@ namespace Trinity
 
             List<Precursor> fdrList = uptimizer.Launch(desired_fdr, displayValues);
             List<Precursor> sortedProbability = new List<Precursor>(this);
-            sortedProbability.Sort(Precursor.CompareOptimizedScore);
+            sortedProbability.Sort(Precursor.CompareProbabilityScore);
             sortedProbability = FDRizer<Precursor>.ComputeAtFDR(sortedProbability, desired_fdr);
             if (sortedProbability.Count > fdrList.Count)
                 fdrList = sortedProbability;
@@ -81,11 +81,6 @@ namespace Trinity
 
     public class Precursor : GraphML_Node, ITargetDecoy
     {
-        public double Score
-        {
-            get { return ScoreFct(); }
-        }
-
         public bool Decoy
         {
             get
@@ -129,7 +124,7 @@ namespace Trinity
 
         public static int CompareMatchingIntensityFraction(Precursor left, Precursor right)
         {
-            return -left.OptimizedBestPsm().MatchingIntensityFraction.CompareTo(right.OptimizedBestPsm().MatchingIntensityFraction);
+            return -left.BestPSMMatchingIntensityFraction().CompareTo(right.BestPSMMatchingIntensityFraction());
         }
         public static int CompareProductScore(Precursor left, Precursor right)
         {
@@ -137,11 +132,11 @@ namespace Trinity
         }
         public static int ComparePrecursorScore(Precursor left, Precursor right)
         {
-            return -left.OptimizedBestPsm().PrecursorScore.CompareTo(right.OptimizedBestPsm().PrecursorScore);
+            return -left.BestPSMPrecursorScore().CompareTo(right.BestPSMPrecursorScore());
         }
         public static int CompareMatchingProductsFraction(Precursor left, Precursor right)
         {
-            return -left.OptimizedBestPsm().MatchingProductsFraction.CompareTo(right.OptimizedBestPsm().MatchingProductsFraction);
+            return -left.BestPSMMatchingProductsFraction().CompareTo(right.BestPSMMatchingProductsFraction());
         }
         public static int CompareMatchingProducts(Precursor left, Precursor right)
         {
@@ -151,17 +146,13 @@ namespace Trinity
         {
             return -left.OptimizedBestPsm().ProteinScore.CompareTo(right.OptimizedBestPsm().ProteinScore);
         }
-        public static int CompareScore(Precursor left, Precursor right)
+        public static int CompareProbabilityScore(Precursor left, Precursor right)
         {
-            return -left.ScoreFct().CompareTo(right.ScoreFct());
-        }
-        public static int CompareOptimizedScore(Precursor left, Precursor right)
-        {
-            return -left.OptimizedScore().CompareTo(right.OptimizedScore());
+            return -left.ProbabilityScore().CompareTo(right.ProbabilityScore());
         }
         public static int ComparePeptideScore(Precursor left, Precursor right)
         {
-            return -left.OptimizedBestPsm().PeptideScore.CompareTo(right.OptimizedBestPsm().PeptideScore);
+            return -left.BestPSMPeptideScore().CompareTo(right.BestPSMPeptideScore());
         }
         public static int CompareNbChargedPrecursor(Precursor left, Precursor right)
         {
@@ -172,12 +163,20 @@ namespace Trinity
             return -left.OptimizedBestPsmScore().CompareTo(right.OptimizedBestPsmScore());
         }
 
-        public double OptimizedScore(Peptide peptide = null, bool checkMods = false)
-        {
-            //return OptimizedBestPsmScore(peptide, false);//TODO Reactivate Optimized Precursor Score
-            PeptideSpectrumMatch psmLeft = OptimizedBestPsm(peptide, checkMods);
-            if (psmLeft != null)
-                return psmLeft.OptimizedScore();/*         (dIntensity * psmLeft.MatchingIntensityFraction +
+        public double ProbabilityScore(Peptide peptide = null, bool checkMods = false)
+        {/*
+            double score = 0;
+            foreach(PeptideSpectrumMatch psm in psms)
+                if(
+            foreach (PeptideSpectrumMatch psm in OptimizedBestPsms(peptide))
+                score += (1 - score) * psm.OptimizedScore();
+            return score;
+            //*/
+            return OptimizedBestPsmScore(peptide, checkMods);//TODO Reactivate Optimized Precursor Score
+            //PeptideSpectrumMatch psmLeft = OptimizedBestPsm(peptide, checkMods);
+            //if (psmLeft != null)
+            //    return psmLeft.OptimizedScore();
+            /*         (dIntensity * psmLeft.MatchingIntensityFraction +
                                 dProduct * psmLeft.ProductScore +
                                 dPrecursor * psmLeft.PrecursorScore +
                                 dMatching * psmLeft.MatchingProductsFraction +
@@ -186,12 +185,25 @@ namespace Trinity
                                 (Isotopes.Count > 0 ? dIsotope : 0) +
                                 (Track.Invented ? dInvented : 0) +
                                 dPeptideScore * psmLeft.PeptideScore);//*/
-            else
-                return 0;//*/
+            //else
+            //    return 0;//*/
         }
+
+        public IEnumerable<PeptideSpectrumMatch> OptimizedBestPsms()
+        {
+            if (psms.Count > 0)
+            {
+                PeptideSpectrumMatch bestpsm = OptimizedBestPsm();
+                double score = bestpsm.ProbabilityScore();
+                for (int i = 0; i < psms.Count; i++)
+                    if (psms[i].ProbabilityScore() >= score)
+                        yield return psms[i];
+            }
+        }
+
         public static int OptimizedScoreComparison(Precursor left, Precursor right)
         {
-            return -left.OptimizedScore().CompareTo(right.OptimizedScore());
+            return -left.ProbabilityScore().CompareTo(right.ProbabilityScore());
         }
 
         public static int COMPTEUR = 0;
@@ -250,34 +262,13 @@ namespace Trinity
                 }
             return charge;
         }
-
-        public static int DescendingScoreComparison(Precursor left, Precursor right)
-        {
-            return -(left.ScoreFct(null).CompareTo(right.ScoreFct(null)));
-        }
-
-        public double ScoreFct(Peptide peptide = null, bool computeIsotopes = true)
-        {
-            return OptimizedScore(peptide);
-        }
         
-        public IEnumerable<PeptideSpectrumMatch> OptimizedBestPsms(Peptide peptide = null)
-        {
-            if (psms.Count > 0)
-            {
-                PeptideSpectrumMatch bestpsm = OptimizedBestPsm(peptide);
-                double score = bestpsm.OptimizedScore();
-                for (int i = 0; i < psms.Count; i++)
-                    if (psms[i].OptimizedScore() >= score)
-                        yield return psms[i];
-            }
-        }
 
         public double OptimizedBestPsmScore(Peptide peptide = null, bool checkMods = false)
         {
             PeptideSpectrumMatch psm = OptimizedBestPsm(peptide, checkMods);
             if (psm != null)
-                return psm.OptimizedScore();
+                return psm.ProbabilityScore();
             else
                 return 0;
         }
@@ -288,12 +279,12 @@ namespace Trinity
             {
                 if (peptide == null)
                 {
-                    double bestScore = psms[0].OptimizedScore();
+                    double bestScore = psms[0].ProbabilityScore();
                     int bestProteinIndex = 0;
                     double tmpScore;
                     for (int i = 1; i < psms.Count; i++)
                     {
-                        tmpScore = psms[i].OptimizedScore();
+                        tmpScore = psms[i].ProbabilityScore();
                         if (tmpScore > bestScore || (tmpScore == bestScore && psms[i].Target))//.ProteinScore >= proteinScore))
                         {
                             bestProteinIndex = i;
@@ -308,17 +299,83 @@ namespace Trinity
                     int bestProteinIndex = 0;
                     double proteinScore = 0;
                     for (int i = 0; i < psms.Count; i++)
-                        if (peptide.IsSamePeptide(psms[i].Peptide, checkMods) && (psms[i].OptimizedScore() > bestScore  || (psms[i].OptimizedScore() == bestScore && psms[i].Target)))//.ProteinScore > proteinScore)))
+                        if (peptide.IsSamePeptide(psms[i].Peptide, checkMods) && (psms[i].ProbabilityScore() > bestScore || (psms[i].ProbabilityScore() == bestScore && psms[i].Target)))//.ProteinScore > proteinScore)))
                         {
                             bestProteinIndex = i;
-                            bestScore = psms[i].OptimizedScore();
+                            bestScore = psms[i].ProbabilityScore();
                             proteinScore = psms[i].ProteinScore;
                         }
-                    if(bestScore > 0)
+                    if (bestScore > 0)
                         return psms[bestProteinIndex];
                 }
             }
             return null;
         }
+
+        public double BestPSMMatchingProductsFraction()
+        {
+            if (psms.Count > 0)
+            {
+                double bestScore = psms[0].MatchingProductsFraction;
+                double tmpScore;
+                for (int i = 1; i < psms.Count; i++)
+                {
+                    tmpScore = psms[i].MatchingProductsFraction;
+                    if (tmpScore > bestScore)
+                        bestScore = tmpScore;
+                }
+                return bestScore;
+            }
+            return 0.0;
+        }
+        public double BestPSMMatchingIntensityFraction()
+        {
+            if (psms.Count > 0)
+            {
+                double bestScore = psms[0].MatchingIntensityFraction;
+                double tmpScore;
+                for (int i = 1; i < psms.Count; i++)
+                {
+                    tmpScore = psms[i].MatchingIntensityFraction;
+                    if (tmpScore > bestScore)
+                        bestScore = tmpScore;
+                }
+                return bestScore;
+            }
+            return 0.0;
+        }
+        public double BestPSMPeptideScore()
+        {
+            if (psms.Count > 0)
+            {
+                double bestScore = psms[0].PeptideScore;
+                double tmpScore;
+                for (int i = 1; i < psms.Count; i++)
+                {
+                    tmpScore = psms[i].PeptideScore;
+                    if (tmpScore > bestScore)
+                        bestScore = tmpScore;
+                }
+                return bestScore;
+            }
+            return 0.0;
+        }
+        public double BestPSMPrecursorScore()
+        {
+            if (psms.Count > 0)
+            {
+                double bestScore = psms[0].PrecursorScore;
+                double tmpScore;
+                for (int i = 1; i < psms.Count; i++)
+                {
+                    tmpScore = psms[i].PrecursorScore;
+                    if (tmpScore > bestScore)
+                        bestScore = tmpScore;
+                }
+                return bestScore;
+            }
+            return 0.0;
+        }
+
     }
 }

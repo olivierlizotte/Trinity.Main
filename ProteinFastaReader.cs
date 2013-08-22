@@ -36,7 +36,7 @@ namespace Trinity
 
                 if(fasta.Peek() == '>' || fasta.Peek() == -1)
                 {
-                    Protein protein = new Protein(sequence, description);
+                    Protein protein = new Protein(sequence, description, false);
                     
                     yield return protein;
 
@@ -57,7 +57,7 @@ namespace Trinity
                             Array.Reverse(sequence_array);
                         }
                         string reversed_sequence = new string(sequence_array);
-                        Protein decoy_protein = new Protein(reversed_sequence, (description.Length > 2 && description[2] == '|') ? description.Insert(3, "DECOY_") : "DECOY_" + description);
+                        Protein decoy_protein = new Protein(reversed_sequence, (description.Length > 2 && description[2] == '|') ? description.Insert(3, "DECOY_") : "DECOY_" + description, true);
                         yield return decoy_protein;//*/
                     }
 

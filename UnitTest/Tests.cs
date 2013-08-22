@@ -64,7 +64,7 @@ namespace Trinity.UnitTest
         {
             //vsCSV csvPeptides = new vsCSV(@"G:\Thibault\-=Proteomics_Raw_Data=-\ELITE\DEC18_2012\DMatton\Clustering_186716\Identifications.csv");
             vsCSV csvPeptides = new vsCSV(@"G:\Thibault\-=Proteomics_Raw_Data=-\ELITE\DEC18_2012\DMatton\Clustering_186716\Cluster_Intensity_peptides_NormP.csv");
-            vsCSVWriter writer = new vsCSVWriter(@"G:\Thibault\-=Proteomics_Raw_Data=-\ELITE\DEC18_2012\DMatton\Clustering_186716\ProteinsPerPeptidesFromDatabases.csv");
+            vsCSVWriter writer = new vsCSVWriter(@"G:\Thibault\-=Proteomics_Raw_Data=-\ELITE\DEC18_2012\DMatton\Clustering_186716\ProteinsPerPeptidesFromDatabases_AllReadingFrames.csv");
 
             NucleicAcid.InitHash();
 
@@ -72,13 +72,25 @@ namespace Trinity.UnitTest
             List<Protein> proteins1 = new List<Protein>(ProteinFastaReader.ReadProteins(protein_fasta_database1, false));
             Dictionary<string, List<string>> protein1AAs = new Dictionary<string, List<string>>();
             foreach (Protein prot in proteins1)
-                protein1AAs.Add(prot.Description, NucleicAcid.ConvertNA3ToAAs(prot.BaseSequence));
+            {
+                for (int shift = 0; shift < 3; shift++)
+                {
+                    protein1AAs.Add(prot.Description + " | Reading Frame " + shift + " | Forward", NucleicAcid.ConvertNA3ToAAs(prot.BaseSequence, shift, false));
+                    protein1AAs.Add(prot.Description + " | Reading Frame " + shift + " | Backward", NucleicAcid.ConvertNA3ToAAs(prot.BaseSequence, shift, true));
+                }
+            }
 
             FileStream protein_fasta_database2 = new FileStream(@"G:\Thibault\Olivier\Databases\DMatton\mattond_20110418_WithReverse_EditedJuly2013.fasta", FileMode.Open, FileAccess.Read, FileShare.Read);
             List<Protein> proteins2 = new List<Protein>(ProteinFastaReader.ReadProteins(protein_fasta_database2, false));
             Dictionary<string, List<string>> protein2AAs = new Dictionary<string, List<string>>();
             foreach (Protein prot in proteins2)
-                protein2AAs.Add(prot.Description, NucleicAcid.ConvertNA3ToAAs(prot.BaseSequence));
+            {
+                for (int shift = 0; shift < 3; shift++)
+                {
+                    protein2AAs.Add(prot.Description + " | Reading Frame " + shift + " | Forward", NucleicAcid.ConvertNA3ToAAs(prot.BaseSequence, shift, false));
+                    protein2AAs.Add(prot.Description + " | Reading Frame " + shift + " | Backward", NucleicAcid.ConvertNA3ToAAs(prot.BaseSequence, shift, true));
+                }
+            }
 
             writer.AddLine(csvPeptides.LINES_LIST[0]);
             Dictionary<string, List<string>> dicOfPepProt = new Dictionary<string, List<string>>();

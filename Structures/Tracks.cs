@@ -46,8 +46,15 @@ namespace Trinity
             Tracks tracks = new Tracks();
             for (int i = 1; i < csv.LINES_LIST.Count; i++)
             {
-                string[] splits = csv.LINES_LIST[i].Split(vsCSV._Generic_Separator);
-                tracks.AddTrack(double.Parse(splits[0]), double.Parse(splits[1]), double.Parse(splits[3]), double.Parse(splits[4]), double.Parse(splits[2]));
+                try
+                {
+                    string[] splits = csv.LINES_LIST[i].Split(vsCSV._Generic_Separator);
+                    tracks.AddTrack(double.Parse(splits[0]), double.Parse(splits[1]), double.Parse(splits[3]), double.Parse(splits[4]), double.Parse(splits[2]));
+                }
+                catch (Exception)
+                {
+                    Console.WriteLine("Error parsing line : " + csv.LINES_LIST[i]);
+                }
             }
             return tracks;
         }
@@ -87,7 +94,7 @@ namespace Trinity
             double maximum_precursor_mz = precursorMz + precursorMassTolerance;
             int low_index = BinarySearchMZ(minimum_precursor_mz);
 
-            if (low_index < Count && this[low_index].MZ >= minimum_precursor_mz)
+            if (low_index >= 0 && low_index < Count && this[low_index].MZ >= minimum_precursor_mz)
                 for (int i = low_index; i < Count && this[i].MZ <= maximum_precursor_mz; i++)
                     yield return this[i];
         }
@@ -119,7 +126,7 @@ namespace Trinity
         {
             int low_index = BinarySearchRT(minimum_precursor_rt);
 
-            if (low_index < Count && this[low_index].RT >= minimum_precursor_rt)
+            if (low_index >= 0 && low_index < Count && this[low_index].RT >= minimum_precursor_rt)
                 for (int i = low_index; i < Count && this[i].RT <= maximum_precursor_rt; i++)
                     yield return this[i];
         }

@@ -39,7 +39,7 @@ namespace Trinity
         /// </summary>
         public void PrepareForSearch()
         {
-            AllProteins             = ReadProteomeFromFasta(dbOptions.FastaDatabaseFilepath, false);
+            AllProteins             = ReadProteomeFromFasta(dbOptions.FastaDatabaseFilepath, !dbOptions.DecoyFusion);
             AllSpectras             = LoadSpectras();
 
             AllQueries              = CreateQueries(AllSpectras);
@@ -69,13 +69,13 @@ namespace Trinity
         /// <param name="fileName"></param>
         /// <param name="onTheFlyDecoys"> Adds reverse sequnce proteins </param>
         /// <returns></returns>
-        public static List<Protein> ReadProteomeFromFasta(string fileName, bool onTheFlyDecoys)
+        public static List<Protein> ReadProteomeFromFasta(string fileName, bool addReverseProteins)
         {
             Console.WriteLine("Reading FASTA file " + fileName + " ... ");
             //Extract Proteins from Fasta file
             List<Protein>  AllProteins = new List<Protein>();
             FileStream protein_fasta_database = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.Read);
-            foreach (Protein protein in ProteinFastaReader.ReadProteins(protein_fasta_database, onTheFlyDecoys))
+            foreach (Protein protein in ProteinFastaReader.ReadProteins(protein_fasta_database, addReverseProteins))
             {
                 AllProteins.Add(protein);
             }
@@ -135,6 +135,7 @@ namespace Trinity
             Queries AllQueries = new Queries(dbOptions);
             foreach(Sample entry in spectras.Keys)
                 AllQueries.GenerateQueries(entry, spectras[entry], spectras[entry].tracks);//TODO Get a list of Tracks, built in LoadSpectra
+                        
             return AllQueries;
         }
         
@@ -173,10 +174,11 @@ namespace Trinity
             long nbTargets = result.SetPrecursors(result.precursors);
 
             Console.WriteLine("Targets before Optimizing Score Ratios : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");
-            allPSMs.OptimizePSMScoreRatios(dbOptions.PSMFalseDiscoveryRate);
+            
+            result.matchedPrecursors.OptimizePSMScoreRatios(dbOptions, dbOptions.PSMFalseDiscoveryRate);
             nbTargets = result.SetPrecursors(result.precursors);
             Console.WriteLine("Targets after Optimizing Score Ratios : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");
-
+            //*/
             //TODO Improve alignment results
             
             Align.AlignPrecursorsByDiff(result, allPSMs);
@@ -187,6 +189,7 @@ namespace Trinity
             nbTargets = result.SetPrecursors(result.precursors);
             Console.WriteLine("Targets after fragment alignment : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");
             //*/
+            
             Align.CropPrecursors(result, allPSMs);
             nbTargets = result.SetPrecursors(result.precursors);
             Console.WriteLine("Targets after croping precursors : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");
@@ -194,8 +197,8 @@ namespace Trinity
             Align.CropProducts(result, allPSMs);
             nbTargets = result.SetPrecursors(result.precursors);
             Console.WriteLine("Targets after croping fragments : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");
+            //*/
             allPSMs = null;
-            
             long bestTargets = nbTargets;            
             MSSearcher msSearcher = new MSSearcher(dbOptions);
             msSearcher.CumulPsm(result.matchedPrecursors);//TODO Check if its still needed
@@ -217,7 +220,9 @@ namespace Trinity
 
             UpdatePsmScores(result.proteins);
 
-            result.matchedPrecursors.OptimizePSMScoreRatios(dbOptions.PSMFalseDiscoveryRate);
+            result.matchedPrecursors.OptimizePSMScoreRatios(dbOptions, dbOptions.PSMFalseDiscoveryRate);            
+            nbTargets = result.SetPrecursors(result.precursors);
+            Console.WriteLine("Targets after ReOptimizing PSM Score Ratios : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");
             
             //Step 5 : Compute the new number of Targets
             nbTargets = result.SetPrecursors(result.precursors);
@@ -235,13 +240,13 @@ namespace Trinity
         public static void UpdatePsmScores(List<ProteinGroupMatch> protein_groups)
         {
             //Push ProteinScores AND Peptide Score down to PSMs
-            protein_groups.Sort(ProteinGroupMatch.AscendingSummedMorpheusScoreProteinGroupComparison);
+            protein_groups.Sort(ProteinGroupMatch.AscendingProbabilityScore);
             foreach (ProteinGroupMatch group in protein_groups)
             {
-                double proteinScore = group.SummedMorpheusScore;
+                double proteinScore = group.ProbabilityScore();
                 foreach (PeptideMatch peptide in group.PeptideMatches)
                 {
-                    double peptideScore = peptide.GetOptimizedScore();
+                    double peptideScore = peptide.ProbabilityScore();
                     foreach (Cluster cluster in peptide.clusters)
                         foreach (clCondition condition in cluster.conditions)
                             if (condition != null)

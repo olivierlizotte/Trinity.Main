@@ -15,6 +15,7 @@ namespace Trinity
 
     public class Query : GraphML_Node, ITargetDecoy
     {
+        public DBOptions                    options;
         public Sample                       sample;
         public PeptideSpectrumMatches       psms;
         public ProductSpectrum              spectrum;
@@ -37,8 +38,9 @@ namespace Trinity
         {
             this.psms = new PeptideSpectrumMatches();
         }
-        public Query(Sample entry, ProductSpectrum spectrum, Precursor precursor, int spectraIndex = -1)
+        public Query(DBOptions dbOptions, Sample entry, ProductSpectrum spectrum, Precursor precursor, int spectraIndex = -1)
         {
+            this.options    = dbOptions;
             this.sample     = entry;
             this.psms       = new PeptideSpectrumMatches();
             this.spectrum   = spectrum;
@@ -50,7 +52,7 @@ namespace Trinity
 
         public double ScoreFct(Peptide peptide = null)
         {
-            return precursor.OptimizedScore(peptide);
+            return precursor.ProbabilityScore(peptide);
         }
         /*
         public double Intensity(Peptide peptide)

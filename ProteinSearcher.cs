@@ -26,7 +26,7 @@ namespace Trinity
             if (uptimizer == null)
             {
                 List<Comparison<ProteinGroupMatch>> sorts = new List<Comparison<ProteinGroupMatch>>();
-                sorts.Add(CompareMorpheusSummedScore);
+                sorts.Add(CompareProbabilityScore);
                 sorts.Add(ComparePeptideMatchesCount);
                 uptimizer = new FDRizer<ProteinGroupMatch>(this, sorts, null);
             }
@@ -34,9 +34,9 @@ namespace Trinity
                 uptimizer.ReStart();
             return uptimizer.Launch(desired_fdr, displayValues);
         }
-        public static int CompareMorpheusSummedScore(ProteinGroupMatch left, ProteinGroupMatch right)
+        public static int CompareProbabilityScore(ProteinGroupMatch left, ProteinGroupMatch right)
         {
-            return -left.SummedMorpheusScore.CompareTo(right.SummedMorpheusScore);
+            return -left.ProbabilityScore().CompareTo(right.ProbabilityScore());
         }
         public static int ComparePeptideMatchesCount(ProteinGroupMatch left, ProteinGroupMatch right)
         {
@@ -86,24 +86,20 @@ namespace Trinity
             }
         }
         //TODO Rename this since it is not a MorpheusScore anymore
-        public double SummedMorpheusScore
+        public double ProbabilityScore()
         {
-            get
-            {
-                double summed_morpheus_score = 0.0;
-
-                foreach (PeptideMatch match in PeptideMatches)  // need option to score based on all PSMs rather than unique peptide PSMs?
-                    summed_morpheus_score += match.ScoreFct();
-
-                return summed_morpheus_score;
-            }
+            double score = 0;
+            
+            foreach (PeptideMatch match in PeptideMatches)  // need option to score based on all PSMs rather than unique peptide PSMs?
+                score += (1 - score) * match.ProbabilityScore();
+            return score;
         }
         
-        public static int DescendingSummedMorpheusScoreProteinGroupComparison(ProteinGroupMatch left, ProteinGroupMatch right)
+        public static int DescendingProbabilityScore(ProteinGroupMatch left, ProteinGroupMatch right)
         {
             try
             {
-                int comparison = -(left.SummedMorpheusScore.CompareTo(right.SummedMorpheusScore));
+                int comparison = -(left.ProbabilityScore().CompareTo(right.ProbabilityScore()));
                 if (comparison != 0)
                 {
                     return comparison;
@@ -120,9 +116,9 @@ namespace Trinity
             return 0;
         }
 
-        public static int AscendingSummedMorpheusScoreProteinGroupComparison(ProteinGroupMatch left, ProteinGroupMatch right)
+        public static int AscendingProbabilityScore(ProteinGroupMatch left, ProteinGroupMatch right)
         {
-            return left.SummedMorpheusScore.CompareTo(right.SummedMorpheusScore);
+            return left.ProbabilityScore().CompareTo(right.ProbabilityScore());
         }
 
         public static readonly string Header = "Protein Description,Protein Sequence,Protein Length,Number of Proteins in Group,Number of Peptide-Spectrum Matches,Protein Sequence Coverage (%),Summed Morpheus Score,Decoy";
@@ -159,7 +155,7 @@ namespace Trinity
                 sequence_coverage = sequence_coverage.Remove(sequence_coverage.Length - 1, 1);
             }
             sb.Append(sequence_coverage.ToString() + ',');
-            sb.Append(SummedMorpheusScore.ToString() + ',');
+            sb.Append(ProbabilityScore().ToString() + ',');
             sb.Append(Decoy.ToString());
 
             return sb.ToString();
@@ -194,25 +190,6 @@ namespace Trinity
             this.DicOfProteins = dicOfProteins;
         }
 
-        public static List<ProteinGroupMatch> RetrieveBestProteins(List<ProteinGroupMatch> proteins)
-        {
-            List<ProteinGroupMatch> filteredProteins = new List<ProteinGroupMatch>();
-            int nbDesiredProteins = (int) (proteins.Count * 0.9);
-
-            proteins.Sort(ProteinGroupMatch.DescendingSummedMorpheusScoreProteinGroupComparison);
-            foreach (ProteinGroupMatch protein in proteins)
-            {
-                if (!protein.Decoy)
-                {
-                    filteredProteins.Add(protein);
-                    nbDesiredProteins--;
-                    if (nbDesiredProteins < 0)
-                        break;
-                }
-            }
-            return filteredProteins;
-        }
-
         public ProteinGroupMatches SearchLatest(List<PeptideMatch> peptides, List<Protein> AllProteins)// Dictionary<string, List<Protein>> dicOfPeptides)
         {
             Dictionary<string, ProteinGroupMatch> peptide_proteins;
@@ -227,7 +204,7 @@ namespace Trinity
             }
 
             ProteinGroupMatches protein_groups = new ProteinGroupMatches(peptide_proteins.Values);//proteins_by_description.Values);
-            protein_groups.Sort(ProteinGroupMatch.DescendingSummedMorpheusScoreProteinGroupComparison);
+            protein_groups.Sort(ProteinGroupMatch.DescendingProbabilityScore);
 
             Console.WriteLine("Found " + protein_groups.Count + " proteins.");
             Console.WriteLine("Merging undistinguishable proteins...");
@@ -241,7 +218,7 @@ namespace Trinity
                 {
                     ProteinGroupMatch lower_protein_group = protein_groups[j];
 
-                    if (lower_protein_group.SummedMorpheusScore < protein_group.SummedMorpheusScore)
+                    if (lower_protein_group.ProbabilityScore() < protein_group.ProbabilityScore())
                     {
                         break;
                     }
@@ -288,7 +265,7 @@ namespace Trinity
                 k--;
             }
 
-            protein_groups.Sort(ProteinGroupMatch.DescendingSummedMorpheusScoreProteinGroupComparison);
+            protein_groups.Sort(ProteinGroupMatch.DescendingProbabilityScore);
             Console.WriteLine("Found " + protein_groups.Count + " protein groups.");
             return protein_groups;
         }
@@ -302,7 +279,7 @@ namespace Trinity
             writer.writeToFile();
         }
 
-        public static IEnumerable<Peptide> ProteinDigest(DBOptions options, List<Protein> Proteins, bool allowSNP, bool onTheFlyNoEnzymeDecoys)
+        public static IEnumerable<Peptide> ProteinDigest(DBOptions options, List<Protein> Proteins, bool allowSNP)
         {
             int nbProteins = 0;
             bool tooLong = false;
@@ -329,9 +306,6 @@ namespace Trinity
                                 if (allowSNP)
                                     foreach (Peptide possibleSnp in newPep.GetSNPsdPeptides())
                                         yield return possibleSnp;
-
-                                if (!onTheFlyNoEnzymeDecoys)
-                                    yield return new Peptide(protein, indices[i + missed_cleavages + 1], indices[i] + 1, missed_cleavages);
                             }
 
                             if (options.initiatorMethionineBehavior != InitiatorMethionineBehavior.Retain && indices[i] + 1 == 0 && protein[0] == 'M')
@@ -342,9 +316,6 @@ namespace Trinity
                                 if (allowSNP)
                                     foreach (Peptide possibleSnp in newPep.GetSNPsdPeptides())
                                         yield return possibleSnp;
-
-                                if (!onTheFlyNoEnzymeDecoys)
-                                    yield return new Peptide(protein, indices[i + missed_cleavages + 1], indices[i] + 1 + 1, missed_cleavages);
                             }
                         }
                     }

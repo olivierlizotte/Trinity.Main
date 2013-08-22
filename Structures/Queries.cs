@@ -33,14 +33,14 @@ namespace Trinity
         /// Constructor used for Unit tests
         /// </summary>
         /// <param name="masses"></param>
-        public Queries(double[] masses)
+        public Queries(DBOptions options, double[] masses)
         {
             Precursors = new Precursors();
             foreach (double mass in masses)
             {
                 Precursor precursor = new Precursor();
                 precursor.Mass = mass;
-                Add(new Query(null, null, precursor));
+                Add(new Query(options, null, null, precursor));
                 Precursors.Add(precursor);
             }
         }
@@ -89,7 +89,7 @@ namespace Trinity
             spectra.Sort(ProductSpectrum.AscendingPrecursorMassComparison);
             double averageNbPrecursorPerSpectrum = 0;
             int nbSpectrumMatchedToTrack = 0;
-
+            
             foreach (ProductSpectrum spectrum in spectra)
             {
                 NbSpectrum++;
@@ -98,8 +98,10 @@ namespace Trinity
                 Track closestTrack = null;
                 int nbTracks = 0;
 
+                List<Query> newQueries = new List<Query>();
+
                 //TODO No threshold on sdf files, and preferably a C# routine that does what MassSense do
-                foreach (Track track in tracks.GetTracksInMzRange(spectrum.PrecursorMZ, spectrum.IsolationWindow))
+                foreach (Track track in tracks.GetTracksInMzRange(spectrum.PrecursorMZ, spectrum.IsolationWindow * dbOptions.EffectiveIsolationWindowRatio))//TODO Optimize this value
                 {
                     Precursor prec = null;
 
@@ -130,12 +132,11 @@ namespace Trinity
                         }
                         if (prec != null)
                         {
-                            nbTracks++;
                             intensityCumul += track.INTENSITY;
-                            Add(new Query(entry, spectrum, prec, NbSpectrum));
+                            newQueries.Add(new Query(dbOptions, entry, spectrum, prec, NbSpectrum));
 
                             if (prec.Charge == spectrum.PrecursorCharge)
-                                foundCharge = true;
+                                foundCharge = true;                            
                         }
                     }
                 }
@@ -154,8 +155,19 @@ namespace Trinity
 
                     Precursor prec = new Precursor(closestTrack, spectrum.PrecursorCharge, entry);
                     Tracks.Add(closestTrack, prec);
-                    Add(new Query(entry, spectrum, prec, NbSpectrum));
+                    Add(new Query(dbOptions, entry, spectrum, prec, NbSpectrum));
                 }//*/
+                
+                if (newQueries.Count > 1)
+                {
+                    //Remove precursors if estimated fragment intensities are too low (based on precursor intensity ratios and isolation window placement)
+                    foreach (Query q in newQueries)
+                        if (q.precursor.Track.INTENSITY > intensityCumul * dbOptions.MinimumPrecursorIntensityRatioInIsolationWindow)
+                        {
+                            this.Add(q);
+                            nbTracks++;
+                        }
+                }
 
                 if (nbTracks > 0)
                 {
@@ -266,7 +278,7 @@ namespace Trinity
             double maximum_precursor_mass = precursorMass + precursorMassTolerance;
             int low_index = BinarySearch(minimum_precursor_mass);
 
-            if (low_index < Count && this[low_index].precursor.Mass >= minimum_precursor_mass)
+            if (low_index >= 0 && low_index < Count && this[low_index].precursor.Mass >= minimum_precursor_mass)
                 for (int i = low_index; i < Count && this[i].precursor.Mass <= maximum_precursor_mass; i++)
                     yield return this[i];
         }

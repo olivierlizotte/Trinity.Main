@@ -45,6 +45,18 @@ namespace Trinity
         public bool LoadSpectraIfFound = true;
 
         public double ComputedRetentionTimeDiff = 1.0;//TODO compute this after alignment step, based on common identifications
+        public double EffectiveIsolationWindowRatio = 0.9;//TODO optimize this value 
+        public double MinimumPrecursorIntensityRatioInIsolationWindow = 0.05;
+
+
+        public double dProduct = 0.0;//0.01;
+        public double dPrecursor = 0.25;//.1;//0.01;
+        public double dMatchingProductFraction = 0.25;//0.6;//0.8;//0.26;
+        public double dMatchingProduct = 0;//0.6;//0.8;//0.26;
+        public double dIntensityFraction = 0.25;//0.8;//0.4;//0.47;
+        public double dIntensity = 0;//0.4;//0.47;
+        public double dProtein = 0;//0.0002;//0.01;
+        public double dPeptideScore = 0.25;//0.008;//0;      
 
         ///Values kept from the original Morpheus source code
         public InitiatorMethionineBehavior initiatorMethionineBehavior;

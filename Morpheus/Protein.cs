@@ -20,7 +20,7 @@ namespace Trinity
             Decoy = false;
         }
 
-        public Protein(string sequence, string description, bool decoy = false)
+        public Protein(string sequence, string description, bool decoy)
             : base(sequence)
         {
             this.Description = description;
@@ -143,7 +143,7 @@ namespace Trinity
             int variable_modification_isoforms = 0;
             foreach(Dictionary<int, Modification> kvp in GetVariableModificationPatterns(possible_modifications))
             {
-                Protein protein = new Protein(BaseSequence, Description);
+                Protein protein = new Protein(BaseSequence, Description, Decoy);
                 protein.SetFixedModifications(FixedModifications);
                 protein.SetVariableModifications(kvp);
                 yield return protein;

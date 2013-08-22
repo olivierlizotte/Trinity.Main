@@ -74,11 +74,18 @@ namespace Trinity
                 i++;
                 for(int j = 0; j < nbPeaks; i++,j++)
                 {
-                    string[] splitPeaks = csv.LINES_LIST[i].Split('\t');
-                    if(splitPeaks.Length > 2)
-                        peaks.Add(new MsMsPeak(double.Parse(splitPeaks[0]), double.Parse(splitPeaks[1]), int.Parse(splitPeaks[2])));
-                    else
-                        peaks.Add(new MsMsPeak(double.Parse(splitPeaks[0]), double.Parse(splitPeaks[1]), 0));
+                    try
+                    {
+                        string[] splitPeaks = csv.LINES_LIST[i].Split('\t');
+                        if (splitPeaks.Length > 2)
+                            peaks.Add(new MsMsPeak(double.Parse(splitPeaks[0]), double.Parse(splitPeaks[1]), int.Parse(splitPeaks[2])));
+                        else
+                            peaks.Add(new MsMsPeak(double.Parse(splitPeaks[0]), double.Parse(splitPeaks[1]), 0));
+                    }
+                    catch (Exception)
+                    {
+                        Console.WriteLine("Error parsing line : " + csv.LINES_LIST[i]);
+                    }
                 }
                 spectra.AddMSMS(new ProductSpectrum(int.Parse(splits[0]), double.Parse(splits[1]), splits[2], mz, double.Parse(splits[4]), charge,Proteomics.Utilities.Numerics.MassFromMZ(mz, charge), peaks, double.Parse(splits[8])));                
             }

@@ -26,14 +26,12 @@ namespace Trinity
         {
             precursors.Add(precursor);
         }
-        public double Score(Peptide peptide)
+        public double ProbabilityScore(Peptide peptide)
         {
             double score = 0;
             foreach (Precursor precursor in precursors)
-                foreach(PeptideSpectrumMatch psm in precursor.OptimizedBestPsms(peptide))
-                    score += (1 - score) * psm.OptimizedScore();
-            if (score > 1)
-                Console.WriteLine("Zoof");
+                score += (1 - score) * precursor.ProbabilityScore(peptide);
+            
             return score;
         }
         public double Rt()
@@ -91,12 +89,12 @@ namespace Trinity
                     nbElem++;
             return nbElem / (double) replicates.Count;
         }
-        public double Score(Peptide peptide)
+        public double ProbabilityScore(Peptide peptide)
         {
             double score = 0;
             foreach (clReplicate replicate in replicates)
                 if (replicate != null)
-                    score += (1 - score) * replicate.Score(peptide);
+                    score += (1 - score) * replicate.ProbabilityScore(peptide);
             return score;
         }
         public double Rt()
@@ -185,12 +183,12 @@ namespace Trinity
             conditions[precursor.sample.PROJECT.CONDITION - 1].Add(precursor);
             //score = -1;
         }
-        public double Score(Peptide peptide)
+        public double ProbabilityScore(Peptide peptide)
         {
             double score = 0;
             foreach (clCondition condition in conditions)
                 if (condition != null)
-                    score += (1 - score) * condition.Score(peptide);
+                    score += (1 - score) * condition.ProbabilityScore(peptide);
             return score;
         }
         public double Rt()
@@ -225,10 +223,10 @@ namespace Trinity
                 foreach (clReplicate replicate in condition.replicates)
                     foreach (Precursor precursor in replicate.precursors)
                         foreach (PeptideSpectrumMatch psm in precursor.OptimizedBestPsms())
-                            if (matches.Count == 0 || matches[0].OptimizedScore() == psm.OptimizedScore())
+                            if (matches.Count == 0 || matches[0].ProbabilityScore() == psm.ProbabilityScore())
                                 matches.Add(psm);
                             else
-                                if (matches[0].OptimizedScore() < psm.OptimizedScore())
+                                if (matches[0].ProbabilityScore() < psm.ProbabilityScore())
                                 {
                                     matches.Clear();
                                     matches.Add(psm);
@@ -258,7 +256,7 @@ namespace Trinity
                 foreach (clReplicate replicate in condition.replicates)
                     foreach (Precursor precursor in replicate.precursors)
                     {
-                        double tmpScore = precursor.OptimizedScore(peptide, checkMods);
+                        double tmpScore = precursor.ProbabilityScore(peptide, checkMods);
                         if (tmpScore > score)
                         {
                             score = tmpScore;
@@ -348,7 +346,7 @@ namespace Trinity
         public GraphML_List<Cluster> Search(Precursors precursors)
         {
             Console.WriteLine("Grouping precursors based on common features...");
-            precursors.Sort(Precursor.DescendingScoreComparison);
+            precursors.Sort(Precursor.CompareProbabilityScore);
 
             GraphML_List<Cluster> clusters = new GraphML_List<Cluster>();
             bool[] done = new bool[precursors.Count];
@@ -393,7 +391,7 @@ namespace Trinity
                 string line = precursor.INDEX + "," + precursor.Track.RT + "," + precursor.Track.MZ + "," + precursor.Charge + "," + precursor.GetMostIntenseCharge() + "," + precursor.Mass + ",";
                 PeptideSpectrumMatch match = precursor.OptimizedBestPsm();
                 if (match != null)
-                    line += match.Peptide.MonoisotopicMass + "," + match.Peptide.BaseSequence + "," + match.Peptide.Sequence + "," + match.PrecursorScore + "," + match.ProductScore + "," + match.IntensityScore + "," + precursor.ScoreFct(match.Peptide) + "," +
+                    line += match.Peptide.MonoisotopicMass + "," + match.Peptide.BaseSequence + "," + match.Peptide.Sequence + "," + match.PrecursorScore + "," + match.ProductScore + "," + match.IntensityScore + "," + precursor.ProbabilityScore(match.Peptide) + "," +
                         match.PrecursorMzError + "," + match.Decoy + "," + match.ProteinScore;
                 writer.AddLine(line);
             }
@@ -426,7 +424,7 @@ namespace Trinity
             
             foreach (PeptideSpectrumMatch psm in psms)
                 writer.AddLine(psm.Query.precursor.Track.MZ +","+ psm.Query.spectrum.RetentionTimeInMin + ","+psm.Query.precursor.Charge +
-                    "," + psm.Peptide.BaseSequence + "," + psm.Peptide.Sequence + "," + psm.PrecursorScore + "," + psm.ProductScore + "," + psm.IntensityScore + "," + psm.Score + "," +
+                    "," + psm.Peptide.BaseSequence + "," + psm.Peptide.Sequence + "," + psm.PrecursorScore + "," + psm.ProductScore + "," + psm.IntensityScore + "," + psm.ProbabilityScore() + "," +
                     psm.PrecursorMzError + "," + psm.Decoy + "," + psm.ProteinScore);
             
             writer.writeToFile();

@@ -30,40 +30,37 @@ namespace Trinity
 
             if (psm.MatchingProducts > 1)
             {
-                lock (query.psms)
+                if (!DicOfProteins.ContainsKey(psm.Peptide.BaseSequence))
+                    DicOfProteins.Add(psm.Peptide.BaseSequence, new List<Protein>());
+                DicOfProteins[psm.Peptide.BaseSequence].Add(psm.Peptide.Parent);
+
+                List<PeptideSpectrumMatch> psmsOfQuery = query.psms;
+
+                if (psmsOfQuery.Count < 32)
+                    psmsOfQuery.Add(psm);
+                else if (psmsOfQuery[31].ProbabilityScore() < psm.ProbabilityScore())
                 {
-                    if (!DicOfProteins.ContainsKey(psm.Peptide.BaseSequence))
-                        DicOfProteins.Add(psm.Peptide.BaseSequence, new List<Protein>());
-                    DicOfProteins[psm.Peptide.BaseSequence].Add(psm.Peptide.Parent);
-
-                    List<PeptideSpectrumMatch> psmsOfQuery = query.psms;
-
-                    if (psmsOfQuery.Count < 32)
-                        psmsOfQuery.Add(psm);
-                    else if (psmsOfQuery[31].MatchingProducts < psm.MatchingProducts)
-                    {
-                        for (int i = 0; i < psmsOfQuery.Count; i++)
-                            if (psmsOfQuery[i].MatchingProducts <= psm.MatchingProducts)
-                            {
-                                psmsOfQuery.Insert(i, psm);
-                                break;
-                            }
-                        if (psmsOfQuery.Count > 32)
-                            psmsOfQuery.RemoveAt(31);
-                    }//*/
-                    //TODO check optimal number of PSM to store
-                    /*
-                    //TODO Reactivate this to save on memory space                
-                    if (psmsOfPrecursor.Count == 0 || psmsOfPrecursor[0].MaxQuantScore() == psm.MaxQuantScore())
-                        psmsOfPrecursor.Add(psm);
-                    else
-                        if (psm.MaxQuantScore() > psmsOfPrecursor[0].MaxQuantScore())
+                    for (int i = 0; i < psmsOfQuery.Count; i++)
+                        if (psmsOfQuery[i].ProbabilityScore() <= psm.ProbabilityScore())
                         {
-                            psmsOfPrecursor.Clear();
-                            psmsOfPrecursor.Add(psm);
+                            psmsOfQuery.Insert(i, psm);
+                            break;
                         }
-                    //*/
-                }
+                    if (psmsOfQuery.Count > 32)
+                        psmsOfQuery.RemoveAt(31);
+                }//*/
+                //TODO check optimal number of PSM to store
+                /*
+                //TODO Reactivate this to save on memory space                
+                if (psmsOfPrecursor.Count == 0 || psmsOfPrecursor[0].MaxQuantScore() == psm.MaxQuantScore())
+                    psmsOfPrecursor.Add(psm);
+                else
+                    if (psm.MaxQuantScore() > psmsOfPrecursor[0].MaxQuantScore())
+                    {
+                        psmsOfPrecursor.Clear();
+                        psmsOfPrecursor.Add(psm);
+                    }
+                //*/                
             }
         }
 
@@ -90,20 +87,24 @@ namespace Trinity
                 {
                     while (indexPrecursor < queries.Count && queries[indexPrecursor].precursor.Mass <= maximumMass)
                     {
-                        //if (low_index < Count && this[low_index].precursor.Mass >= minimum_precursor_mass)
-                        //  foreach (Query query in queries.GetQueryInMassRange(modified_peptide.MonoisotopicMass, options.precursorMassTolerance))
-                        //{
-                        //Target (or decoy with enzyme digests)
-                        ComputePSMs(queries[indexPrecursor], hit.Item1);
 
-                        //Decoy if NoEnzyme digest
-                        if (options.DecoyFusion)
-                            ComputePSMs(queries[indexPrecursor], hit.Item1.Reverse());
+                        lock (queries[indexPrecursor].psms)
+                        {
+                            //if (low_index < Count && this[low_index].precursor.Mass >= minimum_precursor_mass)
+                            //  foreach (Query query in queries.GetQueryInMassRange(modified_peptide.MonoisotopicMass, options.precursorMassTolerance))
+                            //{
+                            //Target (or decoy with enzyme digests)
+                            ComputePSMs(queries[indexPrecursor], hit.Item1);
 
-                        indexPrecursor++;
+                            //Decoy if NoEnzyme digest
+                            if (options.DecoyFusion)
+                                ComputePSMs(queries[indexPrecursor], hit.Item1.Reverse());
 
-                        //foreach (Precursor isotope in query.precursor.Isotopes)                        
-                        //    ComputePSMs(query, modified_peptide, isotope.MassShift, previousProteins);
+                            indexPrecursor++;
+
+                            //foreach (Precursor isotope in query.precursor.Isotopes)                        
+                            //    ComputePSMs(query, modified_peptide, isotope.MassShift, previousProteins);
+                        }
                     }
 
                     nbQueryConsidered += indexPrecursor - hit.Item2;
@@ -116,9 +117,9 @@ namespace Trinity
             foreach (Query query in queries)
             {
                 //Push PSMs to precursors
-                //if (query.precursor.psms_AllPossibilities.Count == 0)
+                if (query.precursor.psms_AllPossibilities.Count == 0)
                     query.precursor.psms_AllPossibilities.AddRange(query.psms);
-                /*else
+                else
                 {
                     //Merge common entries
                     foreach (PeptideSpectrumMatch psmQuery in query.psms)

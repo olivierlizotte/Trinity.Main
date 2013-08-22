@@ -41,9 +41,7 @@ namespace Trinity
     {
         public double PeptideScore;
         public double ProteinScore;
-
-        private static MassType precursorMassType = MassType.Monoisotopic;
-
+        
         public Query Query { get; set; }
 
         public Peptide Peptide { get; set; }
@@ -55,7 +53,7 @@ namespace Trinity
         public double MatchingProductsProbability { get; set; }
         public GraphML_List<ProductMatch> AllProductMatches{ get; set; }
 
-        public int TotalProducts { get; set; }
+        public int TotalTheoreticalProducts { get; set; }
         public double TotalWeightedProducts { get; set; }
 
         public double MatchingProductsFraction { get; set; }
@@ -69,31 +67,21 @@ namespace Trinity
         public double ProductScore { get;  set; }
         public double IntensityScore { get;  set; }
 
-        //TODO Check if those var are common with Precursor and remove zeroed out var
-        public static double dProduct = 0.0;//0.01;
-        public static double dPrecursor = 0.25;//.1;//0.01;
-        public static double dMatchingProductFraction = 0.25;//0.6;//0.8;//0.26;
-        public static double dMatchingProduct = 0;//0.6;//0.8;//0.26;
-        public static double dIntensityFraction = 0.25;//0.8;//0.4;//0.47;
-        public static double dIntensity = 0;//0.4;//0.47;
-        public static double dProtein = 0;//0.0002;//0.01;
-        public static double dPeptideScore = 0.25;//0.008;//0;        
-        public double OptimizedScore()
+        //TODO Check if those var are common with Precursor and remove zeroed out var  
+        public double ProbabilityScore()
         {
+            DBOptions options = Query.options;
             //return MaxQuantScore();//TODO Reactivate Optimized PeptideSpectrumMatch Score
-            return              dIntensity * MatchingIntensity +
-                                dIntensityFraction * MatchingIntensityFraction +
-                                dProduct * ProductScore +
-                                dPrecursor * PrecursorScore +
-                                dMatchingProductFraction * MatchingProductsFraction +
-                                dMatchingProduct * MatchingWeightedProducts +
-                                dProtein * ProteinScore +
-                                dPeptideScore * PeptideScore;//*/
+            double score = options.dIntensity * MatchingIntensity +
+                                options.dIntensityFraction * MatchingIntensityFraction +
+                                options.dProduct * ProductScore +
+                                options.dPrecursor * PrecursorScore +
+                                options.dMatchingProductFraction * MatchingProductsFraction +
+                                options.dMatchingProduct * MatchingWeightedProducts +
+                                options.dProtein * ProteinScore +
+                                options.dPeptideScore * PeptideScore;//*/
+            return score;
         }
-
-        public double Score { get {
-            return OptimizedScore();
-        } }
 
         public bool Decoy
         {
@@ -119,7 +107,7 @@ namespace Trinity
 
             UpdatePrecursor(options);
 
-            Initialize(options, GetProductMZs(options, query.spectrum.Peaks));
+            Initialize(options, GetProductMZs(options, query.spectrum.Peaks), query.spectrum.MostIntensePeak);
         }
 
         public void UpdatePrecursor(DBOptions options)
@@ -131,18 +119,44 @@ namespace Trinity
 
             PrecursorScore = (options.precursorMassTolerance.Value - Math.Abs(PrecursorMzError)) / options.precursorMassTolerance.Value;
         }
-        /*
+        
         public void Merge(PeptideSpectrumMatch psm, DBOptions options)
         {
-            List<ProductMatch> newProductMatches = new List<ProductMatch>(this.AllProductMatches);            
-            newProductMatches.AddRange(psm.AllProductMatches);
-
-            //Todo : Does artificially boosting these integers is mathematically sound?
-            TotalProducts += psm.AllProductMatches.Count;
-            TotalWeightedProducts += psm.MatchingWeightedProducts;
-            Initialize(options, newProductMatches);
-            //TODO validate this approach
-
+            //Augment list A
+            List<ProductMatch> newList = new List<ProductMatch>();
+            foreach (ProductMatch matchA in this.AllProductMatches)
+            {
+                bool isNew = true;
+                foreach (ProductMatch matchB in psm.AllProductMatches)
+                    if (matchA.theoMz == matchB.theoMz && matchA.charge == matchB.charge)
+                    {
+                        if (matchA.mass_diff > matchB.mass_diff)
+                        {
+                            matchA.mass_diff = matchB.mass_diff;
+                            matchA.obsMz = matchB.obsMz;
+                        }
+                        if (matchA.obsIntensity < matchB.obsIntensity)
+                            matchA.obsIntensity = matchB.obsIntensity;
+                        newList.Add(matchA);
+                        isNew = false;
+                    }
+                if (isNew)
+                    newList.Add(matchA);
+            }
+            //Add items unique to list B
+            foreach (ProductMatch matchB in psm.AllProductMatches)
+            {
+                bool isNew = true;
+                foreach (ProductMatch matchNew in newList)
+                    if (matchNew.theoMz == matchB.theoMz && matchNew.charge == matchB.charge)
+                        isNew = false;
+                if (isNew)
+                    newList.Add(matchB);
+            }
+            double mostIntenseFragment = this.Query.spectrum.MostIntensePeak;
+            if (mostIntenseFragment < psm.Query.spectrum.MostIntensePeak)
+                mostIntenseFragment = psm.Query.spectrum.MostIntensePeak;
+            Initialize(options, newList, mostIntenseFragment);
         }//*/
 
         public IEnumerable<ProductMatch> GetProductMZs(DBOptions options, GraphML_List<MsMsPeak> peaks)//, List<double> theoretical_product_mzs = null)
@@ -156,14 +170,14 @@ namespace Trinity
             int num_experimental_peaks = peaks.Count;
             double product_mass_tolerance_value = options.productMassTolerance.Value;
             MassToleranceUnits product_mass_tolerance_units = options.productMassTolerance.Units;
-            TotalProducts = 0;
+            TotalTheoreticalProducts = 0;
             TotalWeightedProducts = 0;
             //New version that should include charged ions
             ProductMatch pMatch = new ProductMatch();
             foreach (ProductMatch matchTheo in options.fragments.ComputeFragments(Peptide, Query.precursor.Charge, options))//Peptide.EnumerateAllProductMz(PRODUCT_TYPES[Query.spectrum.FragmentationMethod], Query.precursor))
             //foreach (ProductMatch matchTheo in Peptide.EnumerateAllProductMz(PRODUCT_TYPES[Query.spectrum.FragmentationMethod], Query.precursor))
             {
-                TotalProducts++;
+                TotalTheoreticalProducts++;
                 TotalWeightedProducts += matchTheo.weight;//++;
                 //TODO test what is most common between charged ions, and uncharged ions
                 //for (int charge = 1; charge <= Query.precursor.Charge; charge++)
@@ -211,7 +225,7 @@ namespace Trinity
 			//Test which is better between without and with neutral loss ... keep best score
 			double lnp = Math.Log(0.06);
 			double lnq = Math.Log(1.0 - 0.06);
-            int n = TotalProducts;
+            int n = TotalTheoreticalProducts;
             int k = MatchingProducts;
 			n = Math.Max(n, k);
 			double s = -k * lnp - (n - k) * lnq -
@@ -220,7 +234,7 @@ namespace Trinity
 			return s;		
         }
 
-        public void Initialize(DBOptions options, IEnumerable<ProductMatch> productMZs)
+        public void Initialize(DBOptions options, IEnumerable<ProductMatch> productMZs, double highestIntensity)
         {
             //List<double> theoretical_product_mz = Peptide.CalculateAllProductMz(PRODUCT_TYPES[Query.spectrum.FragmentationMethod], Query.precursor);
             //TotalProducts = theoretical_product_mz.Count;
@@ -229,6 +243,7 @@ namespace Trinity
             double cumulDiff    = 0;
             ProductScore        = 0;
             AllProductMatches = new GraphML_List<ProductMatch>();
+            MatchingWeightedProducts = 0;
             foreach (ProductMatch match in productMZs)
             {
                 MatchingProducts++;
@@ -238,7 +253,9 @@ namespace Trinity
                 AllProductMatches.Add(new ProductMatch(match));
             }
             MatchingProductsFraction    = (double)MatchingWeightedProducts / (double) TotalWeightedProducts;
-            MatchingIntensityFraction   = MatchingIntensity / (double)(Query.spectrum.MostIntensePeak * TotalProducts);
+            MatchingIntensityFraction   = MatchingIntensity / (double)(highestIntensity * TotalTheoreticalProducts);
+            if (MatchingIntensityFraction > 1)
+                MatchingIntensityFraction = 1.0;
             ProductScore                = 1.0 - (cumulDiff / (double)(MatchingProducts * options.productMassTolerance.Value));
             IntensityScore              = MatchingIntensityFraction / (double)Query.spectrum.Peaks.Count;
             MorpheusScore               = MatchingProducts + MatchingIntensityFraction;
@@ -251,7 +268,7 @@ namespace Trinity
 
         public static int DescendingOptimizedScoreComparison(PeptideSpectrumMatch left, PeptideSpectrumMatch right)
         {
-            int comparison = -(left.OptimizedScore().CompareTo(right.OptimizedScore()));
+            int comparison = -(left.ProbabilityScore().CompareTo(right.ProbabilityScore()));
             if (comparison != 0)
             {
                 return comparison;
@@ -289,11 +306,11 @@ namespace Trinity
             sb.Append(Peptide.MonoisotopicMass.ToString() + '\t');
             sb.Append(PrecursorMzError.ToString() + '\t');
             sb.Append(MatchingProducts.ToString() + '\t');
-            sb.Append(TotalProducts.ToString() + '\t');
+            sb.Append(TotalTheoreticalProducts.ToString() + '\t');
             sb.Append(MatchingProductsFraction.ToString() + '\t');
             sb.Append(MatchingIntensity.ToString() + '\t');
             sb.Append(MatchingIntensityFraction.ToString() + '\t');
-            sb.Append(Score.ToString());
+            sb.Append(ProbabilityScore().ToString());
 
             return sb.ToString();
         }
