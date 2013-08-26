@@ -40,12 +40,12 @@ namespace Trinity
             options.dMatchingProductFraction   = ratioFragments            / totalRatios;
             options.dIntensityFraction         = ratioIntensities          / totalRatios;
             options.dPeptideScore              = ratioPeptideScore         / totalRatios;
-            Console.WriteLine("New score ratios   ------------------------------------- ");
+            Console.WriteLine("New score ratios  [" + totalRatios + " total ratios] ------------------------------------- ");
             Console.WriteLine("    PeptideSpectrumMatch.dPrecursor:                     " + options.dPrecursor);
             Console.WriteLine("    PeptideSpectrumMatch.dMatchingProductFraction:       " + options.dMatchingProductFraction);
             Console.WriteLine("    PeptideSpectrumMatch.dIntensityFraction:             " + options.dIntensityFraction);
             Console.WriteLine("    PeptideSpectrumMatch.dPeptideScore:                  " + options.dPeptideScore);
-            Console.WriteLine("-------------------------------------------------------- ");
+            Console.WriteLine("------------------------------------------------------------------------------------------ ");
         }
         public static int CompareMatchingIntensityFraction(PeptideSpectrumMatch left, PeptideSpectrumMatch right)
         {

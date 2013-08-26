@@ -14,8 +14,10 @@ namespace Trinity
     public class PeptideMatches : GraphML_List<PeptideMatch>
     {
         private FDRizer<PeptideMatch> uptimizer;
+        private FDRizer2<PeptideMatch> uptimizer2;
+
         public PeptideMatches() { }
-        public PeptideMatches(PeptideMatch[] list) : base(list) { }
+        public PeptideMatches(IEnumerable<PeptideMatch> list) : base(list) { }
 
         public List<PeptideMatch> ComputeAtFDR(double desired_fdr)
         {
@@ -28,10 +30,10 @@ namespace Trinity
                 sorts.Add(ComparePeptideScore);
                 sorts.Add(CompareProteinScore);
                 //sorts.Add(CompareProductScore);
-//                sorts.Add(CompareCumulPrecursorScore);
-//                sorts.Add(CompareCumulPrecursorOptimizedScore);
-//                sorts.Add(CompareBestPrecursorScore);
-//                sorts.Add(CompareBestPrecursorOptimizedScore);
+                //                sorts.Add(CompareCumulPrecursorScore);
+                sorts.Add(CompareCumulPrecursorOptimizedScore);
+                //                sorts.Add(CompareBestPrecursorScore);
+                sorts.Add(CompareBestPrecursorOptimizedScore);
                 sorts.Add(CompareScore);
                 //sorts.Add(CompareNbCluster);
                 //sorts.Add(ComparePrecursorMassError);
@@ -40,14 +42,40 @@ namespace Trinity
             else
                 uptimizer.ReStart();
 
-            List<PeptideMatch> fdrList = uptimizer.Launch(desired_fdr);
-            List<PeptideMatch> sortedProbability = new List<PeptideMatch>(this);
-            sortedProbability.Sort(PeptideSearcher.DescendingOptimizedScoreComparison);
-            sortedProbability = FDRizer<PeptideMatch>.ComputeAtFDR(sortedProbability, desired_fdr);
-            if (sortedProbability.Count > fdrList.Count)
-                fdrList = sortedProbability;
+            if (uptimizer2 == null)
+            {
+                List<Comparison<PeptideMatch>> sorts = new List<Comparison<PeptideMatch>>();
+                //sorts.Add(CompareMatchingProducts);
+                //sorts.Add(CompareMatchingProductsFraction);
+                //sorts.Add(CompareMatchingIntensityFraction);
+                sorts.Add(ComparePeptideScore);
+                sorts.Add(CompareProteinScore);
+                //sorts.Add(CompareProductScore);
+//                sorts.Add(CompareCumulPrecursorScore);
+                sorts.Add(CompareCumulPrecursorOptimizedScore);
+//                sorts.Add(CompareBestPrecursorScore);
+                sorts.Add(CompareBestPrecursorOptimizedScore);
+                sorts.Add(CompareScore);
+                //sorts.Add(CompareNbCluster);
+                //sorts.Add(ComparePrecursorMassError);
+                uptimizer2 = new FDRizer2<PeptideMatch>(this, sorts, null);
+            }
+            else
+                uptimizer2.ReStart();
 
-            return fdrList;
+            List<PeptideMatch> fdrList = uptimizer.Launch(desired_fdr, true);
+            List<PeptideMatch> fdrList2 = uptimizer2.Launch(desired_fdr, true);
+
+            if (fdrList.Count < fdrList2.Count)
+                return fdrList2;
+            else
+                return fdrList;
+            //List<PeptideMatch> sortedProbability = new List<PeptideMatch>(this);
+            //sortedProbability.Sort(PeptideSearcher.DescendingOptimizedScoreComparison);
+            //sortedProbability = FDRizer<PeptideMatch>.ComputeAtFDR(sortedProbability, desired_fdr);
+            //if (sortedProbability.Count > fdrList.Count)
+            //    fdrList = sortedProbability;
+            //return fdrList;
         }
 
         public static int CompareMatchingProducts(PeptideMatch left, PeptideMatch right)

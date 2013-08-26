@@ -173,11 +173,12 @@ namespace Trinity
 
             long nbTargets = result.SetPrecursors(result.precursors);
 
-            Console.WriteLine("Targets before Optimizing Score Ratios : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");
-            
-            result.matchedPrecursors.OptimizePSMScoreRatios(dbOptions, dbOptions.PSMFalseDiscoveryRate);
+            //Console.WriteLine("Targets before Optimizing Score Ratios : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");
+
+            //allPSMs.OptimizePSMScoreRatios(dbOptions, dbOptions.PSMFalseDiscoveryRate);
+            //result.matchedPrecursors.OptimizePSMScoreRatios(dbOptions, dbOptions.PSMFalseDiscoveryRate);
             nbTargets = result.SetPrecursors(result.precursors);
-            Console.WriteLine("Targets after Optimizing Score Ratios : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");
+            Console.WriteLine("Targets : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");
             //*/
             //TODO Improve alignment results
             
@@ -219,7 +220,9 @@ namespace Trinity
             result.proteins = protSearcher.SearchLatest(result.peptides, AllProteins);
 
             UpdatePsmScores(result.proteins);
+            nbTargets = result.SetPrecursors(result.precursors);
 
+            Console.WriteLine("Targets before Optimizing Score Ratios : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");
             result.matchedPrecursors.OptimizePSMScoreRatios(dbOptions, dbOptions.PSMFalseDiscoveryRate);            
             nbTargets = result.SetPrecursors(result.precursors);
             Console.WriteLine("Targets after ReOptimizing PSM Score Ratios : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");

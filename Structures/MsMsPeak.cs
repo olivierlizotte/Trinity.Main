@@ -22,7 +22,7 @@ namespace Trinity
             }
         }
 
-        public double Intensity { get;  set; }
+        public double Intensity { get; set; }
 
         public int Charge { get;  set; }
 

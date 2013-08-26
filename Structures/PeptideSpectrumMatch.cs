@@ -41,6 +41,8 @@ namespace Trinity
     {
         public double PeptideScore;
         public double ProteinScore;
+
+        public double highestFragmentIntensity;
         
         public Query Query { get; set; }
 
@@ -103,11 +105,12 @@ namespace Trinity
         public PeptideSpectrumMatch(Query query, Peptide peptide, DBOptions options)
         {
             Query = query;
+            highestFragmentIntensity = query.spectrum.MostIntensePeak;
             Peptide = peptide;
 
             UpdatePrecursor(options);
 
-            Initialize(options, GetProductMZs(options, query.spectrum.Peaks), query.spectrum.MostIntensePeak);
+            Initialize(options, GetProductMZs(options, query.spectrum.Peaks));
         }
 
         public void UpdatePrecursor(DBOptions options)
@@ -153,10 +156,10 @@ namespace Trinity
                 if (isNew)
                     newList.Add(matchB);
             }
-            double mostIntenseFragment = this.Query.spectrum.MostIntensePeak;
-            if (mostIntenseFragment < psm.Query.spectrum.MostIntensePeak)
-                mostIntenseFragment = psm.Query.spectrum.MostIntensePeak;
-            Initialize(options, newList, mostIntenseFragment);
+
+            if (highestFragmentIntensity < psm.Query.spectrum.MostIntensePeak)
+                highestFragmentIntensity = psm.Query.spectrum.MostIntensePeak;
+            Initialize(options, newList);
         }//*/
 
         public IEnumerable<ProductMatch> GetProductMZs(DBOptions options, GraphML_List<MsMsPeak> peaks)//, List<double> theoretical_product_mzs = null)
@@ -172,8 +175,7 @@ namespace Trinity
             MassToleranceUnits product_mass_tolerance_units = options.productMassTolerance.Units;
             TotalTheoreticalProducts = 0;
             TotalWeightedProducts = 0;
-            //New version that should include charged ions
-            ProductMatch pMatch = new ProductMatch();
+            //New version that should include charged ions            
             foreach (ProductMatch matchTheo in options.fragments.ComputeFragments(Peptide, Query.precursor.Charge, options))//Peptide.EnumerateAllProductMz(PRODUCT_TYPES[Query.spectrum.FragmentationMethod], Query.precursor))
             //foreach (ProductMatch matchTheo in Peptide.EnumerateAllProductMz(PRODUCT_TYPES[Query.spectrum.FragmentationMethod], Query.precursor))
             {
@@ -206,6 +208,7 @@ namespace Trinity
                 }
                 if (bestMz >= 0)
                 {
+                    ProductMatch pMatch = new ProductMatch();
                     pMatch.weight = matchTheo.weight;
                     pMatch.theoMz = matchTheo.theoMz;// Utilities.MZFromMzSingleCharge(theoMass, charge);
                     pMatch.obsMz = bestMz;// experimental_masses[bestIndex];
@@ -234,7 +237,7 @@ namespace Trinity
 			return s;		
         }
 
-        public void Initialize(DBOptions options, IEnumerable<ProductMatch> productMZs, double highestIntensity)
+        public void Initialize(DBOptions options, IEnumerable<ProductMatch> productMZs)
         {
             //List<double> theoretical_product_mz = Peptide.CalculateAllProductMz(PRODUCT_TYPES[Query.spectrum.FragmentationMethod], Query.precursor);
             //TotalProducts = theoretical_product_mz.Count;
@@ -242,7 +245,7 @@ namespace Trinity
             MatchingIntensity   = 0.0;
             double cumulDiff    = 0;
             ProductScore        = 0;
-            AllProductMatches = new GraphML_List<ProductMatch>();
+            GraphML_List<ProductMatch> cumulMatch = new GraphML_List<ProductMatch>();
             MatchingWeightedProducts = 0;
             foreach (ProductMatch match in productMZs)
             {
@@ -250,10 +253,13 @@ namespace Trinity
                 MatchingWeightedProducts  += match.weight;
                 MatchingIntensity += match.obsIntensity;
                 cumulDiff += Math.Abs(match.mass_diff) * match.weight;
-                AllProductMatches.Add(new ProductMatch(match));
+                cumulMatch.Add( match );
+                if (match.obsIntensity > highestFragmentIntensity)
+                    Console.WriteLine("fragment intensity higher than most intense fragment ... should not happen!");
             }
+            AllProductMatches = cumulMatch;
             MatchingProductsFraction    = (double)MatchingWeightedProducts / (double) TotalWeightedProducts;
-            MatchingIntensityFraction   = MatchingIntensity / (double)(highestIntensity * TotalTheoreticalProducts);
+            MatchingIntensityFraction   = MatchingIntensity / (double)(highestFragmentIntensity * TotalTheoreticalProducts);
             if (MatchingIntensityFraction > 1)
                 MatchingIntensityFraction = 1.0;
             ProductScore                = 1.0 - (cumulDiff / (double)(MatchingProducts * options.productMassTolerance.Value));

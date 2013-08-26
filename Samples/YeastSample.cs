@@ -30,8 +30,8 @@ namespace Trinity.UnitTest
             //G:\Thibault\-=Proteomics_Raw_Data=-\ELITE\MAR18_2013\ProjectFile_TestForProPheus.csv";
             Samples Project = new Samples(projectFile, 0);
             DBOptions dbOptions = new DBOptions(fastaFile);
-            dbOptions.precursorMassTolerance = new MassTolerance(8/*8withoutisotopes*/, MassToleranceUnits.ppm);
-            dbOptions.productMassTolerance = new MassTolerance(0.034/*without isotopes*/, MassToleranceUnits.Da);//0.034 is a 60 000 resolution over 2000 range in mz
+            dbOptions.precursorMassTolerance = new MassTolerance(15/*8*//*8withoutisotopes*/, MassToleranceUnits.ppm);
+            dbOptions.productMassTolerance = new MassTolerance(0.1/*0.034*//*without isotopes*/, MassToleranceUnits.Da);//0.034 is a 60 000 resolution over 2000 range in mz
             dbOptions.MaximumPeptideMass = 200000;
             dbOptions.OutputFolder = outputDir;
             ProteaseDictionary proteases = ProteaseDictionary.Instance;
@@ -59,13 +59,12 @@ namespace Trinity.UnitTest
                 varMods.Add(ModificationDictionary.Instance["phosphorylation of T"]);
                 varMods.Add(ModificationDictionary.Instance["phosphorylation of Y"]);//*/
 
-                dbOptions.maximumVariableModificationIsoforms = 2 * (varMods.Count + fixMods.Count);//TODO Evaluate the viability of this parameter
+                dbOptions.maximumVariableModificationIsoforms = 1024;// 2 * (varMods.Count + fixMods.Count);//TODO Evaluate the viability of this parameter
             }
             else
                 dbOptions.maximumVariableModificationIsoforms = 2;
             dbOptions.variableModifications = varMods;
 
-            dbOptions.PSMFalseDiscoveryRate = 0.01;
             dbOptions.addFragmentLoss = false;
             dbOptions.addFragmentMods = false;
             dbOptions.fragments = new Fragments();
@@ -91,7 +90,7 @@ namespace Trinity.UnitTest
             
 
             //MSSearcher.Export(dbOptions.outputFolder + "TESTOptimizedV2_precursors.csv", OptimizerV2.PrecursorOptimizer(tmp.precursors, 0.05));
-            tmp.WriteInfoToConsole(true);
+            tmp.WriteInfoToConsole(false);
             tmp.Export(0.05, "05_");
             tmp.Export(0.02, "02_");
             //UnitTest.Tests.MatchAllFragments(tmp);

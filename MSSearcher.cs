@@ -233,6 +233,26 @@ namespace Trinity
                                 }
             return matches;
         }
+
+        public Peptide ComputeBestPeptide()
+        {
+            Dictionary<Peptide, double> peptides = new Dictionary<Peptide, double>();            
+            foreach (clCondition condition in conditions)
+                foreach (clReplicate replicate in condition.replicates)
+                    foreach (Precursor precursor in replicate.precursors)
+                        foreach (PeptideSpectrumMatch psm in precursor.psms)
+                            if(!peptides.ContainsKey(psm.Peptide))
+                                peptides.Add(psm.Peptide, ProbabilityScore(psm.Peptide));
+            double best = -1;
+            Peptide bestPeptide = null;
+            foreach(Peptide key in peptides.Keys)
+                if (peptides[key] > best || (peptides[key] == best && bestPeptide.Decoy))
+                {
+                    best = peptides[key];
+                    bestPeptide = key;
+                }
+            return bestPeptide;
+        }
         /*
         public PeptideSpectrumMatch OptimizedBestPsm(Peptide peptide, bool checkMods)
         {

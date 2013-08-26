@@ -50,7 +50,7 @@ namespace Trinity
                 this.Peaks = peaks;
                 for (int p = 0; p < peaks.Count; p++)
                 {
-                    if (peaks[p].Intensity > MostIntensePeak)
+                    if (peaks[p].Intensity > this.MostIntensePeak)
                         this.MostIntensePeak = peaks[p].Intensity;
                     this.TotalIntensity += peaks[p].Intensity;
                 }

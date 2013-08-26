@@ -165,31 +165,21 @@ namespace Trinity
         {
             Console.WriteLine("Creating the list of peptide found...");
             Dictionary<string, PeptideMatch> peptideMatches = new Dictionary<string, PeptideMatch>();            
+                        
+            foreach(Cluster cl in clusters)
+            {
+                Peptide pep = cl.ComputeBestPeptide();
 
-            precursors.Sort(Precursor.CompareProbabilityScore);//.DescendingScoreComparison);
-            foreach (Precursor precursor in precursors)
-                foreach(PeptideSpectrumMatch psm in precursor.OptimizedBestPsms())
-                {
-                    string seq = (DiffByMod ? psm.Peptide.Sequence : psm.Peptide.BaseSequence);
-                    if (!peptideMatches.ContainsKey(seq))
-                        peptideMatches.Add(seq, new PeptideMatch(psm.Peptide));
-                    else if (psm.Peptide.Target)
-                        peptideMatches[seq].peptide = psm.Peptide;
-                }
+                string seq = (DiffByMod ? pep.Sequence : pep.BaseSequence);
+                if (!peptideMatches.ContainsKey(seq))
+                    peptideMatches.Add(seq, new PeptideMatch(pep));
+                else if (pep.Target)
+                    peptideMatches[seq].peptide = pep;
 
-            foreach (Cluster cluster in clusters)
-                foreach(PeptideSpectrumMatch psm in cluster.OptimizedBestPsms())
-                {
-                    string seq = (DiffByMod ? psm.Peptide.Sequence : psm.Peptide.BaseSequence);
-                    if(peptideMatches.ContainsKey(seq))
-                        peptideMatches[seq].AddOnlyOnce(cluster);
-                }
+                peptideMatches[seq].AddOnlyOnce(cl);
+            }
 
-            PeptideMatches TotalList = new PeptideMatches();
-            foreach (PeptideMatch match in peptideMatches.Values)
-                if (match.clusters.Count > 0)
-                    TotalList.Add(match);
-            //PeptideMatchess TotalList = new PeptideMatchess(peptideMatches.Values.ToArray<PeptideMatch>());//<PeptideMatch>());
+            PeptideMatches TotalList = new PeptideMatches(peptideMatches.Values);            
             Console.WriteLine(TotalList.Count + " distinct peptides (based on sequence" + (DiffByMod ? " and modifications)" : ")"));
             return TotalList;
         }

@@ -46,7 +46,7 @@ namespace Trinity
                     match.obsMz += pr.Calculate(match.obsMz);
                     match.mass_diff = match.theoMz - match.obsMz;
                 }
-                psm.Initialize(result.dbOptions, psm.AllProductMatches, psm.Query.spectrum.MostIntensePeak);
+                psm.Initialize(result.dbOptions, psm.AllProductMatches);
 
                 foreach (MsMsPeak peak in psm.Query.spectrum.Peaks)
                     peak.MZ += pr.Calculate(peak.MZ);
@@ -115,9 +115,9 @@ namespace Trinity
             double stdev = Numerics.StandardDeviation(errorProduct);
             Console.WriteLine("Computed Product Variance = " + variance + "          STDev = " + stdev);
             if (variance < stdev)
-                variance = stdev * 3;
-            else
-                variance *= 3;
+                variance = stdev;
+            variance = result.dbOptions.productMassTolerance.Value * ((2 * variance) / result.dbOptions.productMassTolerance.Value);
+            result.dbOptions.productMassTolerance.Value = variance;
 
             int nbRemovedProduct = 0;
             foreach (PeptideSpectrumMatch psm in allPSMs)
@@ -134,6 +134,7 @@ namespace Trinity
                 }
                 psm.MatchingProducts = psm.AllProductMatches.Count;
             }
+
             int nbRemovedPSM = 0;
             foreach (Precursor precursor in result.precursors)
             {
@@ -143,13 +144,12 @@ namespace Trinity
                         precursor.psms.RemoveAt(i);
                     else
                     {
-                        precursor.psms[i].Initialize(result.dbOptions, precursor.psms[i].AllProductMatches, precursor.psms[i].Query.spectrum.MostIntensePeak);
+                        precursor.psms[i].Initialize(result.dbOptions, precursor.psms[i].AllProductMatches);
                         i++;
                     }
                 }
             }
             result.SetPrecursors(result.precursors);
-            result.dbOptions.productMassTolerance.Value = variance;
             Console.WriteLine("Removed " + nbRemovedProduct + " [" + nbRemovedPSM + " removed PSMs] Fragment matches outside the variance [" + variance + "]");
         }
 
@@ -171,9 +171,8 @@ namespace Trinity
             double stdev    = Numerics.StandardDeviation(errorPrecursor);
             Console.WriteLine("Computed Precursor Variance = " + variance + "          STDev = " + stdev);
             if (variance < stdev)
-                variance = stdev * 3;
-            else
-                variance *= 3;
+                variance = stdev;
+            variance = result.dbOptions.precursorMassTolerance.Value * ((2 * variance) / result.dbOptions.precursorMassTolerance.Value);
 
             int nbRemovedPSM = 0;
             foreach (Precursor precursor in result.precursors)

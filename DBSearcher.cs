@@ -38,10 +38,10 @@ namespace Trinity
 
                 if (psmsOfQuery.Count < 32)
                     psmsOfQuery.Add(psm);
-                else if (psmsOfQuery[31].ProbabilityScore() < psm.ProbabilityScore())
+                else if (psmsOfQuery[31].MatchingProducts < psm.MatchingProducts)
                 {
                     for (int i = 0; i < psmsOfQuery.Count; i++)
-                        if (psmsOfQuery[i].ProbabilityScore() <= psm.ProbabilityScore())
+                        if (psmsOfQuery[i].MatchingProducts <= psm.MatchingProducts)
                         {
                             psmsOfQuery.Insert(i, psm);
                             break;
