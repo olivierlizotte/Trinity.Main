@@ -98,10 +98,11 @@
     <Compile Include="Morpheus\Modification.cs" />
     <Compile Include="Morpheus\ModificationDictionary.cs" />
     <Compile Include="Morpheus\ModificationType.cs" />
+    <Compile Include="Samples\NBSample.cs" />
     <Compile Include="Structures\MsMsPeak.cs" />
     <Compile Include="MSSearcher.cs" />
     <Compile Include="Structures\Peptide.cs" />
-    <Compile Include="Structures\PeptideMatchess.cs" />
+    <Compile Include="Structures\PeptideMatches.cs" />
     <Compile Include="PeptideSearcher.cs" />
     <Compile Include="Structures\PeptideSpectrumMatch.cs" />
     <Compile Include="Structures\PeptideSpectrumMatches.cs" />

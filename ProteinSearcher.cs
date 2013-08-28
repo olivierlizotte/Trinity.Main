@@ -21,7 +21,7 @@ namespace Trinity
         public ProteinGroupMatches(IEnumerable<ProteinGroupMatch> list) : base(list) { }
         public ProteinGroupMatches() { }
         private FDRizer<ProteinGroupMatch> uptimizer;
-        public List<ProteinGroupMatch> ComputeAtFDR(double desired_fdr, bool displayValues = true)
+        public List<ProteinGroupMatch> ComputeAtFDR(double desired_fdr, bool displayValues = false)
         {
             if (uptimizer == null)
             {
@@ -63,11 +63,11 @@ namespace Trinity
         {
             get
             {
-                int nbDecoy = 0;
+                bool onlyDecoy = true;
                 foreach (PeptideMatch match in PeptideMatches)//Is this method adequate? SummedScore comparison?
-                    if (match.Decoy)
-                        nbDecoy++;
-                return nbDecoy > PeptideMatches.Count - nbDecoy;
+                    if (match.Target)
+                        onlyDecoy = false;
+                return onlyDecoy;
             }
         }
 
@@ -182,92 +182,70 @@ namespace Trinity
     public class ProteinSearcher
     {
         DBOptions options;
-        Dictionary<string, List<Protein>> DicOfProteins;
 
-        public ProteinSearcher(DBOptions options, Dictionary<string, List<Protein>> dicOfProteins)
+        public ProteinSearcher(DBOptions options)
         {
             this.options = options;
-            this.DicOfProteins = dicOfProteins;
         }
 
-        public ProteinGroupMatches SearchLatest(List<PeptideMatch> peptides, List<Protein> AllProteins)// Dictionary<string, List<Protein>> dicOfPeptides)
+        public ProteinGroupMatches SearchLatest(List<PeptideMatch> peptides, System.Collections.Concurrent.ConcurrentDictionary<string, List<Protein>> dicOfProteins)//, List<Protein> AllProteins)// Dictionary<string, List<Protein>> dicOfPeptides)
         {
-            Dictionary<string, ProteinGroupMatch> peptide_proteins;
-            Console.WriteLine("Creating list of proteins ... ");
-            peptide_proteins = new Dictionary<string, ProteinGroupMatch>();
-            foreach (PeptideMatch match in peptides)
-            {
-                if (!peptide_proteins.ContainsKey(match.peptide.BaseSequence))
-                    peptide_proteins.Add(match.peptide.BaseSequence, new ProteinGroupMatch());
+            Dictionary<string, PeptideMatch> dicOfPeptideMatches = new Dictionary<string,PeptideMatch>();
+            foreach(PeptideMatch match in peptides)
+                dicOfPeptideMatches.Add(match.peptide.BaseSequence, match);
 
-                peptide_proteins[match.peptide.BaseSequence].PeptideMatches.Add(match);
+            Dictionary<Protein, List<string>> allPossibleProteins = new Dictionary<Protein, List<string>>();
+            foreach (string peptideSequence in dicOfProteins.Keys)
+            {
+                foreach (Protein protein in dicOfProteins[peptideSequence])
+                {
+                    if (!allPossibleProteins.ContainsKey(protein))
+                        allPossibleProteins.Add(protein, new List<string>());
+                    allPossibleProteins[protein].Add(peptideSequence);
+                }
             }
 
-            ProteinGroupMatches protein_groups = new ProteinGroupMatches(peptide_proteins.Values);//proteins_by_description.Values);
-            protein_groups.Sort(ProteinGroupMatch.DescendingProbabilityScore);
-
-            Console.WriteLine("Found " + protein_groups.Count + " proteins.");
             Console.WriteLine("Merging undistinguishable proteins...");
-            // merge indistinguishable proteins
-            for (int i = 0; i < protein_groups.Count - 1; i++)
+
+            foreach(Protein protein in allPossibleProteins.Keys)
+                allPossibleProteins[protein].Sort();
+
+            //Merge only undistinguishable protein sequences
+            //Dictionary<Protein, List<Protein>> dicOfSimilarProteins = new Dictionary<Protein,List<Protein>>();
+            ProteinGroupMatches proteinMatches = new ProteinGroupMatches();
+            List<Protein> proteins = new List<Protein>(allPossibleProteins.Keys);
+            for(int i = 0; i < proteins.Count; i++)
             {
-                ProteinGroupMatch protein_group = protein_groups[i];
+                ProteinGroupMatch groupMatch = new ProteinGroupMatch();
+                groupMatch.Proteins.Add(proteins[i]);
+                foreach(string sequence in allPossibleProteins[proteins[i]])
+                    if(dicOfPeptideMatches.ContainsKey(sequence))
+                        groupMatch.PeptideMatches.Add(dicOfPeptideMatches[sequence]);
 
-                int j = i + 1;
-                while (j < protein_groups.Count)
+                for(int j = i + 1; j < proteins.Count;)
                 {
-                    ProteinGroupMatch lower_protein_group = protein_groups[j];
-
-                    if (lower_protein_group.ProbabilityScore() < protein_group.ProbabilityScore())
+                    bool isSame = false;
+                    if(allPossibleProteins[proteins[i]].Count == allPossibleProteins[proteins[j]].Count)
                     {
-                        break;
+                        isSame = true;
+                        for(int k = 0; k < allPossibleProteins[proteins[i]].Count; k++)
+                        {
+                            if(allPossibleProteins[proteins[i]][k].CompareTo(allPossibleProteins[proteins[j]][k]) != 0)
+                                isSame = false;
+                        }
                     }
-
-                    if (lower_protein_group.BaseLeucinePeptideSequences.SetEquals(protein_group.BaseLeucinePeptideSequences))
+                    if(isSame)
                     {
-                        protein_group.Proteins.AddRange(lower_protein_group.Proteins);  // should only ever be one protein in the group to add
-                        protein_groups.RemoveAt(j);
+                        proteins.RemoveAt(j);
+                        groupMatch.Proteins.Add(proteins[j]);
                     }
                     else
-                    {
                         j++;
-                    }
                 }
-
-                Console.Write("\r{0}%   ", ((100 * i) / protein_groups.Count));
+                proteinMatches.Add(groupMatch);
             }
-
-            Console.Write("\r{0}%   ", 100);
-
-            //TODO ITS SUPER ULTRA LONG. Shjorten this!
-            // remove subset and subsumable protein groups
-            int k = protein_groups.Count - 1;
-            while (k >= 1)
-            {
-                ProteinGroupMatch protein_group = protein_groups[k];
-                HashSet<string> protein_group_peptides = new HashSet<string>(protein_group.BaseLeucinePeptideSequences);
-
-                for (int l = 0; l < k; l++)
-                {
-                    ProteinGroupMatch higher_protein_group = protein_groups[l];
-
-                    protein_group_peptides.ExceptWith(higher_protein_group.BaseLeucinePeptideSequences);
-                    if (protein_group_peptides.Count == 0)
-                    {
-                        break;
-                    }
-                }
-
-                if (protein_group_peptides.Count == 0)
-                {
-                    protein_groups.RemoveAt(k);
-                }
-                k--;
-            }
-
-            protein_groups.Sort(ProteinGroupMatch.DescendingProbabilityScore);
-            Console.WriteLine("Found " + protein_groups.Count + " protein groups.");
-            return protein_groups;
+            Console.WriteLine("Found " + proteinMatches.Count + " protein groups.");
+            return proteinMatches;
         }
 
         public static void Export(string filename, List<ProteinGroupMatch> proteins)

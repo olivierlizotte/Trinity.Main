@@ -47,7 +47,7 @@ namespace Trinity
             Console.WriteLine("------------------------------------------------------------------------------------------ ");
         }
 
-        public List<Precursor> ComputeAtFDR(double desired_fdr, bool displayValues = true)
+        public List<Precursor> ComputeAtFDR(double desired_fdr, bool displayValues = false)
         {
             if (uptimizer == null)
             {

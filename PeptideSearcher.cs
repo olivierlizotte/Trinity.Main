@@ -58,8 +58,7 @@ namespace Trinity
                 score += (1 - score) * cluster.ProbabilityScore(peptide);
             return score;
         }
-
-
+        
         public double BestPrecursorScore()
         {
             double score = 0;

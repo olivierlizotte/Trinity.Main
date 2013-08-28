@@ -46,7 +46,7 @@ namespace Trinity
         }
 
         private FDRizer<Query> uptimizer;
-        public List<Query> ComputeAtFDR(double desired_fdr, bool displayValues = true)
+        public List<Query> ComputeAtFDR(double desired_fdr, bool displayValues = false)
         {
             if (uptimizer == null)
             {

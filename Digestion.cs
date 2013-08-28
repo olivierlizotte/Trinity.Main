@@ -101,15 +101,17 @@ namespace Trinity
             //double maximumMonoisotopicPeakOffset = dbOptions.precursorMonoisotopicPeakCorrection ? dbOptions.maximumPrecursorMonoisotopicPeakOffset : 0;
             foreach (Peptide peptide in ProteinSearcher.ProteinDigest(options, proteins, allowSNP))
             {
-                int firstIndex = AllQueries.BinarySearch(MassTolerance.MzFloor(peptide.MonoisotopicMass, options.precursorMassTolerance));
-                if (firstIndex >= 0 && firstIndex < AllQueries.Count)
-                    yield return new Tuple<Peptide, int>(peptide, firstIndex);
+                //int firstIndex = AllQueries.BinarySearch(MassTolerance.MzFloor(peptide.MonoisotopicMass, options.precursorMassTolerance));
+                //if (firstIndex >= 0 && firstIndex < AllQueries.Count)
+                //    yield return new Tuple<Peptide, int>(peptide, firstIndex);
+
                 //foreach (Peptide peptide in ProteinSearcher.ProteinDigestNoEnzyme(dbOptions, proteins, AllQueries))
                 //if (!TargetPeptides.Contains(peptide.BaseSequence))
                 //{
                 foreach (Peptide modPeptide in peptide.GetVariablyModifiedPeptides(options.variableModifications, options.maximumVariableModificationIsoforms))
                 {
-                    firstIndex = AllQueries.BinarySearch(MassTolerance.MzFloor(modPeptide.MonoisotopicMass, options.precursorMassTolerance));
+                    modPeptide.SetFixedModifications(options.fixedModifications);
+                    int firstIndex = AllQueries.BinarySearch(MassTolerance.MzFloor(modPeptide.MonoisotopicMass, options.precursorMassTolerance));
                     if (firstIndex >= 0 && firstIndex < AllQueries.Count)
                         yield return new Tuple<Peptide, int>(modPeptide, firstIndex);
                 }

@@ -27,8 +27,7 @@ namespace Trinity
                 //sorts.Add(CompareMatchingProducts);
                 //sorts.Add(CompareMatchingProductsFraction);
                 //sorts.Add(CompareMatchingIntensityFraction);
-                sorts.Add(ComparePeptideScore);
-                sorts.Add(CompareProteinScore);
+         
                 //sorts.Add(CompareProductScore);
                 //                sorts.Add(CompareCumulPrecursorScore);
                 sorts.Add(CompareCumulPrecursorOptimizedScore);
@@ -48,8 +47,7 @@ namespace Trinity
                 //sorts.Add(CompareMatchingProducts);
                 //sorts.Add(CompareMatchingProductsFraction);
                 //sorts.Add(CompareMatchingIntensityFraction);
-                sorts.Add(ComparePeptideScore);
-                sorts.Add(CompareProteinScore);
+         
                 //sorts.Add(CompareProductScore);
 //                sorts.Add(CompareCumulPrecursorScore);
                 sorts.Add(CompareCumulPrecursorOptimizedScore);
@@ -63,8 +61,8 @@ namespace Trinity
             else
                 uptimizer2.ReStart();
 
-            List<PeptideMatch> fdrList = uptimizer.Launch(desired_fdr, true);
-            List<PeptideMatch> fdrList2 = uptimizer2.Launch(desired_fdr, true);
+            List<PeptideMatch> fdrList = uptimizer.Launch(desired_fdr);
+            List<PeptideMatch> fdrList2 = uptimizer2.Launch(desired_fdr);
 
             if (fdrList.Count < fdrList2.Count)
                 return fdrList2;
@@ -89,14 +87,6 @@ namespace Trinity
         public static int CompareMatchingIntensityFraction(PeptideMatch left, PeptideMatch right)
         {
             return -left.BestPrecursor().OptimizedBestPsm(left.peptide).MatchingIntensityFraction.CompareTo(right.BestPrecursor().OptimizedBestPsm(right.peptide).MatchingIntensityFraction);
-        }
-        public static int ComparePeptideScore(PeptideMatch left, PeptideMatch right)
-        {
-            return -left.BestPrecursor().OptimizedBestPsm(left.peptide).PeptideScore.CompareTo(right.BestPrecursor().OptimizedBestPsm(right.peptide).PeptideScore);
-        }
-        public static int CompareProteinScore(PeptideMatch left, PeptideMatch right)
-        {
-            return -left.BestPrecursor().OptimizedBestPsm(left.peptide).ProteinScore.CompareTo(right.BestPrecursor().OptimizedBestPsm(right.peptide).ProteinScore);
         }
         public static int CompareProductScore(PeptideMatch left, PeptideMatch right)
         {

@@ -91,9 +91,9 @@ namespace Trinity.UnitTest
                 Propheus propheus = new Propheus(result.dbOptions, Project);
                 propheus.Load(result);
                 //*/
-                Result tmp = propheus.SearchLatestVersion(result.queries);//, 1.0, false, false, null);                
+                Result tmp = propheus.SearchLatestVersion(result.queries, true);//, 1.0, false, false, null);                
                 
-                tmp.WriteInfoToConsole(true);
+                tmp.WriteInfoToCsv(true);
 
                 tmp.Export(0.05, "05_");
                 tmp.Export(0.02, "02_");

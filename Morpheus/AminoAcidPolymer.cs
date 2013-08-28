@@ -368,7 +368,7 @@ namespace Trinity
 
                 for(int r = 0; r < Length; r++)
                 {
-                    if(fixed_modification.Type == ModificationType.AminoAcidResidue && this[r] == fixed_modification.AminoAcid)
+                    if(fixed_modification.Type == ModificationType.AminoAcidResidue && this[r] == fixed_modification.AminoAcid && !variableModifications.ContainsKey(r + 2))
                     {
                         List<Modification> residue_fixed_mods;
                         if(!this.fixedModifications.TryGetValue(r + 2, out residue_fixed_mods))

@@ -73,9 +73,9 @@ namespace Trinity.UnitTest
                 foreach(Sample s in propheus.AllSpectras.Keys)
                     propheus.AllSpectras[s].tracks.Export(outputDir + vsCSV.GetFileName(s.sSDF) + "_Tracks.csv");
 
-                Result tmp = propheus.SearchLatestVersion(propheus.AllQueries);//, 1.0, false, false, null);
+                Result tmp = propheus.SearchLatestVersion(propheus.AllQueries, true);//, 1.0, false, false, null);
 
-                tmp.WriteInfoToConsole(true);
+                tmp.WriteInfoToCsv(true);
 
                 tmp.Export(0.05, "05_");
                 tmp.Export(0.02, "02_");

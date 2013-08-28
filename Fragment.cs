@@ -154,6 +154,10 @@ namespace Trinity
                     match.charge = c;
                     foreach (FragmentClass fragment in this)
                     {
+                        if(fragment.IsReverse)
+                            match.fragmentPos = 1 + sequence.Length - r;
+                        else
+                            match.fragmentPos = r;
                         match.fragment = fragment.Name;
                         foreach (double product_mass in fragment.ComputeFragment(cumulativeCTerminalMass, cumulativeNTerminalMass))
                         {

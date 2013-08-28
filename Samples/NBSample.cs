@@ -11,41 +11,41 @@ using Proteomics.Utilities;
 
 namespace Trinity.UnitTest
 {
-    public class YeastSample
+    public class NBSample
     {
         public static void Launch(bool restrain = false)
         {
             //@"G:\Thibault\Olivier\MnR\Databases\BD_RefGenome_WithReverse_2012-06-20.fasta";                        
             //Trypsin
 
-            string outputDir = @"C:\_IRIC\DATA\Test\testYeast\";
-            string fastaFile = @"C:\_IRIC\DATA\Yeast\Yeast_SwissProt.fasta";//Yeast
+            string outputDir = @"G:\Thibault\-=Proteomics_Raw_Data=-\ELITE\FEB13_2013\MSMS files\Trinity_Output\";
+            string fastaFile = @"G:\Thibault\-=Proteomics_Raw_Data=-\ELITE\FEB13_2013\MSMS files\Peptide.fasta";//Yeast
             //@"G:\Thibault\Olivier\MQ_vs_Morpheus\Yeast_SwissProt.fasta";//Yeast
             //@"G:\Thibault\Olivier\Databases\SProHNoIso_20130430\current\sequences_2013-05-30.fa";
             //G:\Thibault\Olivier\MnR\Databases\mini_human_reference_2013-26-03.fasta";//Yeast
-            string projectFile = @"C:\_IRIC\DATA\Yeast\project.csv";//Yeast
+            string projectFile = @"G:\Thibault\-=Proteomics_Raw_Data=-\ELITE\FEB13_2013\MSMS files\Project_4.csv";//Yeast
             //@"G:\Thibault\Olivier\MQ_vs_Morpheus\project.csv";//Yeast
             //@"G:\Thibault\-=Proteomics_Raw_Data=-\ELITE\JAN22_2013\_Project_FL_Single.csv";
             //G:\Thibault\-=Proteomics_Raw_Data=-\ELITE\JUN27_2012\MR 4Rep DS\MassSense\_Test_ProjectFile_MF3.csv";
             //G:\Thibault\-=Proteomics_Raw_Data=-\ELITE\MAR18_2013\ProjectFile_TestForProPheus.csv";
             Samples Project = new Samples(projectFile, 0);
             DBOptions dbOptions = new DBOptions(fastaFile);
-            dbOptions.precursorMassTolerance = new MassTolerance(15/*8*//*8withoutisotopes*/, MassToleranceUnits.ppm);
-            dbOptions.productMassTolerance = new MassTolerance(0.1/*0.034*//*without isotopes*/, MassToleranceUnits.Da);//0.034 is a 60 000 resolution over 2000 range in mz
+            dbOptions.precursorMassTolerance = new MassTolerance(30/*8*//*8withoutisotopes*/, MassToleranceUnits.ppm);
+            dbOptions.productMassTolerance = new MassTolerance(0.05/*0.034*//*without isotopes*/, MassToleranceUnits.Da);//0.034 is a 60 000 resolution over 2000 range in mz
             dbOptions.MaximumPeptideMass = 200000;
             dbOptions.OutputFolder = outputDir;
             ProteaseDictionary proteases = ProteaseDictionary.Instance;
-            dbOptions.DigestionEnzyme = proteases["trypsin (no proline rule)"];//"no enzyme"];
+            dbOptions.DigestionEnzyme = proteases["no enzyme"];//trypsin (no proline rule)"];
             dbOptions.NoEnzymeSearch = false;// true;
             dbOptions.DecoyFusion = false;
 
             //dbOptions.protease = proteases["trypsin (no proline rule)"];
-            dbOptions.ToleratedMissedCleavages = 2;
+            dbOptions.ToleratedMissedCleavages = 200;// 2;
             dbOptions.MinimumPeptideLength = 5;
             dbOptions.MaximumPeptideLength = 300;
 
             GraphML_List<Modification> fixMods = new GraphML_List<Modification>();
-            fixMods.Add(ModificationDictionary.Instance["carbamidomethylation of C"]);
+            fixMods.Add(ModificationDictionary.Instance["propionylation of K"]);
             dbOptions.fixedModifications = fixMods;
 
             GraphML_List<Modification> varMods = new GraphML_List<Modification>();
@@ -53,11 +53,7 @@ namespace Trinity.UnitTest
             //Mods for Yeast
             if (!restrain)
             {
-                varMods.Add(ModificationDictionary.Instance["oxidation of M"]);
-                varMods.Add(ModificationDictionary.Instance["acetylation of protein N-terminus"]);
-                varMods.Add(ModificationDictionary.Instance["phosphorylation of S"]);
-                varMods.Add(ModificationDictionary.Instance["phosphorylation of T"]);
-                varMods.Add(ModificationDictionary.Instance["phosphorylation of Y"]);//*/
+                varMods.Add(ModificationDictionary.Instance["acetylation of K"]);
 
                 dbOptions.maximumVariableModificationIsoforms = 1024;// 2 * (varMods.Count + fixMods.Count);//TODO Evaluate the viability of this parameter
             }
@@ -66,14 +62,14 @@ namespace Trinity.UnitTest
             dbOptions.variableModifications = varMods;
 
             dbOptions.addFragmentLoss = false;
-            dbOptions.addFragmentMods = false;
+            dbOptions.addFragmentMods = true;
             dbOptions.fragments = new Fragments();
-            //dbOptions.fragments.Add(new FragmentA());
+            dbOptions.fragments.Add(new FragmentA());
             dbOptions.fragments.Add(new FragmentB());
-            //dbOptions.fragments.Add(new FragmentC());
-            //dbOptions.fragments.Add(new FragmentX());
+            dbOptions.fragments.Add(new FragmentC());
+            dbOptions.fragments.Add(new FragmentX());
             dbOptions.fragments.Add(new FragmentY());
-            //dbOptions.fragments.Add(new FragmentZ());
+            dbOptions.fragments.Add(new FragmentZ());
 
             //ClusterOptions clusterOptions = new ClusterOptions(Project, outputDir, 5, true, 90, true);//TODO validate its in seconds for all file types
             
@@ -91,9 +87,27 @@ namespace Trinity.UnitTest
 
             //MSSearcher.Export(dbOptions.outputFolder + "TESTOptimizedV2_precursors.csv", OptimizerV2.PrecursorOptimizer(tmp.precursors, 0.05));
 
-            UnitTest.Tests.MatchAllFragments(tmp); 
+            //UnitTest.Tests.MatchAllFragments(tmp); 
             tmp.WriteInfoToCsv(false);
+                        
+            foreach (Precursor precursor in tmp.matchedPrecursors)
+                foreach (PeptideSpectrumMatch psm in precursor.psms)
+                    if ("GKGGKGLGKGGAKR".CompareTo(psm.Peptide.BaseSequence) == 0)
+                        tmp.ExportFragments(psm);
+            /*
+            double nbMatchingProducts = 0;
+            
+            foreach (Precursor precursor in tmp.matchedPrecursors)
+                foreach (PeptideSpectrumMatch psm in precursor.psms)
+                    if (psm.MatchingProducts > nbMatchingProducts)
+                        nbMatchingProducts = psm.MatchingProducts;
 
+            foreach (Precursor precursor in tmp.matchedPrecursors)
+                foreach (PeptideSpectrumMatch psm in precursor.psms)
+                    if (psm.MatchingProducts == nbMatchingProducts)
+                        tmp.ExportFragments(psm);//*/
+
+            tmp.Export(1, "All_");
             tmp.Export(0.05, "05_");
             tmp.Export(0.02, "02_");
             //tmp.Export(0.05, "05_AllFragments");

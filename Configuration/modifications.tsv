@@ -8,3 +8,5 @@ phosphorylation of Y	amino acid residue	Y	79.96633092	79.979902	none	HPO3
 deamidation of N	amino acid residue	N	0.9840155927	0.98476	none	H-1N-1O
 deamidation of Q	amino acid residue	Q	0.9840155927	0.98476	none	H-1N-1O
 cysteinylation of C	amino acid residue	C	119.0041	119.1442	none	C3H7NO2S
+acetylation of K	amino acid residue	K	42.01056	42.0373	none	C2H2O
+propionylation of K	amino acid residue	K	56.0262147478	56.02	none	C3H5O

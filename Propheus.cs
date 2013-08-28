@@ -147,7 +147,7 @@ namespace Trinity
         /// </summary>
         /// <param name="queries"></param>
         /// <returns></returns>
-        public Result SearchLatestVersion(Queries queries)
+        public Result SearchLatestVersion(Queries queries, bool optimize)
         {
             Result result = new Result();
             result.queries = queries;
@@ -172,32 +172,34 @@ namespace Trinity
                 psm.Query.precursor.psms.Add(psm);
 
             long nbTargets = result.SetPrecursors(result.precursors);
+            Console.WriteLine("Targets before Optimizing Score Ratios : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");
 
-            //Console.WriteLine("Targets before Optimizing Score Ratios : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");
+            if (optimize)
+            {
+                allPSMs.OptimizePSMScoreRatios(dbOptions, dbOptions.PSMFalseDiscoveryRate);
+                result.matchedPrecursors.OptimizePSMScoreRatios(dbOptions, dbOptions.PSMFalseDiscoveryRate);
+                nbTargets = result.SetPrecursors(result.precursors);
+                Console.WriteLine("Targets : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");
+                //*/
+                //TODO Improve alignment results
+                /*
+                Align.AlignPrecursorsByDiff(result, allPSMs);
+                nbTargets = result.SetPrecursors(result.precursors);
+                Console.WriteLine("Targets after precursor alignment : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");
 
-            //allPSMs.OptimizePSMScoreRatios(dbOptions, dbOptions.PSMFalseDiscoveryRate);
-            //result.matchedPrecursors.OptimizePSMScoreRatios(dbOptions, dbOptions.PSMFalseDiscoveryRate);
-            nbTargets = result.SetPrecursors(result.precursors);
-            Console.WriteLine("Targets : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");
-            //*/
-            //TODO Improve alignment results
-            
-            Align.AlignPrecursorsByDiff(result, allPSMs);
-            nbTargets = result.SetPrecursors(result.precursors);
-            Console.WriteLine("Targets after precursor alignment : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");
+                Align.AlignProductsByDiff(result, allPSMs);
+                nbTargets = result.SetPrecursors(result.precursors);
+                Console.WriteLine("Targets after fragment alignment : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");
+                //*/
 
-            Align.AlignProductsByDiff(result, allPSMs);
-            nbTargets = result.SetPrecursors(result.precursors);
-            Console.WriteLine("Targets after fragment alignment : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");
-            //*/
-            
-            Align.CropPrecursors(result, allPSMs);
-            nbTargets = result.SetPrecursors(result.precursors);
-            Console.WriteLine("Targets after croping precursors : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");
+                Align.CropPrecursors(result, allPSMs);
+                nbTargets = result.SetPrecursors(result.precursors);
+                Console.WriteLine("Targets after croping precursors : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");
 
-            Align.CropProducts(result, allPSMs);
-            nbTargets = result.SetPrecursors(result.precursors);
-            Console.WriteLine("Targets after croping fragments : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");
+                Align.CropProducts(result, allPSMs);
+                nbTargets = result.SetPrecursors(result.precursors);
+                Console.WriteLine("Targets after croping fragments : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");
+            }
             //*/
             allPSMs = null;
             long bestTargets = nbTargets;            
@@ -216,17 +218,25 @@ namespace Trinity
             result.peptideSequences = pepSearcher.Search(result.clusters, result.matchedPrecursors, false);
 
             //Step 3 : Regroup based on protein sequences (Morpheus code)
-            ProteinSearcher protSearcher = new ProteinSearcher(dbOptions, dbSearcher.DicOfProteins);
-            result.proteins = protSearcher.SearchLatest(result.peptides, AllProteins);
+            ProteinSearcher protSearcher = new ProteinSearcher(dbOptions);
+            result.proteins = protSearcher.SearchLatest(result.peptideSequences, dbSearcher.DicOfProteins);
 
-            UpdatePsmScores(result.proteins);
-            nbTargets = result.SetPrecursors(result.precursors);
-
-            Console.WriteLine("Targets before Optimizing Score Ratios : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");
-            result.matchedPrecursors.OptimizePSMScoreRatios(dbOptions, dbOptions.PSMFalseDiscoveryRate);            
-            nbTargets = result.SetPrecursors(result.precursors);
-            Console.WriteLine("Targets after ReOptimizing PSM Score Ratios : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");
+            long lastNbTarget = nbTargets;
+            do
+            {
+                lastNbTarget = nbTargets;
+                UpdatePsmScores(result.proteins);
+                nbTargets = result.SetPrecursors(result.precursors);
+            } while (lastNbTarget < nbTargets);
             
+
+            if (optimize)
+            {
+                Console.WriteLine("Targets before Optimizing Score Ratios : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");
+                result.matchedPrecursors.OptimizePSMScoreRatios(dbOptions, dbOptions.PSMFalseDiscoveryRate);
+                nbTargets = result.SetPrecursors(result.precursors);
+                Console.WriteLine("Targets after ReOptimizing PSM Score Ratios : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");
+            }
             //Step 5 : Compute the new number of Targets
             nbTargets = result.SetPrecursors(result.precursors);
             if (nbTargets < bestTargets)

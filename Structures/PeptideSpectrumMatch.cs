@@ -191,9 +191,9 @@ namespace Trinity
 
                 foreach (int index in Query.spectrum.GetIndexOfMZInRange(matchTheo.theoMz, options.productMassTolerance))
                 {
-                    if (peaks[index].Charge == 0 || peaks[index].Charge == matchTheo.charge)
+                    if (peaks[index].Charge <= 0 || peaks[index].Charge == matchTheo.charge)
                     {
-                        double diff = matchTheo.theoMz - peaks[index].MZ;// experimental_masses[index];
+                        double diff = matchTheo.theoMz - peaks[index].MZ;// experimental_masses[index];//TODO DALTON ONLY : add product mass tolerance unit test
                         if (Math.Abs(diff) < options.productMassTolerance.Value)
                         {
                             if (Math.Abs(diff) < Math.Abs(massDiff))//TODO Priority to intensity, or precision?

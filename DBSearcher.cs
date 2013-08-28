@@ -5,6 +5,7 @@
  */
 using System;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -23,31 +24,32 @@ namespace Trinity
             this.options = options;
         }
 
-        public Dictionary<string, List<Protein>> DicOfProteins = new Dictionary<string, List<Protein>>(); 
+        public ConcurrentDictionary<string, List<Protein>> DicOfProteins = new ConcurrentDictionary<string, List<Protein>>();         
         private void ComputePSMs(Query query, Peptide modified_peptide)
         {
             PeptideSpectrumMatch psm = new PeptideSpectrumMatch(query, modified_peptide, options);
 
             if (psm.MatchingProducts > 1)
             {
-                if (!DicOfProteins.ContainsKey(psm.Peptide.BaseSequence))
-                    DicOfProteins.Add(psm.Peptide.BaseSequence, new List<Protein>());
-                DicOfProteins[psm.Peptide.BaseSequence].Add(psm.Peptide.Parent);
+                DicOfProteins.GetOrAdd(psm.Peptide.BaseSequence, new List<Protein>()).Add(psm.Peptide.Parent);
+//                if (!DicOfProteins.ContainsKey(psm.Peptide.BaseSequence))
+//                    DicOfProteins.AddOrUpdate(psm.Peptide.BaseSequence, new List<Protein>());
+//                DicOfProteins[psm.Peptide.BaseSequence].Add(psm.Peptide.Parent);
 
-                List<PeptideSpectrumMatch> psmsOfQuery = query.psms;
+                //List<PeptideSpectrumMatch> psmsOfQuery = query.psms;
 
-                if (psmsOfQuery.Count < 32)
-                    psmsOfQuery.Add(psm);
-                else if (psmsOfQuery[31].MatchingProducts < psm.MatchingProducts)
+                if (query.psms.Count < 32)
+                    query.psms.Add(psm);
+                else if (query.psms[31].MatchingProducts < psm.MatchingProducts)
                 {
-                    for (int i = 0; i < psmsOfQuery.Count; i++)
-                        if (psmsOfQuery[i].MatchingProducts <= psm.MatchingProducts)
+                    for (int i = 0; i < query.psms.Count; i++)
+                        if (query.psms[i].MatchingProducts <= psm.MatchingProducts)
                         {
-                            psmsOfQuery.Insert(i, psm);
+                            query.psms.Insert(i, psm);
                             break;
                         }
-                    if (psmsOfQuery.Count > 32)
-                        psmsOfQuery.RemoveAt(31);
+                    if (query.psms.Count > 32)
+                        query.psms.RemoveAt(31);
                 }//*/
                 //TODO check optimal number of PSM to store
                 /*

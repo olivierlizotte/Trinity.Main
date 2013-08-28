@@ -119,7 +119,7 @@ namespace Trinity
             return nbTarget;
         }
 
-        public void WriteInfoToConsole(bool light = false)
+        public void WriteInfoToCsv(bool light = false)
         {
             int target = 0;
             foreach (Precursor precursor in matchedPrecursors)
@@ -153,7 +153,8 @@ namespace Trinity
 
         public void WriteFragmentation(bool target)
         {
-            Console.WriteLine("  === Fragmentation of " + (target ? "Targets" : "Decoys") + " ===");
+            vsCSVWriter writer = new vsCSVWriter(dbOptions.OutputFolder + "FragmentStats_" + (target ? "Targets" : "Decoy") + ".csv");
+            writer.AddLine("  === Fragmentation of " + (target ? "Targets" : "Decoys") + " ===");
             foreach (FragmentClass fragment in dbOptions.fragments)
             {
                 double cumulIntensity = 0;
@@ -182,8 +183,7 @@ namespace Trinity
                         strPos += "|" + key + ":" + positions[key];
                 else
                     strPos += ",";
-                Console.WriteLine("    " + fragment.Name + ", Number of fragments = , " + nbFrag + ",   Intensity = ," + cumulIntensity);
-                Console.WriteLine("     fragment matched [" + strPos.Substring(1) + "]");
+                writer.AddLine("    " + fragment.Name + ", Number of fragments = , " + nbFrag + ",   Intensity = ," + cumulIntensity + ", fragment matched [" + strPos.Substring(1) + "]");
             }
             foreach (string fragment in FragmentDictionary.Fragments.Keys)
             {
@@ -202,7 +202,7 @@ namespace Trinity
                             }
                     }
                 }
-                Console.WriteLine("    " + fragment + ", Number of fragments = ," + nbFrag + ",   Intensity = ," + cumulIntensity);
+                writer.AddLine("    " + fragment + ", Number of fragments = ," + nbFrag + ",   Intensity = ," + cumulIntensity);
             }
             foreach (string fragment in FragmentDictionary.AAFragments.Keys)
             {
@@ -221,14 +221,228 @@ namespace Trinity
                             }
                     }
                 }
-                Console.WriteLine("    " + fragment + ", Number of fragments = ," + nbFrag + ",   Intensity = ," + cumulIntensity);
+                writer.AddLine("    " + fragment + ", Number of fragments = ," + nbFrag + ",   Intensity = ," + cumulIntensity);
             }
+            writer.writeToFile();
         }
 
         public void Save()
         {
             GraphML graph = new GraphML();
             graph.Export(dbOptions.OutputFolder + "State.GraphML", this);
+        }
+
+        public void ExportFragments(PeptideSpectrumMatch psm)
+        {
+            vsCSVWriter writer = new vsCSVWriter(dbOptions.OutputFolder + psm.Peptide.Sequence + "_" + vsCSV.GetFileName_NoExtension(psm.Query.sample.sSDF) + "_" + psm.Query.precursor.Track.RT + ".csv");
+            List<string> fragments = new List<string>();
+            foreach (string fragment in FragmentDictionary.Fragments.Keys)
+            {
+                bool found = false;
+                foreach (ProductMatch match in dbOptions.fragments.ComputeFragments(psm.Peptide, psm.Query.precursor.Charge, dbOptions))
+                {
+                    if (fragment == match.fragment)
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+                if (found)
+                    fragments.Add(fragment);
+            }
+
+            string title = "Theoretical Fragments";
+            for (int charge = 1; charge <= psm.Query.precursor.Charge; charge++)
+                foreach (FragmentClass fragment in dbOptions.fragments)
+                    title += "," + fragment.Name + " ^" + charge;
+            for (int charge = 1; charge <= psm.Query.precursor.Charge; charge++)
+                foreach (string fragment in fragments)
+                    title += "," + fragment + " ^" + charge;
+            writer.AddLine(title);
+
+            for (int i = 1; i <= psm.Peptide.Length; i++)
+            {
+                string line = i.ToString();
+                for (int charge = 1; charge <= psm.Query.precursor.Charge; charge++)
+                {
+                    foreach (FragmentClass fragment in dbOptions.fragments)
+                    {
+                        bool found = false;
+                        foreach (ProductMatch match in dbOptions.fragments.ComputeFragments(psm.Peptide, psm.Query.precursor.Charge, dbOptions))
+                        {
+                            if (fragment.Name == match.fragment && match.fragmentPos == i && match.charge == charge)
+                            {
+                                line += "," + match.theoMz;
+                                found = true;
+                                break;
+                            }
+                        }
+                        if (!found)
+                            line += ",";
+                    }
+                }
+                for (int charge = 1; charge <= psm.Query.precursor.Charge; charge++)
+                {
+                    foreach (string fragment in fragments)
+                    {
+                        bool found = false;
+                        foreach (ProductMatch match in dbOptions.fragments.ComputeFragments(psm.Peptide, psm.Query.precursor.Charge, dbOptions))
+                        {
+                            if (fragment == match.fragment && match.fragmentPos == i && match.charge == charge)
+                            {
+                                line += "," + match.theoMz;
+                                found = true;
+                                break;
+                            }
+                        }
+                        if (!found)
+                            line += ",";
+                    }
+                }
+                writer.AddLine(line);
+            }
+
+            title = "Observed Fragments Intensities";
+            for (int charge = 1; charge <= psm.Query.precursor.Charge; charge++)
+                foreach (FragmentClass fragment in dbOptions.fragments)
+                    title += "," + fragment.Name + " ^" + charge;
+            for (int charge = 1; charge <= psm.Query.precursor.Charge; charge++)
+                foreach (string fragment in fragments)
+                    title += "," + fragment + " ^" + charge; 
+            writer.AddLine(title);
+
+            for(int i = 1; i <= psm.Peptide.Length; i++)
+            {
+                string line = i.ToString();
+                for (int charge = 1; charge <= psm.Query.precursor.Charge; charge++)
+                {
+                    foreach (FragmentClass fragment in dbOptions.fragments)
+                    {
+                        bool found = false;
+                        foreach (ProductMatch match in psm.AllProductMatches)
+                            if (fragment.Name == match.fragment && match.fragmentPos == i && match.charge == charge)
+                            {
+                                line += "," + match.obsIntensity;
+                                found = true;
+                                break;
+                            }
+                        if (!found)
+                            line += ",";
+                    }
+                }
+                for (int charge = 1; charge <= psm.Query.precursor.Charge; charge++)
+                {
+                    foreach (string fragment in fragments)
+                    {
+                        bool found = false;
+                        foreach (ProductMatch match in psm.AllProductMatches)
+                            if (fragment == match.fragment && match.fragmentPos == i && match.charge == charge)
+                            {
+                                line += "," + match.obsIntensity;
+                                found = true;
+                                break;
+                            }
+                        if (!found)
+                            line += ",";
+                    }
+                }
+                writer.AddLine(line);
+            }
+
+            title = "Observed Fragments Mz";
+            for (int charge = 1; charge <= psm.Query.precursor.Charge; charge++)
+                foreach (FragmentClass fragment in dbOptions.fragments)
+                    title += "," + fragment.Name + " ^" + charge;
+            for (int charge = 1; charge <= psm.Query.precursor.Charge; charge++)
+                foreach (string fragment in fragments)
+                    title += "," + fragment + " ^" + charge;
+            writer.AddLine(title);
+
+            for (int i = 1; i <= psm.Peptide.Length; i++)
+            {
+                string line = i.ToString();
+                for (int charge = 1; charge <= psm.Query.precursor.Charge; charge++)
+                {
+                    foreach (FragmentClass fragment in dbOptions.fragments)
+                    {
+                        bool found = false;
+                        foreach (ProductMatch match in psm.AllProductMatches)
+                            if (fragment.Name == match.fragment && match.fragmentPos == i && match.charge == charge)
+                            {
+                                line += "," + match.obsMz;
+                                found = true;
+                                break;
+                            }
+                        if (!found)
+                            line += ",";
+                    }
+                }
+                for (int charge = 1; charge <= psm.Query.precursor.Charge; charge++)
+                {
+                    foreach (string fragment in fragments)
+                    {
+                        bool found = false;
+                        foreach (ProductMatch match in psm.AllProductMatches)
+                            if (fragment == match.fragment && match.fragmentPos == i && match.charge == charge)
+                            {
+                                line += "," + match.obsMz;
+                                found = true;
+                                break;
+                            }
+                        if (!found)
+                            line += ",";
+                    }
+                }
+                writer.AddLine(line);
+            }
+
+            title = "Error on Fragments";
+            for (int charge = 1; charge <= psm.Query.precursor.Charge; charge++)
+                foreach (FragmentClass fragment in dbOptions.fragments)
+                    title += "," + fragment.Name + " ^" + charge;
+            for (int charge = 1; charge <= psm.Query.precursor.Charge; charge++)
+                foreach (string fragment in fragments)
+                    title += "," + fragment + " ^" + charge;
+            writer.AddLine(title);
+
+            for (int i = 1; i <= psm.Peptide.Length; i++)
+            {
+                string line = i.ToString();
+                for (int charge = 1; charge <= psm.Query.precursor.Charge; charge++)
+                {
+                    foreach (FragmentClass fragment in dbOptions.fragments)
+                    {
+                        bool found = false;
+                        foreach (ProductMatch match in psm.AllProductMatches)
+                            if (fragment.Name == match.fragment && match.fragmentPos == i && match.charge == charge)
+                            {
+                                line += "," + match.mass_diff;
+                                found = true;
+                                break;
+                            }
+                        if (!found)
+                            line += ",";
+                    }
+                }
+                for (int charge = 1; charge <= psm.Query.precursor.Charge; charge++)
+                {
+                    foreach (string fragment in fragments)
+                    {
+                        bool found = false;
+                        foreach (ProductMatch match in psm.AllProductMatches)
+                            if (fragment == match.fragment && match.fragmentPos == i && match.charge == charge)
+                            {
+                                line += "," + match.mass_diff;
+                                found = true;
+                                break;
+                            }
+                        if (!found)
+                            line += ",";
+                    }
+                }
+                writer.AddLine(line);
+            }
+            writer.writeToFile();
         }
 
         public void Export(double fdr, string keyword = "", bool onlyPrecursors = false)

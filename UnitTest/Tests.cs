@@ -44,8 +44,8 @@ namespace Trinity.UnitTest
             ok = Run_ProteinDigestTest(); Console.WriteLine("Protein Digestion test (no-enzyme) : " + (ok ? "OK" : "FAILED"));              failed += ok ? 0 : 1;
             ok = NoEnzymeDigestUnitTest.Run(); Console.WriteLine("Protein Digestion test (no-enzyme) : " + (ok ? "OK" : "FAILED")); failed += ok ? 0 : 1;
 
-            //PushRelabelMaximumFlow ps = new PushRelabelMaximumFlow();
-            //ps.test();
+            PushRelabelMaximumFlow ps = new PushRelabelMaximumFlow();
+            ps.test();
             //FordFulkerson ff = new FordFulkerson();
             //ff.Optimize();
 
@@ -60,7 +60,7 @@ namespace Trinity.UnitTest
             list.Add(item);
         }
 
-        public static void DrownCatPeptidesWithAllProteins()
+        public static void YangLiuPeptidesWithAllProteins()
         {
             //vsCSV csvPeptides = new vsCSV(@"G:\Thibault\-=Proteomics_Raw_Data=-\ELITE\DEC18_2012\DMatton\Clustering_186716\Identifications.csv");
             vsCSV csvPeptides = new vsCSV(@"G:\Thibault\-=Proteomics_Raw_Data=-\ELITE\DEC18_2012\DMatton\Clustering_186716\Cluster_Intensity_peptides_NormP.csv");
@@ -136,7 +136,7 @@ namespace Trinity.UnitTest
 
         /*
          * Too long
-        public static void DrownCatPeptidesWithAllProteins()
+        public static void YangLiuPeptidesWithAllProteins()
         {            
             vsCSV csvPeptides = new vsCSV(@"G:\Thibault\-=Proteomics_Raw_Data=-\ELITE\DEC18_2012\DMatton\Clustering_186716\Cluster_Intensity_peptides_NormP.csv");
             vsCSVWriter writer = new vsCSVWriter(@"G:\Thibault\-=Proteomics_Raw_Data=-\ELITE\DEC18_2012\DMatton\Clustering_186716\ProteinsPerPeptidesFromDatabases.csv");
@@ -178,7 +178,7 @@ namespace Trinity.UnitTest
         }//*/
         /*
          * Only one protein returned by Mascot ... so the list of protein is always of length one
-        public static void DrownCatPeptidesWithAllProteins()
+        public static void YangLiuPeptidesWithAllProteins()
         {
             vsCSV csvIDs = new vsCSV(@"G:\Thibault\-=Proteomics_Raw_Data=-\ELITE\DEC18_2012\DMatton\Clustering_186716\AllProteinPerPeptides.csv");
             //vsCSV csvPeptides = new vsCSV(@"G:\Thibault\-=Proteomics_Raw_Data=-\ELITE\DEC18_2012\DMatton\Clustering_186716\Cluster_Intensity_peptides_NormP.csv");
@@ -260,7 +260,7 @@ namespace Trinity.UnitTest
                 precursor.psms = new PeptideSpectrumMatches();// GraphML_List<PeptideSpectrumMatch>();
                 precursor.psms.Add(psmNew);
             }
-            rez.WriteInfoToConsole();
+            rez.WriteInfoToCsv();
             rez.Export(0.05, "05_AllFragments", true);
             Console.WriteLine("   ****************** All fragments added to best psms ********************   ");
             Console.WriteLine("   ************************************************************************   ");
