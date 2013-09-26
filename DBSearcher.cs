@@ -118,6 +118,8 @@ namespace Trinity
             //Push PSMs to Precursor
             foreach (Query query in queries)
             {
+                query.precursor.psms_AllPossibilities.AddRange(query.psms);//No MERGE
+                /*
                 //Push PSMs to precursors
                 if (query.precursor.psms_AllPossibilities.Count == 0)
                     query.precursor.psms_AllPossibilities.AddRange(query.psms);
@@ -141,7 +143,6 @@ namespace Trinity
                     }
                 }//*/
             }
-            //Remove bad PSMs
             //PeptideSpectrumMatches allPsms = new PeptideSpectrumMatches();
             int nbAssignedPrecursor = 0;
             foreach (Precursor precursor in queries.Precursors)

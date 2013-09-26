@@ -17,8 +17,62 @@ namespace Trinity
         public PeptideSpectrumMatches() { }
         public PeptideSpectrumMatches(IEnumerable<PeptideSpectrumMatch> list) : base(list) { }
 
-        public void OptimizePSMScoreRatios(DBOptions options, double desired_fdr)
+        public void OptimizePSMScoreRatios(DBOptions options, double desired_fdr, Result results)
         {
+            long bestNbTargets = 0;
+            double bestProtein = 0.1;
+            double bestPeptide = 0.2;
+            double bestFragments = 0.4;
+            double bestIntensities = 0.1;
+            double bestPrecursor = 0.2;
+
+            double incr = 0.05;
+            for (options.dProtein = 0.1; options.dProtein < 0.3; options.dProtein += incr)
+                for (options.dPeptideScore = 0.1; options.dPeptideScore < 0.4; options.dPeptideScore += incr)
+                    for (options.dPrecursor = 0.1; options.dPrecursor < 0.5; options.dPrecursor += incr)
+                        for (options.dMatchingProductFraction = 0.1; options.dMatchingProductFraction < 1 - options.dPrecursor - options.dPeptideScore - options.dProtein; options.dMatchingProductFraction += incr)
+                        {
+                            double cumul = options.dPrecursor + options.dPeptideScore + options.dProtein + options.dMatchingProductFraction;
+                            for (options.dIntensityFraction = 0.1; options.dIntensityFraction < 1 - cumul; options.dIntensityFraction += incr)
+                            {
+                                if (cumul + options.dIntensityFraction == 1)
+                                {
+                                    long nbTargets = 0;
+                                    foreach (Precursor precursor in results.matchedPrecursors)
+                                        if (precursor.Target)
+                                            nbTargets++;
+                                    if (nbTargets > bestNbTargets)
+                                    {
+                                        bestNbTargets = nbTargets;
+                                        bestProtein = options.dProtein;
+                                        bestPeptide = options.dPeptideScore;
+                                        bestPrecursor = options.dPrecursor;
+                                        bestIntensities = options.dIntensityFraction;
+                                        bestFragments = options.dMatchingProductFraction;
+                                    }
+                                }
+                            }
+
+                        }
+
+            options.dProtein = bestProtein;
+            options.dPeptideScore = bestPeptide;
+            options.dPrecursor = bestPrecursor;
+            options.dIntensityFraction = bestIntensities;
+            options.dMatchingProductFraction = bestFragments;
+            
+            Console.WriteLine("New score ratios   ----------------------------------------------------------------------- ");
+            Console.WriteLine("    PeptideSpectrumMatch.dPrecursor:                     " + options.dPrecursor);
+            Console.WriteLine("    PeptideSpectrumMatch.dMatchingProductFraction:       " + options.dMatchingProductFraction);
+            Console.WriteLine("    PeptideSpectrumMatch.dIntensityFraction:             " + options.dIntensityFraction);
+            Console.WriteLine("    PeptideSpectrumMatch.dPeptideScore:                  " + options.dPeptideScore);
+            Console.WriteLine("    PeptideSpectrumMatch.dProtein:                       " + options.dProtein);
+            Console.WriteLine("------------------------------------------------------------------------------------------ ");
+        }
+
+        public void OptimizePSMScoreRatios_PREVIOUSVersion(DBOptions options, double desired_fdr)
+        {
+            //TODO find a Max flow approach to modelize the score optimization routine to maximize Targets versus Decoys
             List<PeptideSpectrumMatch> sortedPrecursorPrecision = new List<PeptideSpectrumMatch>(this);
             sortedPrecursorPrecision.Sort(PeptideSpectrumMatches.ComparePrecursorScore);
             double ratioPrecursorPrecision = FDRizer<PeptideSpectrumMatch>.ComputeAtFDR(sortedPrecursorPrecision, desired_fdr).Count / (double)this.Count;
@@ -36,10 +90,21 @@ namespace Trinity
             double ratioPeptideScore = FDRizer<PeptideSpectrumMatch>.ComputeAtFDR(sortedPeptides, desired_fdr).Count / (double)this.Count;
 
             double totalRatios = ratioPrecursorPrecision + ratioFragments + ratioIntensities + ratioPeptideScore;
-            options.dPrecursor                 = ratioPrecursorPrecision   / totalRatios;
-            options.dMatchingProductFraction   = ratioFragments            / totalRatios;
-            options.dIntensityFraction         = ratioIntensities          / totalRatios;
-            options.dPeptideScore              = ratioPeptideScore         / totalRatios;
+            options.dPrecursor += ratioPrecursorPrecision / totalRatios;
+            options.dMatchingProductFraction += ratioFragments / totalRatios;
+            options.dIntensityFraction += ratioIntensities / totalRatios;
+            options.dPeptideScore += ratioPeptideScore / totalRatios;
+
+            double somme = options.dPrecursor + options.dMatchingProductFraction + options.dIntensityFraction + options.dPeptideScore;
+            options.dPrecursor /= somme;
+            options.dMatchingProductFraction /= somme;
+            options.dIntensityFraction /= somme;
+            options.dPeptideScore /= somme;
+
+            //options.dPrecursor                 = ratioPrecursorPrecision   / totalRatios;
+            //options.dMatchingProductFraction   = ratioFragments            / totalRatios;
+            //options.dIntensityFraction         = ratioIntensities          / totalRatios;
+            //options.dPeptideScore              = ratioPeptideScore         / totalRatios;
             Console.WriteLine("New score ratios  [" + totalRatios + " total ratios] ------------------------------------- ");
             Console.WriteLine("    PeptideSpectrumMatch.dPrecursor:                     " + options.dPrecursor);
             Console.WriteLine("    PeptideSpectrumMatch.dMatchingProductFraction:       " + options.dMatchingProductFraction);

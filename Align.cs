@@ -101,7 +101,8 @@ namespace Trinity
         /// </summary>
         /// <param name="result"></param>
         /// <param name="allPSMs"></param>
-        public static void CropProducts(Result result, PeptideSpectrumMatches allPSMs)
+        /// <returns>Returns the newly computed Fragment/Product tolerance</returns>
+        public static double CropProducts(Result result, PeptideSpectrumMatches allPSMs)
         {
             List<double> errorProduct = new List<double>(result.precursors.Count);
             foreach (Precursor precursor in result.matchedPrecursors)
@@ -116,8 +117,7 @@ namespace Trinity
             Console.WriteLine("Computed Product Variance = " + variance + "          STDev = " + stdev);
             if (variance < stdev)
                 variance = stdev;
-            variance = result.dbOptions.productMassTolerance.Value * ((2 * variance) / result.dbOptions.productMassTolerance.Value);
-            result.dbOptions.productMassTolerance.Value = variance;
+            //variance = result.dbOptions.productMassTolerance.Value * ((2 * variance) / result.dbOptions.productMassTolerance.Value);            
 
             int nbRemovedProduct = 0;
             foreach (PeptideSpectrumMatch psm in allPSMs)
@@ -148,9 +148,9 @@ namespace Trinity
                         i++;
                     }
                 }
-            }
-            result.SetPrecursors(result.precursors);
+            }            
             Console.WriteLine("Removed " + nbRemovedProduct + " [" + nbRemovedPSM + " removed PSMs] Fragment matches outside the variance [" + variance + "]");
+            return variance;
         }
 
         /// <summary>
@@ -158,7 +158,8 @@ namespace Trinity
         /// </summary>
         /// <param name="result"></param>
         /// <param name="allPSMs"></param>
-        public static void CropPrecursors(Result result, PeptideSpectrumMatches allPSMs)
+        /// <returns>Returns the newly computed Precursor tolerance</returns>
+        public static double CropPrecursors(Result result, PeptideSpectrumMatches allPSMs)
         {
             List<double> errorPrecursor = new List<double>(result.precursors.Count);
             foreach (Precursor precursor in result.matchedPrecursors)
@@ -172,7 +173,7 @@ namespace Trinity
             Console.WriteLine("Computed Precursor Variance = " + variance + "          STDev = " + stdev);
             if (variance < stdev)
                 variance = stdev;
-            variance = result.dbOptions.precursorMassTolerance.Value * ((2 * variance) / result.dbOptions.precursorMassTolerance.Value);
+            //variance = result.dbOptions.precursorMassTolerance.Value * ((2 * variance) / result.dbOptions.precursorMassTolerance.Value);
 
             int nbRemovedPSM = 0;
             foreach (Precursor precursor in result.precursors)
@@ -190,9 +191,8 @@ namespace Trinity
                         i++;
                 }
             }
-            result.dbOptions.precursorMassTolerance.Value = variance;
-            result.SetPrecursors(result.precursors);
             Console.WriteLine("Removed " + nbRemovedPSM + " [" + allPSMs.Count + " remaining] Peptide Spectrum matches outside the variance [" + variance + "]");
+            return variance;
         }
     }
 }

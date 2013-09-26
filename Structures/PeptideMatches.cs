@@ -112,6 +112,10 @@ namespace Trinity
         {
             return -left.ProbabilityScore().CompareTo(right.ProbabilityScore());
         }
+        public static int CompareScoreDescending(PeptideMatch left, PeptideMatch right)
+        {
+            return left.ProbabilityScore().CompareTo(right.ProbabilityScore());
+        }
         public static int CompareNbCluster(PeptideMatch left, PeptideMatch right)
         {
             return -left.clusters.Count.CompareTo(right.clusters.Count);

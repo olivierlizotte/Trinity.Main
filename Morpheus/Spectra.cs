@@ -129,7 +129,7 @@ namespace Trinity
                 //Spectrum
                 pwiz.CLI.msdata.Spectrum mySpec = msFile.run.spectrumList.spectrum(i, false);
 
-                if (mySpec.precursors.Count != 0)//is an MSMS
+                if (mySpec.precursors.Count > 0 || mySpec.cvParam(pwiz.CLI.cv.CVID.MS_ms_level).value > 1)//is an MSMS
                 {
                     pwiz.CLI.msdata.Spectrum spec = msFile.run.spectrumList.spectrum(i, true);
 
@@ -137,7 +137,7 @@ namespace Trinity
 
                     //List precursors and their intensities
                     double precursor_mz = 0;//Is there a value for the time a scan took to complete?
-                    int charge = 0;
+                    int charge = 2;
                     double precursor_intensity = 0;
                     string fragmentation_method = "unknown";
                     double isolationWindow = 1.0;
@@ -153,7 +153,10 @@ namespace Trinity
                         {
                             //Cycle through MS to get real precursor intensities
                             precursor_mz = ion.cvParams[0].value;
-                            charge = (int)ion.cvParams[1].value;
+                            if (ion.cvParams.Count > 1)
+                                charge = (int)ion.cvParams[1].value;
+                            //else
+                            //    Console.WriteLine("No charge computed for precursor ");
                             if (ion.cvParams.Count > 2)
                                 precursor_intensity = ion.cvParams[2].value;
                         }
@@ -293,7 +296,10 @@ namespace Trinity
                 }
             }//*/
 
-            spectra.tracks = ComputeSpectraTracks(spectra, options, mzMlFilepath, 3, 1, 3, 1.7, MaxQuant.CentroidPosition.weightedMean);            
+            if (spectra.MS1s.Count > 0)
+                spectra.tracks = ComputeSpectraTracks(spectra, options, mzMlFilepath, 3, 1, 3, 1.7, MaxQuant.CentroidPosition.weightedMean);
+            else
+                spectra.tracks = new Tracks();
             spectra.tracks.Sort(Tracks.AscendingPrecursorMassComparison);
             Console.Write("\r{0}%   ", 100);
 
@@ -320,7 +326,7 @@ namespace Trinity
                                             missingScan,//*1-2-3-4-5
                                             centroid,//*1-2-3-4-5-6-7-8-9-10
                                             centroidMethod,//*
-                                            false, 0, options.precursorMassTolerance.Value * 0.5,//TODO ensure its always in ppm
+                                            false, 0, options.precursorMassTolerance.Value,//TODO ensure its always in ppm
                                             minPeaks,//*1-2-3-4-5-6-7-8-9-10
                                             valleyFactor,//*0.1-0.2-0.3-...-3.0
                                             true,

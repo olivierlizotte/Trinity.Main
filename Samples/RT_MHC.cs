@@ -11,16 +11,17 @@ using Proteomics.Utilities;
 
 namespace Trinity.UnitTest
 {
-    public class SettePeptideSample
+    public class RT_MHC
     {
         public static void Launch()//Trinity.UnitTest.SettePeptideSample.Launch()
         {
             try
             {       
-                string outputDir = @"C:\_IRIC\DATA\Test\testMHCSette\";
+                string outputDir = @"C:\_IRIC\DATA\Test\testRTMHC\";
                 string fastaFile = @"C:\_IRIC\DATA\MHC Sette\MHC_Sette_Peptides_20091001.fasta";
-                string projectFile = @"G:\Thibault\-=Proteomics_Raw_Data=-\ELITE\JUL03_2013\ProjectFile_SETTEpep_OneRAW.csv"; 
-
+                string projectFile = //@"G:\Thibault\-=Proteomics_Raw_Data=-\ELITE\AUG06_2013\RT_MHC\Project_TEST_600mM.csv"; 
+                    @"G:\Thibault\-=Proteomics_Raw_Data=-\ELITE\MAR26_2013\Project_NonFAIMS.csv";
+                    //                 @"G:\Thibault\-=Proteomics_Raw_Data=-\ELITE\SEP10_2013\Project_TEST_75_100_300mM.csv";
                 Samples Project = new Samples(projectFile, 0);
                 DBOptions dbOptions = new DBOptions(fastaFile);
                 dbOptions.precursorMassTolerance = new MassTolerance(5, MassToleranceUnits.ppm);
@@ -53,57 +54,17 @@ namespace Trinity.UnitTest
                 dbOptions.addFragmentMods = false;
                 dbOptions.addFragmentLoss = false;
                 dbOptions.fragments = new Fragments();
-//                dbOptions.fragments.Add(new FragmentA());
                 dbOptions.fragments.Add(new FragmentB());
-//                dbOptions.fragments.Add(new FragmentC());
-//                dbOptions.fragments.Add(new FragmentX());
                 dbOptions.fragments.Add(new FragmentY());
-//                dbOptions.fragments.Add(new FragmentZ());
 
-                //ClusterOptions clusterOptions = new ClusterOptions(Project, outputDir, 5, true, 90, true);//TODO validate its in seconds for all file types
-
+                dbOptions.MinimumPrecursorIntensityRatioInIsolationWindow = 0.05;
                 Propheus propheus = new Propheus(dbOptions, Project);
-
-                dbOptions.SaveMS1Peaks = false;
-                dbOptions.SaveMSMSPeaks = false;
-                dbOptions.LoadSpectraIfFound = true;
-                propheus.Preload();
-                propheus.PrepareQueries();
                 
-                //First pass (used to optimize parameters and score weights)
-                Result tmp = propheus.SearchVersionAugust2013(propheus.AllQueries, true);//, 1.0, false, false, null);
-
-                tmp.WriteInfoToCsv(true);
-                tmp.Export(0.02, "FirstPass_02_");
-
                 dbOptions.SaveMS1Peaks = true;
                 dbOptions.SaveMSMSPeaks = true;
-                
-                //Second search
+                dbOptions.LoadSpectraIfFound = true;
                 propheus.Preload();
-                propheus.PrepareQueries();
-                Result finalRez = propheus.SearchLatestVersion(propheus.AllQueries, false);//, 1.0, false, false, null);
-                
-                //tmp.Export(0.05, "05_");
-                tmp.Export(0.02, "02_");
-                //tmp.Export(1.0, "All_");
-
-                //UnitTest.Tests.MatchAllFragments(tmp);
-                //tmp.WriteInfoToConsole();
-                //tmp.Save();
-                /*
-                Optimizer op = new Optimizer(propheus);
-                op.LaunchBestPSMOptimization(tmp);
-                op.LaunchPrecursorScoreOptimization(tmp);
-                /*
-                propheus.Align(tmp);
-
-                Result tmp2 = propheus.Search(1.0, false, null, propheus.CreateQueries(propheus.AllSpectras));
-                tmp2.Export(0.05, "Aligned_05_");
-                tmp2.Export(0.02, "Aligned_02_");
-                tmp2.Export(double.MaxValue, "Aligned_All_");
-                MSSearcher.Export(dbOptions.outputFolder + "Aligned_5PercentOptimized_precursors.csv", Optimizer.PrecursorOptimizer(tmp2.precursors, 0.05));
-                tmp2.WriteInfoToConsole();//*/
+                propheus.PrepareQueries();                
             }
             catch (Exception ex)
             {

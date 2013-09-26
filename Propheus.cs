@@ -37,12 +37,20 @@ namespace Trinity
         /// Also creates the list of queries (some spectrum are used more than once, when multiple 
         /// precursors are found in the mass range of the fragmentation window
         /// </summary>
-        public void PrepareForSearch()
+        public void Preload()
         {
             AllProteins             = ReadProteomeFromFasta(dbOptions.FastaDatabaseFilepath, !dbOptions.DecoyFusion);
             AllSpectras             = LoadSpectras();
+        }
 
-            AllQueries              = CreateQueries(AllSpectras);
+        /// <summary>
+        /// Builds the list of proteins to digest, the spectrum to match them to
+        /// Also creates the list of queries (some spectrum are used more than once, when multiple 
+        /// precursors are found in the mass range of the fragmentation window
+        /// </summary>
+        public void PrepareQueries()
+        {
+            AllQueries = CreateQueries(AllSpectras);
         }
 
         /// <summary>
@@ -81,7 +89,7 @@ namespace Trinity
             }
             //AllProteins.Sort(Protein.TargetDecoyComparison);
             protein_fasta_database.Close();
-            Console.WriteLine("Proteins in fasta file : " + AllProteins.Count / 2 + " [" + AllProteins.Count + "]");
+            Console.WriteLine("Proteins in fasta file : " + AllProteins.Count);
             return AllProteins;
         }        
         
@@ -138,7 +146,67 @@ namespace Trinity
                         
             return AllQueries;
         }
-        
+
+
+        public Result SearchLatestVersion(Queries queries, bool optimize)
+        {
+            Result result = new Result();
+            result.queries = queries;
+            result.dbOptions = dbOptions;
+
+            DBSearcher dbSearcher = new DBSearcher(dbOptions);
+            Digestion ps = new Digestion(dbOptions);
+
+            if (dbOptions.NoEnzymeSearch)
+                result.SetPrecursors(dbSearcher.Search(queries, ps.DigestProteomeOnTheFlyNoEnzyme(AllProteins, queries)));
+            else
+                result.SetPrecursors(dbSearcher.Search(queries, ps.DigestProteomeOnTheFly(AllProteins, false, queries)));
+            Console.WriteLine(result.precursors.Count + " precursors matched !");
+                        
+            foreach (Precursor precursor in result.precursors)
+                foreach (PeptideSpectrumMatch psm in precursor.psms_AllPossibilities)
+                    precursor.psms.Add(psm);
+
+            long nbTargets = result.SetPrecursors(result.precursors);
+            Console.WriteLine("Targets before Optimizing Score Ratios : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");
+
+            //*/
+            long bestTargets = nbTargets;
+            MSSearcher msSearcher = new MSSearcher(dbOptions);
+            msSearcher.CumulPsm(result.matchedPrecursors);//TODO Check if its still needed
+
+            //Step 1 : Cluster psms together based on precursor feature //TODO Implement ProteoProfile Scoring based clustering
+            //Group in clusters
+            result.clusters = msSearcher.Search(result.matchedPrecursors);
+            //Todo Align retention times 
+            //Todo redo clusterization, based on retention time aligned maps
+
+            //Step 2 : Regroup based on peptide sequence
+            PeptideSearcher pepSearcher = new PeptideSearcher(dbOptions);            
+            
+            //result.peptides = UpdatePsmScores(pepSearcher.SearchAll(result.clusters, result.matchedPrecursors, true), result);
+            Console.WriteLine("Found peptides from UpdatePSMScore routine : " + result.peptides);
+            nbTargets = result.SetPrecursors(result.precursors);
+            Console.WriteLine("Targets after Updating PSM scores : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");
+            /*
+            PeptideSpectrumMatches allPSMs = new PeptideSpectrumMatches();
+            foreach (Precursor precursor in result.precursors)
+                foreach (PeptideSpectrumMatch psm in precursor.psms)
+                    allPSMs.Add(psm);
+            
+            allPSMs.OptimizePSMScoreRatios(dbOptions, dbOptions.PSMFalseDiscoveryRate, result);
+            //*/
+            result.peptides = pepSearcher.SearchClusters(result.clusters, result.matchedPrecursors, true);
+            result.peptideSequences = pepSearcher.SearchClusters(result.clusters, result.matchedPrecursors, false);
+            Console.WriteLine("Found peptides from Searchclusters routine : " + result.peptides);
+            
+            nbTargets = result.SetPrecursors(result.precursors);
+            Console.WriteLine("Targets after ReRanking peptides : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");//*/
+            
+            Console.WriteLine(result.matchedPrecursors.Count + " precursors remaining after ProPheus Search!");
+            return result;
+        }//*/
+
         /// <summary>
         /// Latest version of the search routine. Associates spectrum to digested peptide sequences, 
         /// aligns precursors and fragments, clusters common precursors accross samples, create the list of detected
@@ -147,7 +215,7 @@ namespace Trinity
         /// </summary>
         /// <param name="queries"></param>
         /// <returns></returns>
-        public Result SearchLatestVersion(Queries queries, bool optimize)
+        public Result SearchVersionAugust2013(Queries queries, bool optimize)
         {
             Result result = new Result();
             result.queries = queries;
@@ -176,8 +244,8 @@ namespace Trinity
 
             if (optimize)
             {
-                allPSMs.OptimizePSMScoreRatios(dbOptions, dbOptions.PSMFalseDiscoveryRate);
-                result.matchedPrecursors.OptimizePSMScoreRatios(dbOptions, dbOptions.PSMFalseDiscoveryRate);
+                //allPSMs.OptimizePSMScoreRatios(dbOptions, dbOptions.PSMFalseDiscoveryRate, result);
+                //result.matchedPrecursors.OptimizePSMScoreRatios(dbOptions, dbOptions.PSMFalseDiscoveryRate, result);
                 nbTargets = result.SetPrecursors(result.precursors);
                 Console.WriteLine("Targets : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");
                 //*/
@@ -191,14 +259,15 @@ namespace Trinity
                 nbTargets = result.SetPrecursors(result.precursors);
                 Console.WriteLine("Targets after fragment alignment : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");
                 //*/
-
-                Align.CropPrecursors(result, allPSMs);
+                /*
+                dbOptions.precursorMassTolerance.Value = Align.CropPrecursors(result, allPSMs);
                 nbTargets = result.SetPrecursors(result.precursors);
                 Console.WriteLine("Targets after croping precursors : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");
 
-                Align.CropProducts(result, allPSMs);
+                dbOptions.productMassTolerance.Value = Align.CropProducts(result, allPSMs);
                 nbTargets = result.SetPrecursors(result.precursors);
                 Console.WriteLine("Targets after croping fragments : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");
+                //*/
             }
             //*/
             allPSMs = null;
@@ -220,23 +289,26 @@ namespace Trinity
             //Step 3 : Regroup based on protein sequences (Morpheus code)
             ProteinSearcher protSearcher = new ProteinSearcher(dbOptions);
             result.proteins = protSearcher.SearchLatest(result.peptideSequences, dbSearcher.DicOfProteins);
-
-            long lastNbTarget = nbTargets;
-            do
-            {
-                lastNbTarget = nbTargets;
-                UpdatePsmScores(result.proteins);
-                nbTargets = result.SetPrecursors(result.precursors);
-            } while (lastNbTarget < nbTargets);
             
+            //long lastNbTarget = nbTargets;
+            //do
+            //{
+            //    lastNbTarget = nbTargets;
+                //UpdatePsmScores(result.proteins);
+            //    nbTargets = result.SetPrecursors(result.precursors);
+            //} while (lastNbTarget < nbTargets);//*/
+
+            result.peptides = pepSearcher.Search(result.clusters, result.matchedPrecursors, true);
+            result.peptideSequences = pepSearcher.Search(result.clusters, result.matchedPrecursors, false);
 
             if (optimize)
             {
-                Console.WriteLine("Targets before Optimizing Score Ratios : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");
-                result.matchedPrecursors.OptimizePSMScoreRatios(dbOptions, dbOptions.PSMFalseDiscoveryRate);
+                Console.WriteLine("Targets before second Optimization of Score Ratios : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");                                
+                //result.matchedPrecursors.OptimizePSMScoreRatios(dbOptions, dbOptions.PSMFalseDiscoveryRate, result);
                 nbTargets = result.SetPrecursors(result.precursors);
-                Console.WriteLine("Targets after ReOptimizing PSM Score Ratios : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");
+                Console.WriteLine("Targets after ReOptimizing PSM Score Ratios : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");//*/
             }
+
             //Step 5 : Compute the new number of Targets
             nbTargets = result.SetPrecursors(result.precursors);
             if (nbTargets < bestTargets)
@@ -254,12 +326,28 @@ namespace Trinity
         {
             //Push ProteinScores AND Peptide Score down to PSMs
             protein_groups.Sort(ProteinGroupMatch.AscendingProbabilityScore);
+            double maxProteinProbScore = 0;
+            double maxPeptideProbScore = 0;
+            
             foreach (ProteinGroupMatch group in protein_groups)
             {
                 double proteinScore = group.ProbabilityScore();
+                if (proteinScore > maxProteinProbScore)
+                    maxProteinProbScore = proteinScore;
                 foreach (PeptideMatch peptide in group.PeptideMatches)
                 {
                     double peptideScore = peptide.ProbabilityScore();
+                    if (peptideScore > maxPeptideProbScore)
+                        maxPeptideProbScore = peptideScore;
+                }
+            }
+
+            foreach (ProteinGroupMatch group in protein_groups)
+            {
+                double proteinScore = group.ProbabilityScore() / maxProteinProbScore;
+                foreach (PeptideMatch peptide in group.PeptideMatches)
+                {
+                    double peptideScore = peptide.ProbabilityScore() / maxPeptideProbScore;
                     foreach (Cluster cluster in peptide.clusters)
                         foreach (clCondition condition in cluster.conditions)
                             if (condition != null)
@@ -293,7 +381,89 @@ namespace Trinity
                                                 Console.WriteLine("Precursor with no match");// = precursor;
                                         }
                 }
+            }            
+        }
+
+        /// <summary>
+        /// Updates scores for the PeptideSpectrumMatches based on newly computed elements (such as protein sequences, peptides, newly computed tolerances)
+        /// </summary>
+        /// <param name="protein_groups"></param>
+        public static PeptideMatches UpdatePsmScores(PeptideMatches peptides, Result result)
+        {
+            Dictionary<Precursor, PeptideMatch> dicOfUsedPrecursors = new Dictionary<Precursor,PeptideMatch>();
+            peptides.Sort(PeptideMatches.CompareScore);
+
+            foreach (Precursor precursor in result.precursors)
+                precursor.psms.Clear();
+
+            double maxPeptideProbScore = 0;            
+            foreach (PeptideMatch peptide in peptides)
+            {                
+                foreach (Cluster cluster in peptide.clusters)
+                    foreach (clCondition condition in cluster.conditions)
+                        if (condition != null)
+                            foreach (clReplicate replicate in condition.replicates)
+                                if (replicate != null)
+                                    foreach (Precursor precursor in replicate.precursors)
+                                    {
+                                        if(!dicOfUsedPrecursors.ContainsKey(precursor))
+                                        {
+                                            bool found = false;
+                                            foreach (PeptideSpectrumMatch psm in precursor.psms_AllPossibilities)
+                                            {
+                                                if(psm.Peptide.IsSamePeptide(peptide.peptide, true))
+                                                {
+                                                    precursor.psms.Add(psm);
+                                                    found = true;
+                                                }
+                                            }
+                                            if(found)
+                                                dicOfUsedPrecursors.Add(precursor, peptide);
+                                        }
+                                    }
+                
+                double peptideScore = peptide.ProbabilityScore();
+                if (peptideScore > maxPeptideProbScore)
+                    maxPeptideProbScore = peptideScore;
             }
+
+            peptides.Sort(PeptideMatches.CompareScore);            
+            foreach (PeptideMatch peptide in peptides)
+            {
+                double peptideScore = peptide.ProbabilityScore() / maxPeptideProbScore;
+                    foreach (Cluster cluster in peptide.clusters)
+                        foreach (clCondition condition in cluster.conditions)
+                            if (condition != null)
+                                foreach (clReplicate replicate in condition.replicates)
+                                    if (replicate != null)
+                                        foreach (Precursor precursor in replicate.precursors)
+                                        {
+                                            foreach (PeptideSpectrumMatch psm in precursor.psms)
+                                            {
+                                                if (peptide.peptide.IsSamePeptide(psm.Peptide, true))
+                                                {
+                                                    if (psm.PeptideScore < peptideScore)
+                                                        psm.PeptideScore = peptideScore;
+                                                }
+                                            }
+                                            foreach (Precursor isotope in precursor.Isotopes)
+                                            {
+                                                foreach (PeptideSpectrumMatch psm in isotope.psms)
+                                                {
+                                                    if (peptide.peptide.IsSamePeptide(psm.Peptide, true))
+                                                    {
+                                                        if (psm.PeptideScore < peptideScore)
+                                                            psm.PeptideScore = peptideScore;
+                                                    }
+                                                }
+                                            }
+
+                                            precursor.psms.Sort(PeptideSpectrumMatch.DescendingOptimizedScoreComparison);
+                                            if (precursor.psms.Count == 0)
+                                                Console.WriteLine("Precursor with no match");// = precursor;
+                                        }
+                }
+            return peptides;
         }
     }
 }

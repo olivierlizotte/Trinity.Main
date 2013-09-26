@@ -125,6 +125,7 @@ namespace Trinity
         
         public void Merge(PeptideSpectrumMatch psm, DBOptions options)
         {
+            //TODO Replace merging with Max flow approach
             //Augment list A
             List<ProductMatch> newList = new List<ProductMatch>();
             foreach (ProductMatch matchA in this.AllProductMatches)

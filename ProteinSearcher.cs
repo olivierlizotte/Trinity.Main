@@ -85,13 +85,13 @@ namespace Trinity
                 return base_leucine_peptide_sequences;
             }
         }
-        //TODO Rename this since it is not a MorpheusScore anymore
+                
         public double ProbabilityScore()
         {
             double score = 0;
             
             foreach (PeptideMatch match in PeptideMatches)  // need option to score based on all PSMs rather than unique peptide PSMs?
-                score += (1 - score) * match.ProbabilityScore();
+                score += /*(1 - score) * */match.ProbabilityScore();
             return score;
         }
         

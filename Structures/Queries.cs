@@ -80,6 +80,7 @@ namespace Trinity
         {
             Dictionary<Track, Precursor> Tracks = new Dictionary<Track, Precursor>();
             Dictionary<Track, Precursor> Isotopes = new Dictionary<Track, Precursor>();
+
             //Create one query per Spectrum-Precursor duo, including Isotopes in the process to ease search
             //For further analysis, maintain a list of precursors (excluding isotopes)
             int nbMissedTrack = 0;
@@ -87,16 +88,13 @@ namespace Trinity
             //tracks.PrepareRtSort();
             //sdf.TRACKS_LIST.PrepareRtSort();
             spectra.Sort(ProductSpectrum.AscendingPrecursorMassComparison);
-            double averageNbPrecursorPerSpectrum = 0;
-            int nbSpectrumMatchedToTrack = 0;
-            
+
             foreach (ProductSpectrum spectrum in spectra)
             {
                 NbSpectrum++;
                 double intensityCumul = 0.0;
                 bool foundCharge = false;
                 Track closestTrack = null;
-                int nbTracks = 0;
 
                 List<Query> newQueries = new List<Query>();
 
@@ -162,19 +160,13 @@ namespace Trinity
                 {
                     //Remove precursors if estimated fragment intensities are too low (based on precursor intensity ratios and isolation window placement)
                     foreach (Query q in newQueries)
-                        if (q.precursor.Track.INTENSITY > intensityCumul * dbOptions.MinimumPrecursorIntensityRatioInIsolationWindow)
-                        {
+                    {
+                        //if (q.precursor.Track.INTENSITY > intensityCumul * dbOptions.MinimumPrecursorIntensityRatioInIsolationWindow)//Need to be 5% of all intensity
+                        //{
                             this.Add(q);
-                            nbTracks++;
-                        }
+                        //}
+                    }
                 }
-
-                if (nbTracks > 0)
-                {
-                    averageNbPrecursorPerSpectrum += nbTracks;
-                    nbSpectrumMatchedToTrack++;
-                }
-
                 Console.Write("\r{0}%   ", ((100 * NbSpectrum) / spectra.Count));
             }
             Console.Write("\r{0}%   ", 100);
@@ -185,6 +177,57 @@ namespace Trinity
                 if (!Isotopes.ContainsKey(track))
                     Precursors.Add(Tracks[track]);
 
+            //TODO Validate this approach
+            //REMOVE QUERIES RELATED TO AN ISOTOPE and Compute the average CoElution 
+            Dictionary<ProductSpectrum, double> DicOfSpectrumIntensities = new Dictionary<ProductSpectrum, double>();
+            for(int i = 0; i < this.Count; )
+            {
+                Query query = this[i];
+                if (!Isotopes.ContainsKey(query.precursor.Track))
+                {
+                    if (!DicOfSpectrumIntensities.ContainsKey(query.spectrum))
+                        DicOfSpectrumIntensities.Add(query.spectrum, query.precursor.Track.INTENSITY);
+                    else
+                        DicOfSpectrumIntensities[query.spectrum] += query.precursor.Track.INTENSITY;
+                    i++;
+                }
+                else
+                    this.RemoveAt(i);
+            }
+                        
+            //REMOVE Queries with Precursor intensities too low
+            for (int i = 0; i < this.Count; )
+            {
+                Query query = this[i];
+                if (query.precursor.Track.INTENSITY < DicOfSpectrumIntensities[query.spectrum] * dbOptions.MinimumPrecursorIntensityRatioInIsolationWindow)
+                    this.RemoveAt(i);
+                else
+                    i++;
+            }//*/
+
+            Dictionary<ProductSpectrum, int> DicOfSpectrumTracks = new Dictionary<ProductSpectrum, int>();
+            for (int i = 0; i < this.Count; )
+            {
+                Query query = this[i];
+                if (!Isotopes.ContainsKey(query.precursor.Track))
+                {
+                    if (!DicOfSpectrumTracks.ContainsKey(query.spectrum))
+                        DicOfSpectrumTracks.Add(query.spectrum, 1);
+                    else
+                        DicOfSpectrumTracks[query.spectrum]++;
+                    i++;
+                }
+                else
+                    this.RemoveAt(i);
+            }
+
+            double averageNbPrecursorPerSpectrum = 0;
+            int nbSpectrumMatchedToTrack = 0;
+            foreach (ProductSpectrum spectrum in DicOfSpectrumTracks.Keys)
+            {
+                nbSpectrumMatchedToTrack++;
+                averageNbPrecursorPerSpectrum += DicOfSpectrumTracks[spectrum];
+            }
             Console.WriteLine(entry.sSDF + " :" + Precursors.Count + " precursors [" + Isotopes.Count + " isotopes] spreaded in " + Count + " queries [" + nbMissedTrack + " trackless precursors]");
             Console.WriteLine("Average Precursors per Spectrum : " + averageNbPrecursorPerSpectrum / (double)nbSpectrumMatchedToTrack);
         }

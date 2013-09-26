@@ -16,12 +16,65 @@ namespace Trinity
         public Precursors() { }
         private FDRizer<Precursor> uptimizer;
 
-        public void OptimizePSMScoreRatios(DBOptions options, double desired_fdr)
+        public void OptimizePSMScoreRatios(DBOptions options, double desired_fdr, Result results)
+        {
+            long bestNbTargets = 0;
+            double bestProtein = 0.1;
+            double bestPeptide = 0.2;
+            double bestFragments = 0.4;
+            double bestIntensities = 0.1;
+            double bestPrecursor = 0.2;
+
+            double incr = 0.05;
+            for (options.dProtein = 0.1; options.dProtein < 0.3; options.dProtein += incr)
+                for (options.dPeptideScore = 0.1; options.dPeptideScore < 0.4; options.dPeptideScore += incr)
+                    for (options.dPrecursor = 0.1; options.dPrecursor < 0.5; options.dPrecursor += incr)
+                        for (options.dMatchingProductFraction = 0.1; options.dMatchingProductFraction < 1 - options.dPrecursor - options.dPeptideScore - options.dProtein; options.dMatchingProductFraction += incr)
+                        {
+                            double cumul = options.dPrecursor + options.dPeptideScore + options.dProtein + options.dMatchingProductFraction;
+                            for (options.dIntensityFraction = 0.1; options.dIntensityFraction < 1 - cumul; options.dIntensityFraction += incr)
+                            {
+                                if (cumul + options.dIntensityFraction == 1)
+                                {
+                                    long nbTargets = 0;
+                                    foreach (Precursor precursor in results.matchedPrecursors)
+                                        if (precursor.Target)
+                                            nbTargets++;
+                                    if (nbTargets > bestNbTargets)
+                                    {
+                                        bestNbTargets = nbTargets;
+                                        bestProtein = options.dProtein;
+                                        bestPeptide = options.dPeptideScore;
+                                        bestPrecursor = options.dPrecursor;
+                                        bestIntensities = options.dIntensityFraction;
+                                        bestFragments = options.dMatchingProductFraction;
+                                    }
+                                }
+                            }
+
+                        }
+
+            options.dProtein = bestProtein;
+            options.dPeptideScore = bestPeptide;
+            options.dPrecursor = bestPrecursor;
+            options.dIntensityFraction = bestIntensities;
+            options.dMatchingProductFraction = bestFragments;
+
+            Console.WriteLine("New score ratios   ----------------------------------------------------------------------- ");
+            Console.WriteLine("    PeptideSpectrumMatch.dPrecursor:                     " + options.dPrecursor);
+            Console.WriteLine("    PeptideSpectrumMatch.dMatchingProductFraction:       " + options.dMatchingProductFraction);
+            Console.WriteLine("    PeptideSpectrumMatch.dIntensityFraction:             " + options.dIntensityFraction);
+            Console.WriteLine("    PeptideSpectrumMatch.dPeptideScore:                  " + options.dPeptideScore);
+            Console.WriteLine("    PeptideSpectrumMatch.dProtein:                       " + options.dProtein);
+            Console.WriteLine("------------------------------------------------------------------------------------------ ");
+        }
+
+        public void OptimizePSMScoreRatios_PREVIOUSVersion(DBOptions options, double desired_fdr)
         {
             List<Precursor> sortedPrecursorPrecision = new List<Precursor>(this);
             sortedPrecursorPrecision.Sort(Precursor.ComparePrecursorScore);
             double ratioPrecursorPrecision = FDRizer<Precursor>.ComputeAtFDR(sortedPrecursorPrecision, desired_fdr).Count / (double)this.Count;
-           
+
             List<Precursor> sortedFragments = new List<Precursor>(this);
             sortedFragments.Sort(Precursor.CompareMatchingProductsFraction);
             double ratioFragments = FDRizer<Precursor>.ComputeAtFDR(sortedFragments, desired_fdr).Count / (double)this.Count;
@@ -35,10 +88,10 @@ namespace Trinity
             double ratioPeptideScore = FDRizer<Precursor>.ComputeAtFDR(sortedPeptides, desired_fdr).Count / (double)this.Count;
 
             double totalRatios = ratioPrecursorPrecision + ratioFragments + ratioIntensities + ratioPeptideScore;
-            options.dPrecursor                  = ratioPrecursorPrecision   / totalRatios;
-            options.dMatchingProductFraction    = ratioFragments            / totalRatios;
-            options.dIntensityFraction          = ratioIntensities          / totalRatios;
-            options.dPeptideScore               = ratioPeptideScore         / totalRatios;
+            options.dPrecursor = ratioPrecursorPrecision / totalRatios;
+            options.dMatchingProductFraction = ratioFragments / totalRatios;
+            options.dIntensityFraction = ratioIntensities / totalRatios;
+            options.dPeptideScore = ratioPeptideScore / totalRatios;
             Console.WriteLine("New score ratios  [" + totalRatios + " total ratios] ------------------------------------- ");
             Console.WriteLine("    PeptideSpectrumMatch.dPrecursor:                     " + options.dPrecursor);
             Console.WriteLine("    PeptideSpectrumMatch.dMatchingProductFraction:       " + options.dMatchingProductFraction);
@@ -172,7 +225,16 @@ namespace Trinity
                 score += (1 - score) * psm.OptimizedScore();
             return score;
             //*/
-            return OptimizedBestPsmScore(peptide, checkMods);//TODO Reactivate Optimized Precursor Score
+            if (peptide != null)
+            {
+                double score = 0;
+                foreach (PeptideSpectrumMatch psm in psms)
+                    if (peptide.IsSamePeptide(psm.Peptide, checkMods))
+                        score += 1.0;
+                return score;
+            }
+            else
+                return OptimizedBestPsmScore(peptide, checkMods);//TODO Reactivate Optimized Precursor Score
             //PeptideSpectrumMatch psmLeft = OptimizedBestPsm(peptide, checkMods);
             //if (psmLeft != null)
             //    return psmLeft.OptimizedScore();

@@ -50,13 +50,13 @@ namespace Trinity
 
 
         public double dProduct = 0.0;//0.01;
-        public double dPrecursor = 0.1;//.1;//0.01;
-        public double dMatchingProductFraction = 0.35;//0.6;//0.8;//0.26;
+        public double dPrecursor = 0.12;//.1;//0.01;
+        public double dMatchingProductFraction = 0.45;//0.6;//0.8;//0.26;
         public double dMatchingProduct = 0;//0.6;//0.8;//0.26;
-        public double dIntensityFraction = 0.05;//0.8;//0.4;//0.47;
+        public double dIntensityFraction = 0.13;//0.8;//0.4;//0.47;
         public double dIntensity = 0;//0.4;//0.47;
         public double dProtein = 0;//0.0002;//0.01;
-        public double dPeptideScore = 0.5;//0.008;//0;      
+        public double dPeptideScore = 0.3;//0.008;//0;      
 
         ///Values kept from the original Morpheus source code
         public InitiatorMethionineBehavior initiatorMethionineBehavior;

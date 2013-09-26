@@ -378,7 +378,7 @@ namespace Trinity.MaxQuant
                 Console.Write("\r{0}%   ", ((100 * i) / rawFile.MS1Count));
             }
             Console.Write("\r{0}%   ", 100);
-            for (int i = rawFile.MS1Count - maxMissingScans - 1; i < rawFile.MS1Count; i++)
+            for (int i = rawFile.MS1Count - maxMissingScans - 1; i < rawFile.MS1Count; i++)//i >= oldMinInd
             {
                 Ms1CentroidList last = cache[i - oldMinInd];
                 for (int j = 0; j < last.Count; j++)

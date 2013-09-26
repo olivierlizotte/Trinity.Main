@@ -55,7 +55,7 @@ namespace Trinity
         {
             double score = 0;
             foreach (Cluster cluster in clusters)
-                score += (1 - score) * cluster.ProbabilityScore(peptide);
+                score += /*(1 - score) * */cluster.ProbabilityScore(peptide);
             return score;
         }
         
@@ -159,27 +159,106 @@ namespace Trinity
             return -left.ProbabilityScore().CompareTo(right.ProbabilityScore());
         }
 
-        
+        public PeptideMatches SearchAll(List<Cluster> clusters, List<Precursor> precursors, bool DiffByMod = true)
+        {
+            Console.WriteLine("Creating the list of peptide found...");
+            Dictionary<string, PeptideMatch> peptideMatches = new Dictionary<string, PeptideMatch>();
+
+            foreach (Precursor prec in precursors)
+                foreach (PeptideSpectrumMatch psm in prec.psms_AllPossibilities)
+                {
+                    Peptide pep = psm.Peptide;
+                    string seq = (DiffByMod ? pep.Sequence : pep.BaseSequence);
+                    if (!peptideMatches.ContainsKey(seq))
+                        peptideMatches.Add(seq, new PeptideMatch(pep));
+                    else if (pep.Target)
+                        peptideMatches[seq].peptide = pep;
+                }
+
+            int nbClusterNewSeq = 0;
+            foreach (Cluster cl in clusters)
+                foreach (clCondition condition in cl.conditions)
+                    foreach (clReplicate replicate in condition.replicates)
+                        foreach (Precursor precursor in replicate.precursors)
+                            foreach (PeptideSpectrumMatch psm in precursor.psms_AllPossibilities)
+                            {
+                                string seq = (DiffByMod ? psm.Peptide.Sequence : psm.Peptide.BaseSequence);
+                                if (peptideMatches.ContainsKey(seq))
+                                    peptideMatches[seq].AddOnlyOnce(cl);
+                            }
+
+            PeptideMatches TotalList = new PeptideMatches(peptideMatches.Values);
+            Console.WriteLine(TotalList.Count + " distinct peptides (based on sequence" + (DiffByMod ? " and modifications)" : ")") + "    [" + nbClusterNewSeq + " added from clusters]");
+            return TotalList;
+        }
+
+        public PeptideMatches SearchClusters(List<Cluster> clusters, List<Precursor> precursors, bool DiffByMod = true)
+        {
+            Console.WriteLine("Creating the list of peptide found...");
+            Dictionary<string, PeptideMatch> peptideMatches = new Dictionary<string, PeptideMatch>();
+
+            foreach (Precursor prec in precursors)
+                foreach (PeptideSpectrumMatch psm in prec.OptimizedBestPsms())
+                {
+                    Peptide pep = psm.Peptide;
+                    string seq = (DiffByMod ? pep.Sequence : pep.BaseSequence);
+                    if (!peptideMatches.ContainsKey(seq))
+                        peptideMatches.Add(seq, new PeptideMatch(pep));
+                    else if (pep.Target)
+                        peptideMatches[seq].peptide = pep;
+                }
+
+            int nbClusterNewSeq = 0;
+            foreach (Cluster cl in clusters)
+                foreach (clCondition condition in cl.conditions)
+                    if(condition != null)
+                    foreach (clReplicate replicate in condition.replicates)
+                        if(replicate != null)
+                        foreach (Precursor precursor in replicate.precursors)
+                            foreach (PeptideSpectrumMatch psm in precursor.OptimizedBestPsms())
+                            {
+                                string seq = (DiffByMod ? psm.Peptide.Sequence : psm.Peptide.BaseSequence);
+                                if (peptideMatches.ContainsKey(seq))
+                                    peptideMatches[seq].AddOnlyOnce(cl);
+                                else
+                                    nbClusterNewSeq++;
+                            }
+
+            PeptideMatches TotalList = new PeptideMatches(peptideMatches.Values);
+            Console.WriteLine(TotalList.Count + " distinct peptides (based on sequence" + (DiffByMod ? " and modifications)" : ")") + "    [" + nbClusterNewSeq + " not unmapped clusters]");
+            return TotalList;
+        }
+
         public PeptideMatches Search(List<Cluster> clusters, List<Precursor> precursors, bool DiffByMod = true)
         {
             Console.WriteLine("Creating the list of peptide found...");
             Dictionary<string, PeptideMatch> peptideMatches = new Dictionary<string, PeptideMatch>();            
-                        
+         
+            foreach(Precursor prec in precursors)
+                foreach (PeptideSpectrumMatch psm in prec.OptimizedBestPsms())
+                {
+                    Peptide pep = psm.Peptide;
+                    string seq = (DiffByMod ? pep.Sequence : pep.BaseSequence);
+                    if (!peptideMatches.ContainsKey(seq))
+                        peptideMatches.Add(seq, new PeptideMatch(pep));
+                    else if (pep.Target)
+                        peptideMatches[seq].peptide = pep;
+                }
+
+            int nbClusterNewSeq = 0;
             foreach(Cluster cl in clusters)
-            {
-                Peptide pep = cl.ComputeBestPeptide();
+                foreach (clCondition condition in cl.conditions)
+                    foreach (clReplicate replicate in condition.replicates)
+                        foreach (Precursor precursor in replicate.precursors)
+                            foreach (PeptideSpectrumMatch psm in precursor.OptimizedBestPsms())
+                            {
+                                string seq = (DiffByMod ? psm.Peptide.Sequence : psm.Peptide.BaseSequence);
+                                if (peptideMatches.ContainsKey(seq))
+                                    peptideMatches[seq].AddOnlyOnce(cl);
+                            }
 
-                string seq = (DiffByMod ? pep.Sequence : pep.BaseSequence);
-                if (!peptideMatches.ContainsKey(seq))
-                    peptideMatches.Add(seq, new PeptideMatch(pep));
-                else if (pep.Target)
-                    peptideMatches[seq].peptide = pep;
-
-                peptideMatches[seq].AddOnlyOnce(cl);
-            }
-
-            PeptideMatches TotalList = new PeptideMatches(peptideMatches.Values);            
-            Console.WriteLine(TotalList.Count + " distinct peptides (based on sequence" + (DiffByMod ? " and modifications)" : ")"));
+            PeptideMatches TotalList = new PeptideMatches(peptideMatches.Values);
+            Console.WriteLine(TotalList.Count + " distinct peptides (based on sequence" + (DiffByMod ? " and modifications)" : ")") + "    [" + nbClusterNewSeq + " added from clusters]");
             return TotalList;
         }
 

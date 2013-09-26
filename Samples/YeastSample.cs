@@ -79,23 +79,29 @@ namespace Trinity.UnitTest
             
             Propheus propheus = new Propheus(dbOptions, Project);
 
-            propheus.PrepareForSearch();
+            dbOptions.SaveMS1Peaks = false;
+            dbOptions.SaveMSMSPeaks = false;
+            dbOptions.LoadSpectraIfFound = true;
+            propheus.Preload();
+            propheus.PrepareQueries();
 
-            Result tmp = propheus.SearchLatestVersion(propheus.AllQueries, true);
-            //Result tmp = propheus.Search(propheus.AllQueries, 1.0, false, false, null);
+            //First pass (used to optimize parameters and score weights)
+            Result tmp = propheus.SearchLatestVersion(propheus.AllQueries, true);//, 1.0, false, false, null);
+
+            tmp.WriteInfoToCsv(true);
+            tmp.Export(0.02, "FirstPass_02_");
+
+            dbOptions.SaveMS1Peaks = true;
+            dbOptions.SaveMSMSPeaks = true;
+
+            //Second search
+            propheus.Preload();
+            propheus.PrepareQueries();
+            Result finalRez = propheus.SearchLatestVersion(propheus.AllQueries, false);//, 1.0, false, false, null);
+
             //tmp.Export(0.05, "05_");
-
-            //tmp.Save();//*/
-            //Result tmp = Result.Import(dbOptions.outputFolder + "State.GraphML");
-            
-
-            //MSSearcher.Export(dbOptions.outputFolder + "TESTOptimizedV2_precursors.csv", OptimizerV2.PrecursorOptimizer(tmp.precursors, 0.05));
-
-            UnitTest.Tests.MatchAllFragments(tmp); 
-            tmp.WriteInfoToCsv(false);
-
-            tmp.Export(0.05, "05_");
             tmp.Export(0.02, "02_");
+
             //tmp.Export(0.05, "05_AllFragments");
             // tmp.Export(0.01, "01_");
             //tmp.Export(double.MaxValue, "All_");

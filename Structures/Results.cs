@@ -445,6 +445,110 @@ namespace Trinity
             writer.writeToFile();
         }
 
+        public List<double> GetFragments(List<PeptideSpectrumMatch> psms, Peptide peptide, int psmCharge, bool average)
+        {
+            List<string> fragments = new List<string>();
+            foreach (string fragment in FragmentDictionary.Fragments.Keys)
+            {
+                bool found = false;
+                foreach (ProductMatch match in dbOptions.fragments.ComputeFragments(peptide, psmCharge, dbOptions))
+                {
+                    if (fragment == match.fragment)
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+                if (found)
+                    fragments.Add(fragment);
+            }
+
+            List<double> products = new List<double>();
+            for (int i = 1; i <= peptide.Length; i++)
+            {
+                for (int charge = 1; charge <= psmCharge; charge++)
+                {
+                    foreach (FragmentClass fragment in dbOptions.fragments)
+                    {
+                        double cumul = 0.0;
+                        int nbTimesSeen = 0;
+                        foreach (PeptideSpectrumMatch psm in psms)
+                            foreach (ProductMatch match in psm.AllProductMatches)
+                                if (fragment.Name == match.fragment && match.fragmentPos == i && match.charge == charge)
+                                {
+                                    cumul += match.obsIntensity;
+                                    nbTimesSeen++;
+                                }
+                        if(average && nbTimesSeen > 0)
+                            products.Add(cumul / (double)nbTimesSeen);
+                        else
+                            products.Add(cumul);
+                    }
+                }
+            }
+            return products;
+        }
+
+        public void ExportFragmentIntensities(List<PeptideSpectrumMatch> psms, Peptide peptide, int psmCharge, string fileName)
+        {
+            vsCSVWriter writer = new vsCSVWriter(fileName);
+            List<string> fragments = new List<string>();
+            foreach (string fragment in FragmentDictionary.Fragments.Keys)
+            {
+                bool found = false;
+                foreach (ProductMatch match in dbOptions.fragments.ComputeFragments(peptide, psmCharge, dbOptions))
+                {
+                    if (fragment == match.fragment)
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+                if (found)
+                    fragments.Add(fragment);
+            }
+
+            string title = "Cumulated Product Intensities";
+            for (int charge = 1; charge <= psmCharge; charge++)
+                foreach (FragmentClass fragment in dbOptions.fragments)
+                    title += "," + fragment.Name + " ^" + charge;
+            for (int charge = 1; charge <= psmCharge; charge++)
+                foreach (string fragment in fragments)
+                    title += "," + fragment + " ^" + charge;
+            writer.AddLine(title);
+
+            for (int i = 1; i <= peptide.Length; i++)
+            {
+                string line = i.ToString();
+                for (int charge = 1; charge <= psmCharge; charge++)
+                {
+                    foreach (FragmentClass fragment in dbOptions.fragments)
+                    {
+                        double cumul = 0.0;
+                        foreach(PeptideSpectrumMatch psm in psms)
+                            foreach (ProductMatch match in psm.AllProductMatches)
+                                if (fragment.Name == match.fragment && match.fragmentPos == i && match.charge == charge)
+                                    cumul += match.obsIntensity;
+                        line += "," + cumul;
+                    }
+                }
+                for (int charge = 1; charge <= psmCharge; charge++)
+                {
+                    foreach (string fragment in fragments)
+                    {
+                        double cumul = 0.0;
+                        foreach (PeptideSpectrumMatch psm in psms)
+                            foreach (ProductMatch match in psm.AllProductMatches)
+                                if (fragment == match.fragment && match.fragmentPos == i && match.charge == charge)
+                                    cumul += match.obsIntensity;
+                        line += "," + cumul;
+                    }
+                }
+                writer.AddLine(line);
+            }
+            writer.writeToFile();
+        }
+
         public void Export(double fdr, string keyword = "", bool onlyPrecursors = false)
         {
             Console.WriteLine("Exporting at " + (fdr * 100) + "% FDR (Decoy/Target)...");

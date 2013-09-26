@@ -98,6 +98,7 @@
     <Compile Include="Morpheus\Modification.cs" />
     <Compile Include="Morpheus\ModificationDictionary.cs" />
     <Compile Include="Morpheus\ModificationType.cs" />
+    <Compile Include="Samples\RT_MHC.cs" />
     <Compile Include="Samples\NBSample.cs" />
     <Compile Include="Structures\MsMsPeak.cs" />
     <Compile Include="MSSearcher.cs" />

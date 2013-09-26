@@ -30,7 +30,7 @@ namespace Trinity
         {
             double score = 0;
             foreach (Precursor precursor in precursors)
-                score += (1 - score) * precursor.ProbabilityScore(peptide);
+                score += /*(1 - score) * */precursor.ProbabilityScore(peptide, true);
             
             return score;
         }
@@ -94,7 +94,7 @@ namespace Trinity
             double score = 0;
             foreach (clReplicate replicate in replicates)
                 if (replicate != null)
-                    score += (1 - score) * replicate.ProbabilityScore(peptide);
+                    score += /*(1 - score) * */replicate.ProbabilityScore(peptide);
             return score;
         }
         public double Rt()
@@ -186,10 +186,21 @@ namespace Trinity
         public double ProbabilityScore(Peptide peptide)
         {
             double score = 0;
+            int nbCond = 0;
             foreach (clCondition condition in conditions)
                 if (condition != null)
-                    score += (1 - score) * condition.ProbabilityScore(peptide);
-            return score;
+                {
+                    double tmp = condition.ProbabilityScore(peptide);
+                    if (tmp > 0)
+                    {
+                        score += tmp;
+                        nbCond++;
+                    }
+                }
+            if (nbCond > 0)
+                return score;// / (double)nbCond;
+            else
+                return 0.0;
         }
         public double Rt()
         {
@@ -235,12 +246,12 @@ namespace Trinity
         }
 
         public Peptide ComputeBestPeptide()
-        {
+        {            
             Dictionary<Peptide, double> peptides = new Dictionary<Peptide, double>();            
             foreach (clCondition condition in conditions)
                 foreach (clReplicate replicate in condition.replicates)
                     foreach (Precursor precursor in replicate.precursors)
-                        foreach (PeptideSpectrumMatch psm in precursor.psms)
+                        foreach (PeptideSpectrumMatch psm in precursor.OptimizedBestPsms())
                             if(!peptides.ContainsKey(psm.Peptide))
                                 peptides.Add(psm.Peptide, ProbabilityScore(psm.Peptide));
             double best = -1;
@@ -382,7 +393,7 @@ namespace Trinity
                     group.Add(precursors[i]);
                     for (int j = i + 1; j < precursors.Count; j++)
                     {
-                        if (!done[j])
+                        if (!done[j] && precursors[i].sample != precursors[j].sample)
                         {
                             double score = Score(precursors[i], precursors[j]);
                             //TODO Implement ProteoProfile Clustering algorithm, or anything on the litterature, as long as its backed by the scoring function
