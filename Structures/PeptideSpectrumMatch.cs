@@ -139,8 +139,7 @@ namespace Trinity
                             matchA.mass_diff = matchB.mass_diff;
                             matchA.obsMz = matchB.obsMz;
                         }
-                        if (matchA.obsIntensity < matchB.obsIntensity)
-                            matchA.obsIntensity = matchB.obsIntensity;
+                        matchA.obsIntensity += matchB.obsIntensity;
                         newList.Add(matchA);
                         isNew = false;
                     }
@@ -158,8 +157,8 @@ namespace Trinity
                     newList.Add(matchB);
             }
 
-            if (highestFragmentIntensity < psm.Query.spectrum.MostIntensePeak)
-                highestFragmentIntensity = psm.Query.spectrum.MostIntensePeak;
+            highestFragmentIntensity += psm.highestFragmentIntensity;
+
             Initialize(options, newList);
         }//*/
 

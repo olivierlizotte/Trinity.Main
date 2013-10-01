@@ -568,6 +568,38 @@ namespace Trinity
             writer.writeToFile();
         }
 
+        public void ExportFragmentIntensitiesForAllPSM(List<PeptideSpectrumMatch> psms, Peptide peptide, int psmCharge, string fileName)
+        {
+            vsCSVWriter writer = new vsCSVWriter(fileName);
+            string title = "Retention Time";
+            for (int i = 1; i <= peptide.Length; i++)
+                for (int charge = 1; charge <= psmCharge; charge++)
+                    foreach (FragmentClass fragment in dbOptions.fragments)
+                        title += "," + i + fragment.Name + " ^" + charge;
+            writer.AddLine(title);
+
+            foreach (PeptideSpectrumMatch psm in psms)
+            {
+                string line = psm.Query.spectrum.RetentionTimeInMin.ToString();
+                for (int i = 1; i <= peptide.Length; i++)
+                {
+                    for (int charge = 1; charge <= psmCharge; charge++)
+                    {
+                        foreach (FragmentClass fragment in dbOptions.fragments)
+                        {
+                            double cumul = 0.0;
+                            foreach (ProductMatch match in psm.AllProductMatches)
+                                if (fragment.Name == match.fragment && match.fragmentPos == i && match.charge == charge)
+                                    cumul += match.obsIntensity;
+                            line += "," + cumul;
+                        }
+                    }
+                }
+                writer.AddLine(line);
+            }
+            writer.writeToFile();
+        }
+
         public void Export(double fdr, string keyword = "", bool onlyPrecursors = false)
         {
             Console.WriteLine("Exporting at " + (fdr * 100) + "% FDR (Decoy/Target)...");
