@@ -312,11 +312,11 @@ namespace Trinity.UnitTest
 
             string baseSeq = "";
             List<List<double>> ratios = BuildPeptideRatios(ProjectRatios, ref baseSeq, false, true, 0.01);
-            
+
             double RatiosStepSize = 1000000;
             foreach (List<double> list in ratios)
                 NormalizeList(list, RatiosStepSize);//*/
-            
+
             //Get PSMs
             DBOptions dbOptions = GetDBOptions(false);
             dbOptions.productMassTolerance.Value = 0.05;
@@ -339,7 +339,7 @@ namespace Trinity.UnitTest
                     }
                 }
             }
-            
+
             List<long> mix = new List<long>();
             double FragmentStepSize = 1000;
             foreach (double fragment in tmp.GetFragments(tmpList, tmpList[0].Peptide, 2, false, false, 0.0001))
@@ -395,7 +395,96 @@ namespace Trinity.UnitTest
                 }
                 Console.WriteLine(" ----------------- --------------- ----------------- ------------------ ---------------- ");
 
-                Console.WriteLine("Number of solutions : " + optimalSolutions.Count);            
+                Console.WriteLine("Number of solutions : " + optimalSolutions.Count);
+            }
+        }
+
+        public static void MaxFlowThis2()//string projectSingleInjections, string projectMixed)
+        {
+            Samples ProjectRatios = new Samples(@"G:\Thibault\-=Proteomics_Raw_Data=-\ELITE\SEP11_2013\Project__Group2_All.csv", 0);//Group 2 (all)            
+            Samples ProjectMixed = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_MonoAce_OneRaw.csv", 0);
+
+            string baseSeq = "";
+            List<List<double>> ratios = BuildPeptideRatios(ProjectRatios, ref baseSeq, false, true, 0.01);
+
+            //Get PSMs
+            DBOptions dbOptions = GetDBOptions(false);
+            dbOptions.productMassTolerance.Value = 0.05;
+            Propheus propheus = new Propheus(dbOptions, ProjectMixed);
+
+            propheus.Preload();
+            propheus.PrepareQueries();
+
+            Result tmp = propheus.SearchLatestVersion(propheus.AllQueries, true);
+
+            double bestIntensity = 0;
+            double bestScore = 0;
+            PeptideSpectrumMatch tmpPSM = null;
+            int iterPsm = 0;
+            foreach (Query query in tmp.queries)
+            {
+                if (query.precursor.Track.INTENSITY > bestIntensity)
+                {
+                    bestScore = 0;
+                    bestIntensity = query.precursor.Track.INTENSITY;
+                    foreach (PeptideSpectrumMatch psm in query.psms)
+                    {
+                        if (psm.Peptide.BaseSequence.CompareTo(baseSeq) == 0 && query.precursor.Charge == 2)
+                        {
+                            if (psm.ProbabilityScore() > bestScore)
+                            {
+                                bestScore = psm.ProbabilityScore();
+                                tmpPSM = psm;
+                            }
+
+                            List<PeptideSpectrumMatch> psms = new List<PeptideSpectrumMatch>();
+                            psms.Add(tmpPSM);
+                            tmp.ExportFragmentIntensities(psms, tmpPSM.Peptide, 2, dbOptions.OutputFolder + "output" + iterPsm + ".csv");
+                            iterPsm++;
+
+                            List<double> capacity = new List<double>();
+                            foreach (double fragment in tmp.GetFragments(psms, tmpPSM.Peptide, 2, false, false, 0.0001))
+                                capacity.Add(fragment);
+
+                            List<string> ratioNames = new List<string>();
+                            foreach (Sample sample in ProjectRatios)
+                                ratioNames.Add(sample.nameColumn);
+                            double overFlow = 0;
+                            double underFlow = 0;
+                            double percentError = 0;
+                            List<double> finalRatios = Proteomics.Utilities.MaxFlowPrePush.Compute(ratios, ratioNames, 1000, capacity, ref overFlow, ref underFlow, ref percentError);
+
+                            Console.WriteLine(" ----------------- --------------- ----------------- ------------------ ---------------- ");
+                            Console.WriteLine("Max Flow computed (error of " + (float)percentError + "%)");
+                            for (int i = 0; i < ratioNames.Count; i++)
+                                Console.WriteLine("     " + ratioNames[i] + " -> " + finalRatios[i] + "");
+                            Console.WriteLine(" ----------------- --------------- ----------------- ------------------ ---------------- ");
+                        }
+                    }
+                }
+            }
+            {
+                List<PeptideSpectrumMatch> psms = new List<PeptideSpectrumMatch>();
+                psms.Add(tmpPSM);
+                tmp.ExportFragmentIntensities(psms, tmpPSM.Peptide, 2, dbOptions.OutputFolder + "output.csv");
+
+                List<double> capacity = new List<double>();
+                foreach (double fragment in tmp.GetFragments(psms, tmpPSM.Peptide, 2, false, false, 0.0001))
+                    capacity.Add(fragment);
+
+                List<string> ratioNames = new List<string>();
+                foreach (Sample sample in ProjectRatios)
+                    ratioNames.Add(sample.nameColumn);
+                double overFlow = 0;
+                double underFlow = 0;
+                double percentError = 0;
+                List<double> finalRatios = Proteomics.Utilities.MaxFlowPrePush.Compute(ratios, ratioNames, 1000, capacity, ref overFlow, ref underFlow, ref percentError);
+
+                Console.WriteLine(" ----------------- --------------- ----------------- ------------------ ---------------- ");
+                Console.WriteLine("Max Flow computed (error of " + (float)percentError + "%)");
+                for (int i = 0; i < ratioNames.Count; i++)
+                    Console.WriteLine("     " + ratioNames[i] + " -> " + finalRatios[i] + "");
+                Console.WriteLine(" ----------------- --------------- ----------------- ------------------ ---------------- ");
             }
         }
 
@@ -426,9 +515,9 @@ namespace Trinity.UnitTest
                             {
                                 peptide = psm.Peptide;
                                 BaseSequence = peptide.BaseSequence;
-                                if (psm.Query.precursor.Track.INTENSITY/*.ProbabilityScore()*/ > bestPsmScore)
+                                if (psm.MatchingIntensity/*.Query.precursor.Track.INTENSITY*/ >= bestPsmScore)
                                 {
-                                    bestPsmScore = psm.Query.precursor.Track.INTENSITY;
+                                    bestPsmScore = psm.MatchingIntensity;//.Query.precursor.Track.INTENSITY;
                                     bestPSM = psm;
                                 }
                                 psmList.Add(psm);
@@ -440,7 +529,10 @@ namespace Trinity.UnitTest
                     //TODO Check witch one is better : Average, Sum or Best ProbabilityScore
                     psmList.Clear();
                     psmList.Add(bestPSM);
+                    tmp.ExportFragmentIntensities(psmList, psmList[0].Peptide, charge, dbOptions.OutputFolder + sample.nameColumn + "_Ratio.csv");
                 }
+                else
+                    Console.WriteLine("Missing ratio");
                 List<double> tmpList = tmp.GetFragments(psmList, peptide, charge, false, false, minRatioIntensity);
                 items.Add(tmpList);
 
@@ -556,6 +648,75 @@ namespace Trinity.UnitTest
 
             Console.WriteLine("Number of solutions : " + optimalSolutions.Count);
             //return tmp;
+        }
+
+        public static void Launch2(bool restrain = false)
+        {
+            /*
+            string projectFile = @"G:\Thibault\-=Proteomics_Raw_Data=-\ELITE\SEP11_2013\Project_1.csv";//Group 1
+            string strToAim = "GK(propionylation of K)GGK(propionylation of K)GLGK(propionylation of K)GGAK(propionylation of K)R";
+            double mzAIM = 747.94000244140625;//*/
+            /*
+            string projectFile = @"G:\Thibault\-=Proteomics_Raw_Data=-\ELITE\SEP11_2013\Project_2.csv";//Group 2
+            string strToAim = "GK(acetylation of K)GGK(propionylation of K)GLGK(propionylation of K)GGAK(propionylation of K)R";
+            double mzAIM = 747.93000244140625;//*/
+            /*
+            string projectFile = @"G:\Thibault\-=Proteomics_Raw_Data=-\ELITE\SEP11_2013\Project_3.csv";//Group 2
+            string strToAim = "GK(propionylation of K)GGK(acetylation of K)GLGK(propionylation of K)GGAK(propionylation of K)R";
+            double mzAIM = 747.93000244140625;//*/
+            /*
+            string projectFile = @"G:\Thibault\-=Proteomics_Raw_Data=-\ELITE\SEP11_2013\Project_4.csv";//Group 2
+            string strToAim = "GK(propionylation of K)GGK(propionylation of K)GLGK(acetylation of K)GGAK(propionylation of K)R";
+            double mzAIM = 747.93000244140625;//*/
+            /*
+            string projectFile = @"G:\Thibault\-=Proteomics_Raw_Data=-\ELITE\SEP11_2013\Project_5.csv";//Group 2
+            string strToAim = "GK(propionylation of K)GGK(propionylation of K)GLGK(propionylation of K)GGAK(acetylation of K)R";
+            double mzAIM = 747.93000244140625;//*/
+
+            string projectFile = @"G:\Thibault\-=Proteomics_Raw_Data=-\ELITE\SEP11_2013\Project__Group2_All.csv";//Group 2 (all)
+
+            //string projectFile = @"G:\Thibault\-=Proteomics_Raw_Data=-\ELITE\SEP11_2013\Project__Group3_All.csv";//Group 3 (all)
+            Samples Project = new Samples(projectFile, 0);
+
+            string baseSeq = "";
+            List<List<double>> items = BuildPeptideRatios(Project, ref baseSeq, false, true, 0.01);
+            for (int nbCycle = 0; nbCycle < 5; nbCycle++)
+            {
+                /*
+                foreach (List<double> list in items)
+                    NormalizeList(list, 1000);//*/
+                //Build InSilico Mixed Spectrum
+                Random rd = new Random();
+                List<double> mix = new List<double>();
+                for (int i = 0; i < items[0].Count; i++)
+                {
+                    double cumul = 0;
+                    //double iter = 640;
+                    double iter = 5;
+                    foreach (List<double> list in items)
+                    {
+                        cumul += list[i] * iter;
+                        //iter /= 2.0;
+                        iter *= 2.0;
+                    }
+                    double delta = 1 + (rd.NextDouble() / 10.0) - 0.05;// * FragmentStepSize * RatiosStepSize);
+                    mix.Add(cumul * delta);//Pollute system
+                }
+
+                List<string> ratioNames = new List<string>();
+                foreach (Sample sample in Project)
+                    ratioNames.Add(sample.nameColumn);
+                double overFlow = 0;
+                double underFlow = 0;
+                double percentError = 0;
+                List<double> finalRatios = Proteomics.Utilities.MaxFlowPrePush.Compute(items, ratioNames, 1000, mix, ref overFlow, ref underFlow, ref percentError);
+
+                Console.WriteLine(" ----------------- --------------- ----------------- ------------------ ---------------- ");
+                Console.WriteLine("Max Flow computed (error of " + (float)percentError + "%)");
+                for (int i = 0; i < ratioNames.Count; i++)
+                    Console.WriteLine("     " + ratioNames[i] + " -> " + finalRatios[i] + "");
+                Console.WriteLine(" ----------------- --------------- ----------------- ------------------ ---------------- ");
+            }
         }
     }
 }
