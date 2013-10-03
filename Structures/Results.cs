@@ -445,7 +445,7 @@ namespace Trinity
             writer.writeToFile();
         }
 
-        public List<double> GetFragments(List<PeptideSpectrumMatch> psms, Peptide peptide, int psmCharge, bool average, bool internalFragments)
+        public List<double> GetFragments(List<PeptideSpectrumMatch> psms, Peptide peptide, int psmCharge, bool average, bool internalFragments, double minRatioIntensity)
         {
             List<string> fragments = new List<string>();
             foreach (string fragment in FragmentDictionary.Fragments.Keys)
@@ -463,6 +463,11 @@ namespace Trinity
                     fragments.Add(fragment);
             }
 
+            double cumulIntensity = 0;
+            foreach (PeptideSpectrumMatch psm in psms)
+                foreach (ProductMatch match in psm.AllProductMatches)
+                    cumulIntensity += match.obsIntensity;
+
             List<double> products = new List<double>();
             for (int i = 1; i <= peptide.Length; i++)
             {
@@ -472,6 +477,7 @@ namespace Trinity
                     {
                         double cumul = 0.0;
                         int nbTimesSeen = 0;
+
                         foreach (PeptideSpectrumMatch psm in psms)
                             foreach (ProductMatch match in psm.AllProductMatches)
                                 if (fragment.Name == match.fragment && match.fragmentPos == i && match.charge == charge)
@@ -479,6 +485,8 @@ namespace Trinity
                                     cumul += match.obsIntensity;
                                     nbTimesSeen++;
                                 }
+                        if (cumul < cumulIntensity * minRatioIntensity)
+                            cumul = 0;
                         if(average && nbTimesSeen > 0)
                             products.Add(cumul / (double)nbTimesSeen);
                         else

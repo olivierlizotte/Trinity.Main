@@ -65,7 +65,7 @@ namespace Trinity.UnitTest
 
         public static int FindLocalMaximumFlow(List<double> fragRatio, List<long> fragments, long sumOfIntensities)
         {
-            int cumul = 0;
+            int cumul = 1;
             while (cumul <= sumOfIntensities)
             {
                 for (int i = 0; i < fragments.Count; i++)
@@ -152,7 +152,7 @@ namespace Trinity.UnitTest
             return Underflow(fragRatios, localFlows, fragments);
         }//*/
 
-        public static DBOptions GetDBOptions()
+        public static DBOptions GetDBOptions(bool loadFromRaw)
         {
             string outputDir = @"C:\_IRIC\DATA\Test\testNB\";
             string fastaFile = @"G:\Thibault\-=Proteomics_Raw_Data=-\ELITE\FEB13_2013\MSMS files\Peptide.fasta";
@@ -195,7 +195,7 @@ namespace Trinity.UnitTest
 
             dbOptions.SaveMS1Peaks = true;
             dbOptions.SaveMSMSPeaks = true;
-            dbOptions.LoadSpectraIfFound = true;
+            dbOptions.LoadSpectraIfFound = !loadFromRaw;
 
             return dbOptions;
         }
@@ -308,17 +308,17 @@ namespace Trinity.UnitTest
         public static void MaxFlowThis()//string projectSingleInjections, string projectMixed)
         {
             Samples ProjectRatios = new Samples(@"G:\Thibault\-=Proteomics_Raw_Data=-\ELITE\SEP11_2013\Project__Group2_All.csv", 0);//Group 2 (all)            
-            Samples ProjectMixed = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_DiAce_OneRaw.csv", 0);
+            Samples ProjectMixed = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_MonoAce_OneRaw.csv", 0);
 
             string baseSeq = "";
-            List<List<double>> ratios = BuildPeptideRatios(ProjectRatios, ref baseSeq);
+            List<List<double>> ratios = BuildPeptideRatios(ProjectRatios, ref baseSeq, false, true, 0.01);
             
             double RatiosStepSize = 1000000;
             foreach (List<double> list in ratios)
                 NormalizeList(list, RatiosStepSize);//*/
             
             //Get PSMs
-            DBOptions dbOptions = GetDBOptions();
+            DBOptions dbOptions = GetDBOptions(false);
             dbOptions.productMassTolerance.Value = 0.05;
             Propheus propheus = new Propheus(dbOptions, ProjectMixed);
 
@@ -327,79 +327,81 @@ namespace Trinity.UnitTest
 
             Result tmp = propheus.SearchLatestVersion(propheus.AllQueries, true);
 
+            List<PeptideSpectrumMatch> tmpList = new List<PeptideSpectrumMatch>();
             foreach (Query query in tmp.queries)
             {
                 foreach (PeptideSpectrumMatch psm in query.psms)
                 {
                     if (psm.Peptide.BaseSequence.CompareTo(baseSeq) == 0 && query.precursor.Charge == 2)
                     {
-                        List<PeptideSpectrumMatch> tmpList = new List<PeptideSpectrumMatch>();
                         tmpList.Add(psm);
-                        List<long> mix = new List<long>();
-                        double FragmentStepSize = 1000;
-                        foreach (double fragment in tmp.GetFragments(tmpList, psm.Peptide, query.precursor.Charge, false, false))
-                            mix.Add((long)(fragment * FragmentStepSize * RatiosStepSize));
-
-                        List<List<double>> optimalSolutions = new List<List<double>>();
-                        double error = MaxFlow(ratios, mix, ref optimalSolutions);
-
-                        bool isEmpty = true;
-                        foreach (List<double> listOp in optimalSolutions)
-                            foreach (double dbl in listOp)
-                                if (dbl > 0)
-                                    isEmpty = false;
-                        if (!isEmpty)
-                        {
-                            //Compute average
-                            List<double> average = new List<double>();
-                            for (int i = 0; i < optimalSolutions[0].Count; i++)
-                            {
-                                double sum = 0.0;
-                                foreach (List<double> solution in optimalSolutions)
-                                    sum += solution[i];
-                                double avg = sum / (double)optimalSolutions.Count;
-                                average.Add(avg);
-                            }
-                            optimalSolutions.Add(average);
-
-                            //Compute expected error in percentage
-                            double errorCumul = 0.0;
-
-                            for (int k = 0; k < ratios[0].Count; k++)
-                            {
-                                double peakSum = 0;
-                                for (int i = 0; i < ratios.Count; i++)
-                                    peakSum += ratios[i][k] * optimalSolutions[0][i];
-                                errorCumul += Math.Abs(mix[k] - peakSum);
-                            }
-                            double sumOfIntensities = 0;
-                            foreach (long item in mix)
-                                sumOfIntensities += item;
-                            //errorCumul /= (double)average.Count;
-                            Console.WriteLine(" -=+ Error cumulated : " + (float)(errorCumul / (double)sumOfIntensities) * 100 + " +=- ");
-                            List<Sample> samples = new List<Sample>();
-                            foreach (Sample sample in ProjectRatios)
-                                samples.Add(sample);
-                            //int error = MaxFlowBruteForce(items[0], items[1], items[2], items[3], mix, ref optimalSolutions);            
-                            foreach (List<double> solution in optimalSolutions)
-                            {
-                                Console.WriteLine(" ----------------- --------------- ----------------- ------------------ ---------------- ");
-                                Console.WriteLine("Max Flow computed (error of " + error / (FragmentStepSize * RatiosStepSize) + ")");
-                                for (int i = 0; i < samples.Count; i++)
-                                    Console.WriteLine("     " + samples[i].nameColumn + " -> " + solution[i] / FragmentStepSize + "");
-                            }
-                            Console.WriteLine(" ----------------- --------------- ----------------- ------------------ ---------------- ");
-
-                            Console.WriteLine("Number of solutions : " + optimalSolutions.Count);
-                        }
+                        break;
                     }
                 }
             }
+            
+            List<long> mix = new List<long>();
+            double FragmentStepSize = 1000;
+            foreach (double fragment in tmp.GetFragments(tmpList, tmpList[0].Peptide, 2, false, false, 0.0001))
+                mix.Add((long)(fragment * FragmentStepSize * RatiosStepSize));
+
+            List<List<double>> optimalSolutions = new List<List<double>>();
+            double error = MaxFlow(ratios, mix, ref optimalSolutions);
+
+            bool isEmpty = true;
+            foreach (List<double> listOp in optimalSolutions)
+                foreach (double dbl in listOp)
+                    if (dbl > 0)
+                        isEmpty = false;
+            if (!isEmpty)
+            {
+                //Compute average
+                List<double> average = new List<double>();
+                for (int i = 0; i < optimalSolutions[0].Count; i++)
+                {
+                    double sum = 0.0;
+                    foreach (List<double> solution in optimalSolutions)
+                        sum += solution[i];
+                    double avg = sum / (double)optimalSolutions.Count;
+                    average.Add(avg);
+                }
+                optimalSolutions.Add(average);
+
+                //Compute expected error in percentage
+                double errorCumul = 0.0;
+
+                for (int k = 0; k < ratios[0].Count; k++)
+                {
+                    double peakSum = 0;
+                    for (int i = 0; i < ratios.Count; i++)
+                        peakSum += ratios[i][k] * optimalSolutions[0][i];
+                    errorCumul += Math.Abs(mix[k] - peakSum);
+                }
+                double sumOfIntensities = 0;
+                foreach (long item in mix)
+                    sumOfIntensities += item;
+                //errorCumul /= (double)average.Count;
+                Console.WriteLine(" -=+ Error cumulated : " + (float)(errorCumul / (double)sumOfIntensities) * 100 + " +=- ");
+                List<Sample> samples = new List<Sample>();
+                foreach (Sample sample in ProjectRatios)
+                    samples.Add(sample);
+                //int error = MaxFlowBruteForce(items[0], items[1], items[2], items[3], mix, ref optimalSolutions);            
+                foreach (List<double> solution in optimalSolutions)
+                {
+                    Console.WriteLine(" ----------------- --------------- ----------------- ------------------ ---------------- ");
+                    Console.WriteLine("Max Flow computed (error of " + error / (FragmentStepSize * RatiosStepSize) + ")");
+                    for (int i = 0; i < samples.Count; i++)
+                        Console.WriteLine("     " + samples[i].nameColumn + " -> " + solution[i] / FragmentStepSize + "");
+                }
+                Console.WriteLine(" ----------------- --------------- ----------------- ------------------ ---------------- ");
+
+                Console.WriteLine("Number of solutions : " + optimalSolutions.Count);            
+            }
         }
 
-        public static List<List<double>> BuildPeptideRatios(Samples Project, ref string BaseSequence)
+        public static List<List<double>> BuildPeptideRatios(Samples Project, ref string BaseSequence, bool loadFromRaw, bool bestPSMOnly, double minRatioIntensity)
         {
-            DBOptions dbOptions = GetDBOptions();
+            DBOptions dbOptions = GetDBOptions(loadFromRaw);
             Propheus propheus = new Propheus(dbOptions, Project);
 
             propheus.Preload();
@@ -420,19 +422,26 @@ namespace Trinity.UnitTest
                     if (query.precursor.Charge == charge && query.precursor.sample == sample)
                     {
                         foreach (PeptideSpectrumMatch psm in query.psms)
-                            if (sample.nameColumn.CompareTo(psm.Peptide.Sequence) == 0)// && psm.ProbabilityScore() > bestPsmScore)
+                            if (sample.nameColumn.CompareTo(psm.Peptide.Sequence) == 0 && psm.ProbabilityScore() > 0)// && psm.ProbabilityScore() > bestPsmScore)
                             {
                                 peptide = psm.Peptide;
                                 BaseSequence = peptide.BaseSequence;
-                                bestPsmScore = psm.ProbabilityScore();
-                                bestPSM = psm;
+                                if (psm.Query.precursor.Track.INTENSITY/*.ProbabilityScore()*/ > bestPsmScore)
+                                {
+                                    bestPsmScore = psm.Query.precursor.Track.INTENSITY;
+                                    bestPSM = psm;
+                                }
                                 psmList.Add(psm);
                             }
                     }
 
-                //TODO Check witch one is better : Average, Sum or Best ProbabilityScore
-                //psmList.Add(bestPSM);
-                List<double> tmpList = tmp.GetFragments(psmList, peptide, charge, false, false);
+                if (bestPSMOnly && bestPSM != null)
+                {
+                    //TODO Check witch one is better : Average, Sum or Best ProbabilityScore
+                    psmList.Clear();
+                    psmList.Add(bestPSM);
+                }
+                List<double> tmpList = tmp.GetFragments(psmList, peptide, charge, false, false, minRatioIntensity);
                 items.Add(tmpList);
 
                 tmp.ExportFragmentIntensitiesForAllPSM(psmList, peptide, charge, dbOptions.OutputFolder + sample.nameColumn + ".csv");
@@ -469,7 +478,7 @@ namespace Trinity.UnitTest
             Samples Project = new Samples(projectFile, 0);
 
             string baseSeq = "";
-            List<List<double>> items = BuildPeptideRatios(Project, ref baseSeq);
+            List<List<double>> items = BuildPeptideRatios(Project, ref baseSeq, false, false, 0.01);
 
             double FragmentStepSize = 1000;
             double RatiosStepSize = 1000;

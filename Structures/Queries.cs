@@ -156,7 +156,7 @@ namespace Trinity
                     Add(new Query(dbOptions, entry, spectrum, prec, NbSpectrum));
                 }//*/
                 
-                if (newQueries.Count > 1)
+                if (newQueries.Count > 0)
                 {
                     //Remove precursors if estimated fragment intensities are too low (based on precursor intensity ratios and isolation window placement)
                     foreach (Query q in newQueries)
