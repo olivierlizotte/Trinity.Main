@@ -38,9 +38,9 @@ namespace Trinity
 
                 //List<PeptideSpectrumMatch> psmsOfQuery = query.psms;
 
-                if (query.psms.Count < 32)
+                if (query.psms.Count < options.NbPSMToKeep)
                     query.psms.Add(psm);
-                else if (query.psms[31].MatchingProducts < psm.MatchingProducts)
+                else if (query.psms[options.NbPSMToKeep-1].MatchingProducts < psm.MatchingProducts)
                 {
                     for (int i = 0; i < query.psms.Count; i++)
                         if (query.psms[i].MatchingProducts <= psm.MatchingProducts)
@@ -48,8 +48,8 @@ namespace Trinity
                             query.psms.Insert(i, psm);
                             break;
                         }
-                    if (query.psms.Count > 32)
-                        query.psms.RemoveAt(31);
+                    if (query.psms.Count > options.NbPSMToKeep)
+                        query.psms.RemoveAt(options.NbPSMToKeep-1);
                 }//*/
                 //TODO check optimal number of PSM to store
                 /*

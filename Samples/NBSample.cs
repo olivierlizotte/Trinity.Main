@@ -322,7 +322,7 @@ namespace Trinity.UnitTest
             dbOptions.productMassTolerance.Value = 0.05;
             Propheus propheus = new Propheus(dbOptions, ProjectMixed);
 
-            propheus.Preload();
+            propheus.Preload(true);
             propheus.PrepareQueries();
 
             Result tmp = propheus.SearchLatestVersion(propheus.AllQueries, true);
@@ -401,6 +401,24 @@ namespace Trinity.UnitTest
 
         public static void MaxFlowThis2()//string projectSingleInjections, string projectMixed)
         {
+            //Proteomics.Utilities.MotifFindor.ScoreSequences(@"C:\_IRIC\DATA\Christina\testOut.csv");
+            Proteomics.Utilities.MotifFindor.LIR(   @"C:\_IRIC\DATA\Christina\Uniprot_Mouse_HSV1.fasta",
+                                                    @"C:\_IRIC\DATA\Christina\Training_LIR.csv");
+            //Proteomics.Utilities.MascotReportAnalyser.MergeUbiSites(@"C:\_IRIC\DATA\Christina\Bortezomib_score28_Ubi_and_hCKSAAP_Pred.csv",
+            //                                                        @"C:\_IRIC\DATA\Christina\Vehicle_score30_Ubi_and_hSCKAAP_Pred.csv",
+            //                                                        @"C:\_IRIC\DATA\Christina\Vehicle_Bortezomib_Common.csv");
+            //Proteomics.Utilities.Fasta.FastaRead.ComputeSequenceFROverlap(@"G:\Thibault\Olivier\Databases\peptideDb-minOcc10.fa",
+            //                                                            //@"C:\_IRIC\DATA\Tariq\translatedReadsDB_filter-10_ARN_R_fwd1_13-06-06_15db_13-07-15_09.fasta", 
+            //                                                            true, @"G:\Thibault\Olivier\Databases\peptideDb-minOcc10_OUTPUT.csv");
+            //Proteomics.Utilities.Fasta.FastaRead.AppendUbiPredToMascotReport(@"C:\_IRIC\DATA\Christina\UbiPredWithIDs.csv",
+            //                                                                   @"C:\_IRIC\DATA\Christina\Bortezomib_score28.csv",
+            //                                                                   @"C:\_IRIC\DATA\Christina\Bortezomib_score28_UbiPred.csv");
+            //Proteomics.Utilities.Fasta.FastaRead.AddIPIToUbiPredFile(   @"C:\_IRIC\DATA\Christina\ipi.HUMAN.v3.54-fr_20090128_Filtered_WithUniqueID.fasta",
+            //                                                            @"C:\_IRIC\DATA\Christina\UbPred\out - Copy.csv", 
+            //                                                            @"C:\_IRIC\DATA\Christina\UbiPredWithIDs.csv");
+            //Proteomics.Utilities.Fasta.FastaRead.FilterFromIDs(@"C:\_IRIC\DATA\Christina\ipi.HUMAN.v3.54-fr_20090128.fasta", @"C:\_IRIC\DATA\Christina\ipi.HUMAN.v3.54-fr_20090128_Filtered.fasta", 
+            //    @"C:\_IRIC\DATA\Christina\ProteinIPIs.csv");
+            return;
             Samples ProjectRatios = new Samples(@"G:\Thibault\-=Proteomics_Raw_Data=-\ELITE\SEP11_2013\Project__Group2_All.csv", 0);//Group 2 (all)            
             Samples ProjectMixed = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_MonoAce_OneRaw.csv", 0);
 
@@ -412,7 +430,7 @@ namespace Trinity.UnitTest
             dbOptions.productMassTolerance.Value = 0.05;
             Propheus propheus = new Propheus(dbOptions, ProjectMixed);
 
-            propheus.Preload();
+            propheus.Preload(true);
             propheus.PrepareQueries();
 
             Result tmp = propheus.SearchLatestVersion(propheus.AllQueries, true);
@@ -486,6 +504,12 @@ namespace Trinity.UnitTest
                     Console.WriteLine("     " + ratioNames[i] + " -> " + finalRatios[i] + "");
                 Console.WriteLine(" ----------------- --------------- ----------------- ------------------ ---------------- ");
             }
+
+            tmp.Export(0.05);
+            using(Database.Neo4j.ResultExporter exp = new Database.Neo4j.ResultExporter())
+            {
+                exp.AddNode(tmp);// Database.Neo4j.ResultExporter.ExportAll(tmp);
+            }
         }
 
         public static List<List<double>> BuildPeptideRatios(Samples Project, ref string BaseSequence, bool loadFromRaw, bool bestPSMOnly, double minRatioIntensity)
@@ -493,7 +517,7 @@ namespace Trinity.UnitTest
             DBOptions dbOptions = GetDBOptions(loadFromRaw);
             Propheus propheus = new Propheus(dbOptions, Project);
 
-            propheus.Preload();
+            propheus.Preload(true);
             propheus.PrepareQueries();
 
             Result tmp = propheus.SearchLatestVersion(propheus.AllQueries, true);

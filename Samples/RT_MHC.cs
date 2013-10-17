@@ -63,7 +63,7 @@ namespace Trinity.UnitTest
                 dbOptions.SaveMS1Peaks = true;
                 dbOptions.SaveMSMSPeaks = true;
                 dbOptions.LoadSpectraIfFound = true;
-                propheus.Preload();
+                propheus.Preload(true);
                 propheus.PrepareQueries();                
             }
             catch (Exception ex)

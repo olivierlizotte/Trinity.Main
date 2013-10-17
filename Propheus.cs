@@ -37,10 +37,10 @@ namespace Trinity
         /// Also creates the list of queries (some spectrum are used more than once, when multiple 
         /// precursors are found in the mass range of the fragmentation window
         /// </summary>
-        public void Preload()
+        public void Preload(bool loadMS1, bool filterMS2 = true)
         {
             AllProteins             = ReadProteomeFromFasta(dbOptions.FastaDatabaseFilepath, !dbOptions.DecoyFusion);
-            AllSpectras             = LoadSpectras();
+            AllSpectras             = LoadSpectras(loadMS1, filterMS2);
         }
 
         /// <summary>
@@ -97,7 +97,7 @@ namespace Trinity
         /// Loads spectra from Raw files
         /// </summary>
         /// <returns></returns>
-        public Dictionary<Sample, Spectra> LoadSpectras()
+        public Dictionary<Sample, Spectra> LoadSpectras(bool loadMS = true, bool filterMS2 = true)
         {
             //TODO test compatibility with QExactive, mzML ... other known formats
             AllSpectras = new Dictionary<Sample, Spectra>();
@@ -117,7 +117,7 @@ namespace Trinity
                     Console.WriteLine("Loading Sectra " + sample.sSDF);
 
                     pwiz.CLI.msdata.MSDataFile msFile = new pwiz.CLI.msdata.MSDataFile(sample.sSDF);
-                    Spectra spectra = Spectra.Load(msFile, dbOptions, sample.sSDF);
+                    Spectra spectra = Spectra.Load(msFile, dbOptions, sample.sSDF, loadMS, filterMS2);
                     spectra.Sort(ProductSpectrum.AscendingPrecursorMassComparison);
 
                     Console.WriteLine(sample.sSDF + " [" + spectra.Count + " msms scans]");
@@ -182,20 +182,23 @@ namespace Trinity
             //Todo redo clusterization, based on retention time aligned maps
 
             //Step 2 : Regroup based on peptide sequence
-            PeptideSearcher pepSearcher = new PeptideSearcher(dbOptions);            
+            PeptideSearcher pepSearcher = new PeptideSearcher(dbOptions);
+
+            if (optimize)
+            {
+                //result.peptides = UpdatePsmScores(pepSearcher.SearchAll(result.clusters, result.matchedPrecursors, true), result);
+                Console.WriteLine("Found peptides from UpdatePSMScore routine : " + result.peptides);
+                nbTargets = result.SetPrecursors(result.precursors);
+                Console.WriteLine("Targets after Updating PSM scores : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");
+                /*
+                PeptideSpectrumMatches allPSMs = new PeptideSpectrumMatches();
+                foreach (Precursor precursor in result.precursors)
+                    foreach (PeptideSpectrumMatch psm in precursor.psms)
+                        allPSMs.Add(psm);
             
-            //result.peptides = UpdatePsmScores(pepSearcher.SearchAll(result.clusters, result.matchedPrecursors, true), result);
-            Console.WriteLine("Found peptides from UpdatePSMScore routine : " + result.peptides);
-            nbTargets = result.SetPrecursors(result.precursors);
-            Console.WriteLine("Targets after Updating PSM scores : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");
-            /*
-            PeptideSpectrumMatches allPSMs = new PeptideSpectrumMatches();
-            foreach (Precursor precursor in result.precursors)
-                foreach (PeptideSpectrumMatch psm in precursor.psms)
-                    allPSMs.Add(psm);
-            
-            allPSMs.OptimizePSMScoreRatios(dbOptions, dbOptions.PSMFalseDiscoveryRate, result);
-            //*/
+                allPSMs.OptimizePSMScoreRatios(dbOptions, dbOptions.PSMFalseDiscoveryRate, result);
+                //*/
+            }
             result.peptides = pepSearcher.SearchClusters(result.clusters, result.matchedPrecursors, true);
             result.peptideSequences = pepSearcher.SearchClusters(result.clusters, result.matchedPrecursors, false);
             Console.WriteLine("Found peptides from Searchclusters routine : " + result.peptides);

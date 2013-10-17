@@ -29,6 +29,7 @@ namespace Trinity
 
         public double PSMFalseDiscoveryRate = 0.05;
 
+        public int NbPSMToKeep = 32;
         public string OutputFolder;
         public double MinimumPSMScore;
         public int MinimumPeptideLength = 5;

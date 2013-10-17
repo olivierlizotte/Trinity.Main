@@ -67,7 +67,7 @@ namespace Trinity.UnitTest
                 dbOptions.SaveMS1Peaks = false;
                 dbOptions.SaveMSMSPeaks = false;
                 dbOptions.LoadSpectraIfFound = true;
-                propheus.Preload();
+                propheus.Preload(true);
                 propheus.PrepareQueries();
                 
                 //First pass (used to optimize parameters and score weights)
@@ -80,7 +80,7 @@ namespace Trinity.UnitTest
                 dbOptions.SaveMSMSPeaks = true;
                 
                 //Second search
-                propheus.Preload();
+                propheus.Preload(true);
                 propheus.PrepareQueries();
                 Result finalRez = propheus.SearchLatestVersion(propheus.AllQueries, false);//, 1.0, false, false, null);
                 

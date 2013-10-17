@@ -114,7 +114,7 @@ namespace Trinity
             Add(spectrum);
         }
 
-        public static Spectra Load(pwiz.CLI.msdata.MSDataFile msFile, DBOptions options, string filePath)
+        public static Spectra Load(pwiz.CLI.msdata.MSDataFile msFile, DBOptions options, string filePath, bool loadMS = true, bool filterMS2 = true)
         {
             //Find file name in msFile;
             string mzMlFilepath = filePath;
@@ -122,100 +122,112 @@ namespace Trinity
             Spectra spectra = new Spectra(num_spectra);
             //List<Trail> trails = new List<Trail>();       
             MS1Spectrum previousMS1 = null;
-            //TODO DONT forget to remove the limiter
-            //int maxNbMSMS = 10;
-            for (int i = 0; i < num_spectra/* && i < 200*/; i++)//TODO Fix that later!
+            try
             {
-                //Spectrum
-                pwiz.CLI.msdata.Spectrum mySpec = msFile.run.spectrumList.spectrum(i, false);
 
-                if (mySpec.precursors.Count > 0 || mySpec.cvParam(pwiz.CLI.cv.CVID.MS_ms_level).value > 1)//is an MSMS
+                //TODO DONT forget to remove the limiter
+                //int maxNbMSMS = 10;
+                for (int i = 0; i < num_spectra/* && i < 200*/; i++)//TODO Fix that later!
                 {
+                    //Spectrum
                     pwiz.CLI.msdata.Spectrum spec = msFile.run.spectrumList.spectrum(i, true);
 
-                    double retention_time = spec.scanList.scans[0].cvParam(pwiz.CLI.cv.CVID.MS_scan_start_time).timeInSeconds() / 60.0;
-
-                    //List precursors and their intensities
-                    double precursor_mz = 0;//Is there a value for the time a scan took to complete?
-                    int charge = 2;
-                    double precursor_intensity = 0;
-                    string fragmentation_method = "unknown";
-                    double isolationWindow = 1.0;
-                    foreach (pwiz.CLI.msdata.Precursor precursor in spec.precursors)
+                    if (spec.precursors.Count > 0 || spec.cvParam(pwiz.CLI.cv.CVID.MS_ms_level).value > 1)//is an MSMS
                     {
-                        fragmentation_method = precursor.activation.cvParams[0].name;
-                        if (precursor.isolationWindow.cvParams.Count > 2 && (double)precursor.isolationWindow.cvParams[1].value == (double)precursor.isolationWindow.cvParams[2].value)
-                            isolationWindow = precursor.isolationWindow.cvParams[1].value;
-                        else if (precursor.isolationWindow.cvParams.Count > 2)
-                            Console.WriteLine("Weird Isolation Window");
+                        double retention_time = spec.scanList.scans[0].cvParam(pwiz.CLI.cv.CVID.MS_scan_start_time).timeInSeconds() / 60.0;
 
-                        foreach (pwiz.CLI.msdata.SelectedIon ion in precursor.selectedIons)
+                        //List precursors and their intensities
+                        double precursor_mz = 0;//Is there a value for the time a scan took to complete?
+                        int charge = 2;
+                        double precursor_intensity = 0;
+                        string fragmentation_method = "unknown";
+                        double isolationWindow = 1.0;
+                        foreach (pwiz.CLI.msdata.Precursor precursor in spec.precursors)
                         {
-                            //Cycle through MS to get real precursor intensities
-                            precursor_mz = ion.cvParams[0].value;
-                            if (ion.cvParams.Count > 1)
-                                charge = (int)ion.cvParams[1].value;
-                            //else
-                            //    Console.WriteLine("No charge computed for precursor ");
-                            if (ion.cvParams.Count > 2)
-                                precursor_intensity = ion.cvParams[2].value;
-                        }
-                    }
+                            fragmentation_method = precursor.activation.cvParams[0].name;
+                            if (precursor.isolationWindow.cvParams.Count > 2 && (double)precursor.isolationWindow.cvParams[1].value == (double)precursor.isolationWindow.cvParams[2].value)
+                                isolationWindow = precursor.isolationWindow.cvParams[1].value;
+                            else if (precursor.isolationWindow.cvParams.Count > 2)
+                                Console.WriteLine("Weird Isolation Window");
 
-
-                    int scan_index = i;
-                    int scan_number = scan_index + 1;
-
-                    pwiz.CLI.msdata.BinaryDataArray mz = spec.getMZArray();
-                    pwiz.CLI.msdata.BinaryDataArray intensity = spec.getIntensityArray();
-
-                    int num_peaks = mz.data.Count;
-                    GraphML_List<MsMsPeak> peaks = new GraphML_List<MsMsPeak>();//num_peaks);
-                    for (int k = 0; k < num_peaks; k++)
-                    {
-                        if (intensity.data[k] > 0)
-                        {
-                            MsMsPeak peak = new MsMsPeak(mz.data[k], intensity.data[k], 0);
-                            peaks.Add(peak);
-                        }
-                    }
-
-                    peaks.Sort(MsMsPeak.AscendingMzComparison);
-
-                    //peaks = AssignChargeStates(peaks, options.maximumAssumedPrecursorChargeState, options.precursorMassTolerance);
-                    //peaks = Deisotopebkp(peaks, options.maximumAssumedPrecursorChargeState, options.precursorMassTolerance);
-                    peaks = AssignChargeStatesAndDeisotope(peaks, options.MaximumPrecursorChargeState, new MassTolerance(options.productMassTolerance.Value * 0.5, options.productMassTolerance.Units));
-                    peaks = FilterPeaks(peaks, options.MaximumNumberOfFragmentsPerSpectrum);
-
-                    //TODO Add Contaminant removal 
-                    //peaks = ContaminantMasses.RemoveContaminantsFromMzSortedList(peaks, options.productMassTolerance);
-
-                    //Can sometime be sorted by intensity after this call
-                    //peaks = FilterPeaksV2(peaks);
-                    peaks.Sort(MsMsPeak.AscendingMzComparison);
-
-                    /*//TODO Validate that in most cases, next steps can calculate missing charge
-                    if (charge == 0)
-                    {
-                        for (int c = options.minimumAssumedPrecursorChargeState; c <= options.maximumAssumedPrecursorChargeState; c++)
-                        {
-                            if (options.assignChargeStates)
+                            foreach (pwiz.CLI.msdata.SelectedIon ion in precursor.selectedIons)
                             {
-                                peaks = AssignChargeStates(peaks, c, options.productMassTolerance);
-                                if (options.deisotope)
-                                {
-                                    peaks = Deisotope(peaks, c, options.productMassTolerance);
-                                }
+                                //Cycle through MS to get real precursor intensities
+                                precursor_mz = ion.cvParams[0].value;
+                                if (ion.cvParams.Count > 1)
+                                    charge = (int)ion.cvParams[1].value;
+                                //else
+                                //    Console.WriteLine("No charge computed for precursor ");
+                                if (ion.cvParams.Count > 2)
+                                    precursor_intensity = ion.cvParams[2].value;
                             }
-
-                            double precursor_mass = Utilities.MassFromMZ(precursor_mz, c);
-
-                            ProductSpectrum spectrum = new ProductSpectrum(mzMlFilepath, scan_number, retention_time, fragmentation_method, precursor_mz, precursor_intensity, c, precursor_mass, peaks);
-                            spectra.Add(spectrum);
                         }
-                    }
-                    else//*/
-                    {/*
+
+
+                        int scan_index = i;
+                        int scan_number = scan_index + 1;
+
+                        pwiz.CLI.msdata.BinaryDataArray mz = spec.getMZArray();
+                        pwiz.CLI.msdata.BinaryDataArray intensity = spec.getIntensityArray();
+
+                        int num_peaks = mz.data.Count;
+                        if (num_peaks != intensity.data.Count)
+                        {
+                            Console.WriteLine("PreoteWizard reports peaks arrays (mz/intensity) of different sizes : (" + num_peaks + "/" + intensity.data.Count + ")");
+                            if (intensity.data.Count < num_peaks)
+                                num_peaks = intensity.data.Count;
+                        }
+                        GraphML_List<MsMsPeak> peaks = new GraphML_List<MsMsPeak>(num_peaks);
+                        for (int k = 0; k < num_peaks; k++)
+                        {
+                            if (intensity.data[k] > 0)
+                            {
+                                MsMsPeak peak = new MsMsPeak(mz.data[k], intensity.data[k], 0);
+                                peaks.Add(peak);
+                            }
+                        }
+                        mz.Dispose(); mz = null;
+                        intensity.Dispose(); intensity = null;
+
+                        peaks.Sort(MsMsPeak.AscendingMzComparison);
+
+                        if (filterMS2)
+                        {
+                            //peaks = AssignChargeStates(peaks, options.maximumAssumedPrecursorChargeState, options.precursorMassTolerance);
+                            //peaks = Deisotopebkp(peaks, options.maximumAssumedPrecursorChargeState, options.precursorMassTolerance);
+                            peaks = AssignChargeStatesAndDeisotope(peaks, options.MaximumPrecursorChargeState, new MassTolerance(options.productMassTolerance.Value * 0.5, options.productMassTolerance.Units));
+                            peaks = FilterPeaks(peaks, options.MaximumNumberOfFragmentsPerSpectrum);
+
+                            //TODO Add Contaminant removal 
+                            //peaks = ContaminantMasses.RemoveContaminantsFromMzSortedList(peaks, options.productMassTolerance);
+
+                            //Can sometime be sorted by intensity after this call
+                            //peaks = FilterPeaksV2(peaks);
+                            peaks.Sort(MsMsPeak.AscendingMzComparison);
+                        }
+
+                        /*//TODO Validate that in most cases, next steps can calculate missing charge
+                        if (charge == 0)
+                        {
+                            for (int c = options.minimumAssumedPrecursorChargeState; c <= options.maximumAssumedPrecursorChargeState; c++)
+                            {
+                                if (options.assignChargeStates)
+                                {
+                                    peaks = AssignChargeStates(peaks, c, options.productMassTolerance);
+                                    if (options.deisotope)
+                                    {
+                                        peaks = Deisotope(peaks, c, options.productMassTolerance);
+                                    }
+                                }
+
+                                double precursor_mass = Utilities.MassFromMZ(precursor_mz, c);
+
+                                ProductSpectrum spectrum = new ProductSpectrum(mzMlFilepath, scan_number, retention_time, fragmentation_method, precursor_mz, precursor_intensity, c, precursor_mass, peaks);
+                                spectra.Add(spectrum);
+                            }
+                        }
+                        else//*/
+                        {/*
                         if (options.assignChargeStates)
                         {
                             peaks = AssignChargeStatesbkp(peaks, charge, options.productMassTolerance);
@@ -224,87 +236,95 @@ namespace Trinity
                                 peaks = Deisotopebkp(peaks, charge, options.productMassTolerance);
                             }
                         }//*/
-                        //peaks = AssignChargeStatesAndDeisotope(peaks, options.maximumAssumedPrecursorChargeState, options.productMassTolerance);
+                            //peaks = AssignChargeStatesAndDeisotope(peaks, options.maximumAssumedPrecursorChargeState, options.productMassTolerance);
 
-                        double precursor_mass = Numerics.MassFromMZ(precursor_mz, charge);
+                            double precursor_mass = Numerics.MassFromMZ(precursor_mz, charge);
 
-                        ProductSpectrum spectrum = new ProductSpectrum(scan_number, retention_time, fragmentation_method, precursor_mz, precursor_intensity, charge, precursor_mass, peaks, isolationWindow);
-                        spectra.AddMSMS(spectrum);
-                        //zones.Add(new Zone(precursor_mz - isolationWindow, precursor_mz + isolationWindow, retention_time));
+                            ProductSpectrum spectrum = new ProductSpectrum(scan_number, retention_time, fragmentation_method, precursor_mz, precursor_intensity, charge, precursor_mass, peaks, isolationWindow);
+                            spectra.AddMSMS(spectrum);
+                            //zones.Add(new Zone(precursor_mz - isolationWindow, precursor_mz + isolationWindow, retention_time));
+                        }
+
+                        //if (spectra.Count >= maxNbMSMS)
+                        //    i = 10000000;
                     }
-
-                    //if (spectra.Count >= maxNbMSMS)
-                    //    i = 10000000;
-                }
-                else //Is an MS
-                {
-                    pwiz.CLI.msdata.Spectrum spec = msFile.run.spectrumList.spectrum(i, true);
-                    double retention_time = spec.scanList.scans[0].cvParam(pwiz.CLI.cv.CVID.MS_scan_start_time).timeInSeconds() / 60.0;
-
-                    pwiz.CLI.msdata.BinaryDataArray mz = spec.getMZArray();
-                    pwiz.CLI.msdata.BinaryDataArray intensity = spec.getIntensityArray();
-
-                    if (previousMS1 != null)
+                    else //Is an MS
                     {
-                        previousMS1.ScanDuration = retention_time - previousMS1.RetentionTimeInMin;
-                        spectra.MS1s.Add(previousMS1);
-                    }
-                    previousMS1 = new MS1Spectrum(i, retention_time, intensity.data, mz.data, 1);
-                    //Trail.Follow(mz.data, intensity.data, retention_time, ref trails, options);
-                    //Trail.RemoveFinished(ref trails, spectra, 1);
-                }
-                Console.Write("\r{0}%   ", ((100 * i) / num_spectra));
-            }
-            if (previousMS1 != null)
-                spectra.MS1s.Add(previousMS1);
-            /*
-            //Optimization of Track following parameters
-            long nbChargedTracks = 0;
-            for(int missingScans = 1; missingScans < 5; missingScans++)
-            {
-                for(int centroid = 1; centroid < 5; centroid++)
-                {
-                    for(int minPeaks = 1; minPeaks < 7; minPeaks++)
-                    {
-                        for(double valleyFactor = 0.1; valleyFactor < 4; valleyFactor += 0.3)
-                        {                            
-                            //weightedMean
-                            Tracks tracks = ComputeSpectraTracks(spectra, options, mzMlFilepath, missingScans, centroid, minPeaks, valleyFactor, MaxQuant.CentroidPosition.weightedMean);
-                            tracks.Sort(Tracks.AscendingPrecursorMassComparison);
-                            long cumulIsotopes = 0;
-                            foreach (stTrack track in tracks)
-                                cumulIsotopes += Queries.GetIsotopes(track, options, tracks, sample).Count;
-                            if (cumulIsotopes > nbChargedTracks)
+                        if (loadMS)
+                        {
+                            double retention_time = spec.scanList.scans[0].cvParam(pwiz.CLI.cv.CVID.MS_scan_start_time).timeInSeconds() / 60.0;
+
+                            pwiz.CLI.msdata.BinaryDataArray mz = spec.getMZArray();
+                            pwiz.CLI.msdata.BinaryDataArray intensity = spec.getIntensityArray();
+
+                            if (previousMS1 != null)
                             {
-                                nbChargedTracks = cumulIsotopes;
-                                Console.WriteLine(missingScans + "," + centroid + "," + minPeaks + "," + valleyFactor + ",weightedMean");
+                                previousMS1.ScanDuration = retention_time - previousMS1.RetentionTimeInMin;
+                                spectra.MS1s.Add(previousMS1);
                             }
+                            previousMS1 = new MS1Spectrum(i, retention_time, intensity.data, mz.data, 1);
+                            //Trail.Follow(mz.data, intensity.data, retention_time, ref trails, options);
+                            //Trail.RemoveFinished(ref trails, spectra, 1);
+                        }
+                    }
+                    spec.Dispose(); spec = null;
+                    Console.Write("\r{0}%   ", ((100 * i) / num_spectra));
+                }
+                if (previousMS1 != null)
+                    spectra.MS1s.Add(previousMS1);
+                /*
+                //Optimization of Track following parameters
+                long nbChargedTracks = 0;
+                for(int missingScans = 1; missingScans < 5; missingScans++)
+                {
+                    for(int centroid = 1; centroid < 5; centroid++)
+                    {
+                        for(int minPeaks = 1; minPeaks < 7; minPeaks++)
+                        {
+                            for(double valleyFactor = 0.1; valleyFactor < 4; valleyFactor += 0.3)
+                            {                            
+                                //weightedMean
+                                Tracks tracks = ComputeSpectraTracks(spectra, options, mzMlFilepath, missingScans, centroid, minPeaks, valleyFactor, MaxQuant.CentroidPosition.weightedMean);
+                                tracks.Sort(Tracks.AscendingPrecursorMassComparison);
+                                long cumulIsotopes = 0;
+                                foreach (stTrack track in tracks)
+                                    cumulIsotopes += Queries.GetIsotopes(track, options, tracks, sample).Count;
+                                if (cumulIsotopes > nbChargedTracks)
+                                {
+                                    nbChargedTracks = cumulIsotopes;
+                                    Console.WriteLine(missingScans + "," + centroid + "," + minPeaks + "," + valleyFactor + ",weightedMean");
+                                }
                             
-                            //Gaussian
-                            tracks = ComputeSpectraTracks(spectra, options, mzMlFilepath, missingScans, centroid, minPeaks, valleyFactor, MaxQuant.CentroidPosition.gaussian);
-                            tracks.Sort(Tracks.AscendingPrecursorMassComparison);
-                            cumulIsotopes = 0;
-                            foreach (stTrack track in tracks)
-                                cumulIsotopes += Queries.GetIsotopes(track, options, tracks, sample).Count;
-                            if (cumulIsotopes > nbChargedTracks)
-                            {
-                                nbChargedTracks = cumulIsotopes;
-                                Console.WriteLine(missingScans + "," + centroid + "," + minPeaks + "," + valleyFactor + ",Gaussian");
+                                //Gaussian
+                                tracks = ComputeSpectraTracks(spectra, options, mzMlFilepath, missingScans, centroid, minPeaks, valleyFactor, MaxQuant.CentroidPosition.gaussian);
+                                tracks.Sort(Tracks.AscendingPrecursorMassComparison);
+                                cumulIsotopes = 0;
+                                foreach (stTrack track in tracks)
+                                    cumulIsotopes += Queries.GetIsotopes(track, options, tracks, sample).Count;
+                                if (cumulIsotopes > nbChargedTracks)
+                                {
+                                    nbChargedTracks = cumulIsotopes;
+                                    Console.WriteLine(missingScans + "," + centroid + "," + minPeaks + "," + valleyFactor + ",Gaussian");
+                                }
                             }
                         }
                     }
-                }
-            }//*/
+                }//*/
 
-            if (spectra.MS1s.Count > 0)
-                spectra.tracks = ComputeSpectraTracks(spectra, options, mzMlFilepath, 3, 1, 3, 1.7, MaxQuant.CentroidPosition.weightedMean);
-            else
-                spectra.tracks = new Tracks();
-            spectra.tracks.Sort(Tracks.AscendingPrecursorMassComparison);
-            Console.Write("\r{0}%   ", 100);
+                if (spectra.MS1s.Count > 0)
+                    spectra.tracks = ComputeSpectraTracks(spectra, options, mzMlFilepath, 3, 1, 3, 1.7, MaxQuant.CentroidPosition.weightedMean);
+                else
+                    spectra.tracks = new Tracks();
+                spectra.tracks.Sort(Tracks.AscendingPrecursorMassComparison);
+                Console.Write("\r{0}%   ", 100);
 
-            //ContaminantMasses.DisplayContaminants();
-            
+                //ContaminantMasses.DisplayContaminants();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.StackTrace);
+                Console.WriteLine(ex.Message);
+            }
             return spectra;
         }
 

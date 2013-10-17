@@ -171,8 +171,6 @@ namespace Trinity
             //double[] experimental_masses = Query.spectrum.Masses;
             //GraphML_List<MSPeak> peaks = Query.spectrum.Peaks;
             int num_experimental_peaks = peaks.Count;
-            double product_mass_tolerance_value = options.productMassTolerance.Value;
-            MassToleranceUnits product_mass_tolerance_units = options.productMassTolerance.Units;
             TotalTheoreticalProducts = 0;
             TotalWeightedProducts = 0;
             //New version that should include charged ions            
@@ -193,7 +191,9 @@ namespace Trinity
                 {
                     if (peaks[index].Charge <= 0 || peaks[index].Charge == matchTheo.charge)
                     {
-                        double diff = matchTheo.theoMz - peaks[index].MZ;// experimental_masses[index];//TODO DALTON ONLY : add product mass tolerance unit test
+
+                        double diff = Numerics.CalculateMassError(peaks[index].MZ, matchTheo.theoMz, options.productMassTolerance.Units);
+                        //double diff = matchTheo.theoMz - peaks[index].MZ;// experimental_masses[index];//TODO DALTON ONLY : add product mass tolerance unit test
                         if (Math.Abs(diff) < options.productMassTolerance.Value)
                         {
                             if (Math.Abs(diff) < Math.Abs(massDiff))//TODO Priority to intensity, or precision?
