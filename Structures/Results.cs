@@ -445,6 +445,213 @@ namespace Trinity
             writer.writeToFile();
         }
 
+        public List<ProductMatch> GetCommonSpectrum(List<PeptideSpectrumMatch> psms, Peptide peptide, int psmCharge)
+        {
+            List<string> fragments = new List<string>();
+            foreach (string fragment in FragmentDictionary.Fragments.Keys)
+            {
+                bool found = false;
+                foreach (ProductMatch match in dbOptions.fragments.ComputeFragments(peptide, psmCharge, dbOptions))
+                {
+                    if (fragment == match.fragment)
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+                if (found)
+                    fragments.Add(fragment);
+            }
+            /*
+            double cumulIntensity = 0;
+            foreach (PeptideSpectrumMatch psm in psms)
+                foreach (ProductMatch match in psm.AllProductMatches)
+                    cumulIntensity += match.obsIntensity;//*/
+
+            int nbExpectedPSM = 0;
+            foreach (PeptideSpectrumMatch psm in psms)
+                if (psm.MatchingProducts > 3)
+                    nbExpectedPSM++;
+            int nbCumuledFrag = 0;
+            List<ProductMatch> products = new List<ProductMatch>();
+            for (int i = 1; i <= peptide.Length; i++)
+            {
+                for (int charge = 1; charge <= psmCharge; charge++)
+                {
+                    foreach (FragmentClass fragment in dbOptions.fragments)
+                    {
+                        double cumul = 0.0;   
+                        int nbTimesSeen = 0;
+                        ProductMatch pm = null;
+
+                        foreach (PeptideSpectrumMatch psm in psms)
+                        {
+                            //if (psm.ProbabilityScore() > 0.02)
+                            {
+                                foreach (ProductMatch match in psm.AllProductMatches)
+                                {
+                                    if (fragment.Name == match.fragment && match.fragmentPos == i && match.charge == charge)
+                                    {
+                                        pm = match;
+                                        if (psm.Query.spectrum.PrecursorIntensity > 0)
+                                        {
+                                            cumul += match.obsIntensity / psm.Query.spectrum.PrecursorIntensity;//TODO Add precursor intensity                                            
+                                            nbTimesSeen++;
+                                        }
+                                        else
+                                            Console.WriteLine("Null Intensity");
+                                    }
+                                }
+                            }
+                        }
+
+                        if (pm != null)//cumul > 0 && nbTimesSeen >= nbExpectedPSM * 0.80)
+                        {
+                            ProductMatch savedPm = new ProductMatch(pm);
+                            savedPm.obsIntensity = cumul;// / (double)nbTimesSeen;
+                            savedPm.weight = nbTimesSeen;
+                            products.Add(savedPm);
+                            nbCumuledFrag++;
+                        }
+                        else
+                        {
+                            ProductMatch savedPm = new ProductMatch();
+                            savedPm.charge = charge;
+                            savedPm.fragment = fragment.Name;
+                            savedPm.fragmentPos = i;
+                            savedPm.mass_diff = 0;
+                            savedPm.obsIntensity = 0;
+                            foreach (ProductMatch matchTheo in dbOptions.fragments.ComputeFragments(peptide, 2, dbOptions))                                
+                                    if (fragment.Name == matchTheo.fragment && matchTheo.fragmentPos == i && matchTheo.charge == charge)
+                                    {
+                                        savedPm.obsMz = matchTheo.theoMz;
+                                        savedPm.theoMz = matchTheo.theoMz;
+                                    }
+                            savedPm.weight = 0;
+                            products.Add(savedPm);
+                            nbCumuledFrag++;
+                        }
+                    }
+                }
+            }
+            //products.Sort(ProductMatch.AscendingWeightComparison);
+            //if(products.Count > 5)
+            //    products.RemoveRange(0, products.Count - 5);
+            return products;
+        }
+
+        public List<double> GetCommonFragments(List<PeptideSpectrumMatch> psms, Peptide peptide, int psmCharge)
+        {
+            List<string> fragments = new List<string>();
+            foreach (string fragment in FragmentDictionary.Fragments.Keys)
+            {
+                bool found = false;
+                foreach (ProductMatch match in dbOptions.fragments.ComputeFragments(peptide, psmCharge, dbOptions))
+                {
+                    if (fragment == match.fragment)
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+                if (found)
+                    fragments.Add(fragment);
+            }
+
+            double cumulIntensity = 0;
+            foreach (PeptideSpectrumMatch psm in psms)
+                foreach (ProductMatch match in psm.AllProductMatches)
+                    cumulIntensity += match.obsIntensity;
+            
+            int nbExpectedPSM = 0;
+           foreach (PeptideSpectrumMatch psm in psms)
+               if(psm.MatchingProducts > 3)
+                   nbExpectedPSM ++;
+           int nbCumuledFrag = 0;
+            List<double> products = new List<double>();
+            for (int i = 1; i <= peptide.Length; i++)
+            {
+                for (int charge = 1; charge <= psmCharge; charge++)
+                {
+                    foreach (FragmentClass fragment in dbOptions.fragments)
+                    {
+                        double cumul = 0.0;
+                        int nbTimesSeen = 0;
+
+                        foreach (PeptideSpectrumMatch psm in psms)
+                        {
+                            if(psm.MatchingProducts > 3)
+                            {
+                                foreach (ProductMatch match in psm.AllProductMatches)
+                                {
+                                    if (fragment.Name == match.fragment && match.fragmentPos == i && match.charge == charge)
+                                    {
+                                        if (psm.Query.spectrum.PrecursorIntensity > 0)
+                                        {
+                                            cumul += match.obsIntensity / psm.Query.spectrum.PrecursorIntensity;//TODO Add precursor intensity
+                                            nbTimesSeen++;
+                                        }
+                                        else
+                                            Console.WriteLine("Null Intensity");
+                                    }
+                                }
+                            }
+                        }
+
+                        if (cumul > 0 && nbTimesSeen >= nbExpectedPSM * 0.95)
+                        {
+                            products.Add(cumul / (double)nbTimesSeen);
+                            nbCumuledFrag++;
+                        }
+                        else
+                            products.Add(0);
+                    }
+                }
+            }
+            return products;
+        }
+
+        public List<double> GetFragments(PeptideSpectrumMatch psm, Peptide peptide, int psmCharge)
+        {
+            List<string> fragments = new List<string>();
+            foreach (string fragment in FragmentDictionary.Fragments.Keys)
+            {
+                bool found = false;
+                foreach (ProductMatch match in dbOptions.fragments.ComputeFragments(peptide, psmCharge, dbOptions))
+                {
+                    if (fragment == match.fragment)
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+                if (found)
+                    fragments.Add(fragment);
+            }
+            
+            List<double> products = new List<double>();
+            for (int i = 1; i <= peptide.Length; i++)
+            {
+                for (int charge = 1; charge <= psmCharge; charge++)
+                {
+                    foreach (FragmentClass fragment in dbOptions.fragments)
+                    {
+                        double cumul = 0.0;
+                        int nbTimesSeen = 0;
+                        
+                        foreach (ProductMatch match in psm.AllProductMatches)
+                            if (fragment.Name == match.fragment && match.fragmentPos == i && match.charge == charge)
+                            {
+                                cumul += match.obsIntensity;
+                                nbTimesSeen++;
+                            }
+                        products.Add(cumul);
+                    }
+                }
+            }
+            return products;
+        }
+
         public List<double> GetFragments(List<PeptideSpectrumMatch> psms, Peptide peptide, int psmCharge, bool average, bool internalFragments, double minRatioIntensity)
         {
             List<string> fragments = new List<string>();

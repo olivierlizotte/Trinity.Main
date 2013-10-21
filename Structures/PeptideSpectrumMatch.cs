@@ -36,6 +36,12 @@ namespace Trinity
             this.fragmentPos = match.fragmentPos;
             this.weight = match.weight;
         }
+        public static int AscendingWeightComparison(ProductMatch left, ProductMatch right)
+        {
+            if (left.weight == right.weight)
+                return left.obsIntensity.CompareTo(right.obsIntensity);
+            return left.weight.CompareTo(right.weight);
+        }
     }
     public class PeptideSpectrumMatch : GraphML_Node, ITargetDecoy
     {

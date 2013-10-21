@@ -89,7 +89,8 @@ namespace Trinity
                 }
                 spectra.AddMSMS(new ProductSpectrum(int.Parse(splits[0]), double.Parse(splits[1]), splits[2], mz, double.Parse(splits[4]), charge,Proteomics.Utilities.Numerics.MassFromMZ(mz, charge), peaks, double.Parse(splits[8])));                
             }
-            spectra.tracks = Tracks.Import(filenameTracks);
+            if(!string.IsNullOrEmpty(filenameTracks))
+                spectra.tracks = Tracks.Import(filenameTracks);
             return spectra;
         }
 

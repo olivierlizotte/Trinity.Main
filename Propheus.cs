@@ -110,7 +110,10 @@ namespace Trinity
                                                 && System.IO.File.Exists(msmsIonFile))
                 {
                     Console.WriteLine("Loading Sectra from " + trackFile + " AND " + msmsIonFile);                    
-                    AllSpectras.Add(sample, Spectra.Import(msmsIonFile, trackFile));
+                    if(loadMS)
+                        AllSpectras.Add(sample, Spectra.Import(msmsIonFile, trackFile));
+                    else
+                        AllSpectras.Add(sample, Spectra.Import(msmsIonFile, null));
                 }
                 else
                 {
