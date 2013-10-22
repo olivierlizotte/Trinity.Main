@@ -133,20 +133,20 @@ namespace Trinity
                 //TODO Only search for modifications that were seen in the spectrum
                 double tmp = 0;
                 cumulSeq += sequence[r - 1];
-                if (peptide.FixedModifications != null && peptide.FixedModifications.ContainsKey(r))
-                    foreach (Modification mod in peptide.FixedModifications[r])
+                if (peptide.FixedModifications != null && peptide.FixedModifications.ContainsKey(r+1))
+                    foreach (Modification mod in peptide.FixedModifications[r+1])
                         tmp += mod.MonoisotopicMassShift;
-                if (peptide.VariableModifications != null && peptide.VariableModifications.ContainsKey(r))
-                    tmp += peptide.VariableModifications[r].MonoisotopicMassShift;
+                if (peptide.VariableModifications != null && peptide.VariableModifications.ContainsKey(r+1))
+                    tmp += peptide.VariableModifications[r+1].MonoisotopicMassShift;
                 cumulativeNTerminalMass += AminoAcidMasses.GetMonoisotopicMass(sequence[r - 1]) + tmp;
 
                 tmp = 0;
                 cumulRevSeq += sequence[sequence.Length - r];
-                if (peptide.FixedModifications != null && peptide.FixedModifications.ContainsKey(sequence.Length - r))
-                    foreach (Modification mod in peptide.FixedModifications[sequence.Length - r])
+                if (peptide.FixedModifications != null && peptide.FixedModifications.ContainsKey(sequence.Length + 2 - r))
+                    foreach (Modification mod in peptide.FixedModifications[sequence.Length + 2 - r])
                         tmp += mod.MonoisotopicMassShift;
-                if (peptide.VariableModifications != null && peptide.VariableModifications.ContainsKey(sequence.Length - r))
-                    tmp += peptide.VariableModifications[sequence.Length - r].MonoisotopicMassShift;
+                if (peptide.VariableModifications != null && peptide.VariableModifications.ContainsKey(sequence.Length + 2 - r))
+                    tmp += peptide.VariableModifications[sequence.Length + 2 - r].MonoisotopicMassShift;
                 cumulativeCTerminalMass += AminoAcidMasses.GetMonoisotopicMass(sequence[sequence.Length - r]) + tmp;
 
                 for (int c = precursorCharge; c > 0; c--)

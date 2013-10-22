@@ -42,6 +42,10 @@ namespace Trinity
                 return left.obsIntensity.CompareTo(right.obsIntensity);
             return left.weight.CompareTo(right.weight);
         }
+        public override string ToString()
+        {
+            return "[" + obsMz + ";" + obsIntensity + "]";
+        }
     }
     public class PeptideSpectrumMatch : GraphML_Node, ITargetDecoy
     {

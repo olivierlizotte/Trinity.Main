@@ -451,8 +451,10 @@ namespace Trinity
             foreach (string fragment in FragmentDictionary.Fragments.Keys)
             {
                 bool found = false;
+                int nbFrag = 0;
                 foreach (ProductMatch match in dbOptions.fragments.ComputeFragments(peptide, psmCharge, dbOptions))
                 {
+                    nbFrag++;
                     if (fragment == match.fragment)
                     {
                         found = true;
@@ -495,7 +497,7 @@ namespace Trinity
                                         pm = match;
                                         if (psm.Query.spectrum.PrecursorIntensity > 0)
                                         {
-                                            cumul += match.obsIntensity / psm.Query.spectrum.PrecursorIntensity;//TODO Add precursor intensity                                            
+                                            cumul += match.obsIntensity;// / psm.Query.spectrum.PrecursorIntensity;//TODO Add precursor intensity                                            
                                             nbTimesSeen++;
                                         }
                                         else
@@ -505,14 +507,14 @@ namespace Trinity
                             }
                         }
 
-                        if (pm != null)//cumul > 0 && nbTimesSeen >= nbExpectedPSM * 0.80)
+                        if (pm != null && cumul > 0 && nbTimesSeen >= nbExpectedPSM * 0.95)
                         {
                             ProductMatch savedPm = new ProductMatch(pm);
-                            savedPm.obsIntensity = cumul;// / (double)nbTimesSeen;
+                            savedPm.obsIntensity = cumul / (double)nbTimesSeen;
                             savedPm.weight = nbTimesSeen;
                             products.Add(savedPm);
                             nbCumuledFrag++;
-                        }
+                        }/*
                         else
                         {
                             ProductMatch savedPm = new ProductMatch();
@@ -530,13 +532,13 @@ namespace Trinity
                             savedPm.weight = 0;
                             products.Add(savedPm);
                             nbCumuledFrag++;
-                        }
+                        }//*/
                     }
                 }
-            }
-            //products.Sort(ProductMatch.AscendingWeightComparison);
-            //if(products.Count > 5)
-            //    products.RemoveRange(0, products.Count - 5);
+            }/*
+            products.Sort(ProductMatch.AscendingWeightComparison);
+            if(products.Count > 10)
+                products.RemoveRange(0, products.Count - 10);//*/
             return products;
         }
 

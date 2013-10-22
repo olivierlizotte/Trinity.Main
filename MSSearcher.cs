@@ -307,9 +307,17 @@ namespace Trinity
         public Dictionary<int, List<int>> samples = new Dictionary<int, List<int>>();
         public Precursors precursors = new Precursors();
         
-        public MSSearcher(DBOptions options)
+        public MSSearcher(DBOptions options, Samples project)
         {
             this.options = options;
+            
+            foreach(Sample sample in project)
+            {
+                if (!samples.ContainsKey(sample.PROJECT.CONDITION))
+                    samples.Add(sample.PROJECT.CONDITION, new List<int>());
+                if (!samples[sample.PROJECT.CONDITION].Contains(sample.PROJECT.REPLICATE))
+                    samples[sample.PROJECT.CONDITION].Add(sample.PROJECT.REPLICATE);
+            }
         }
 
         public void CumulPsm(List<Precursor> matches)
@@ -319,10 +327,10 @@ namespace Trinity
                 Sample entry = precursor.sample;
                 precursors.Add(precursor);//Remove blank psm (unmatched spectrum/query duos)
 
-                if (!samples.ContainsKey(entry.PROJECT.CONDITION))
+             /*   if (!samples.ContainsKey(entry.PROJECT.CONDITION))
                     samples.Add(entry.PROJECT.CONDITION, new List<int>());
                 if (!samples[entry.PROJECT.CONDITION].Contains(entry.PROJECT.REPLICATE))
-                    samples[entry.PROJECT.CONDITION].Add(entry.PROJECT.REPLICATE);
+                    samples[entry.PROJECT.CONDITION].Add(entry.PROJECT.REPLICATE);//*/
             }
         }
 

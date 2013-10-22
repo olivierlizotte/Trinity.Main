@@ -141,19 +141,37 @@ namespace Trinity
 
                 if (!foundCharge)
                 {
-                    if (closestTrack == null || 
-                        Tracks.ContainsKey(closestTrack) ||
-                        Math.Abs(Numerics.CalculateMassError(closestTrack.MZ, spectrum.PrecursorMZ, dbOptions.precursorMassTolerance.Units)) > dbOptions.precursorMassTolerance.Value)
+                    /*if (closestTrack != null && Tracks.ContainsKey(closestTrack) && Math.Abs(Numerics.CalculateMassError(closestTrack.MZ, spectrum.PrecursorMZ, dbOptions.precursorMassTolerance.Units)) < dbOptions.precursorMassTolerance.Value)
+                    {
+                        if(closestTrack.RT_Min > (float)(spectrum.RetentionTimeInMin - dbOptions.ComputedRetentionTimeDiff))
+                            closestTrack.RT_Min = (float)(spectrum.RetentionTimeInMin - dbOptions.ComputedRetentionTimeDiff);
+                        if (closestTrack.RT_Max < (float)(spectrum.RetentionTimeInMin + dbOptions.ComputedRetentionTimeDiff))
+                            closestTrack.RT_Max = (float)(spectrum.RetentionTimeInMin + dbOptions.ComputedRetentionTimeDiff);
+                        if (closestTrack.INTENSITY < spectrum.PrecursorIntensity)
+                            closestTrack.INTENSITY = spectrum.PrecursorIntensity;
+
+                        Precursor prec = Tracks[closestTrack];
+                        if (prec.Charge == spectrum.PrecursorCharge)
+                        {
+                            Add(new Query(dbOptions, entry, spectrum, prec, NbSpectrum));
+                        }
+                        else
+                        {
+                            Precursor newPrec = new Precursor(closestTrack, spectrum.PrecursorCharge, entry);
+                            Add(new Query(dbOptions, entry, spectrum, newPrec, NbSpectrum));
+                        }
+                    }
+                    else//*/
                     {
                         nbMissedTrack++;
                         closestTrack = new Track((float)spectrum.PrecursorMZ, (float)spectrum.RetentionTimeInMin, spectrum.PrecursorIntensity,
-                                                   (float)(spectrum.RetentionTimeInMin - dbOptions.ComputedRetentionTimeDiff), (float)(spectrum.RetentionTimeInMin + dbOptions.ComputedRetentionTimeDiff),
-                                                   true);
-                    }
+                                                 (float)(spectrum.RetentionTimeInMin - dbOptions.ComputedRetentionTimeDiff), (float)(spectrum.RetentionTimeInMin + dbOptions.ComputedRetentionTimeDiff),
+                                                 true);
 
-                    Precursor prec = new Precursor(closestTrack, spectrum.PrecursorCharge, entry);
-                    Tracks.Add(closestTrack, prec);
-                    Add(new Query(dbOptions, entry, spectrum, prec, NbSpectrum));
+                        Precursor prec = new Precursor(closestTrack, spectrum.PrecursorCharge, entry);
+                        Tracks.Add(closestTrack, prec);
+                        Add(new Query(dbOptions, entry, spectrum, prec, NbSpectrum));
+                    }
                 }//*/
                 
                 if (newQueries.Count > 0)

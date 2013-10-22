@@ -158,8 +158,8 @@ namespace Trinity.UnitTest
             string fastaFile = @"G:\Thibault\-=Proteomics_Raw_Data=-\ELITE\FEB13_2013\MSMS files\Peptide.fasta";
             DBOptions dbOptions = new DBOptions(fastaFile);
             dbOptions.precursorMassTolerance = new MassTolerance(8/*8*//*8withoutisotopes*/, MassToleranceUnits.ppm);
-            dbOptions.productMassTolerance = new MassTolerance(8/*8*//*8withoutisotopes*/, MassToleranceUnits.ppm);
-            //dbOptions.productMassTolerance = new MassTolerance(0.05/*0.034*//*without isotopes*/, MassToleranceUnits.Da);//0.034 is a 60 000 resolution over 2000 range in mz
+            //dbOptions.productMassTolerance = new MassTolerance(20/*8*//*8withoutisotopes*/, MassToleranceUnits.ppm);
+            dbOptions.productMassTolerance = new MassTolerance(0.05/*0.034*//*without isotopes*/, MassToleranceUnits.Da);//0.034 is a 60 000 resolution over 2000 range in mz
             dbOptions.MaximumPeptideMass = 200000;
             dbOptions.OutputFolder = outputDir;
             ProteaseDictionary proteases = ProteaseDictionary.Instance;
@@ -186,7 +186,7 @@ namespace Trinity.UnitTest
             dbOptions.addFragmentMods = false;// true;
             dbOptions.fragments = new Fragments();
             //dbOptions.fragments.Add(new FragmentA());
-            dbOptions.fragments.Add(new FragmentB());
+            //dbOptions.fragments.Add(new FragmentB());
             //dbOptions.fragments.Add(new FragmentC());
             //dbOptions.fragments.Add(new FragmentX());
             dbOptions.fragments.Add(new FragmentY());
@@ -220,8 +220,9 @@ namespace Trinity.UnitTest
 
             string baseSeq = "";
             List<List<ProductMatch>> ratios = new List<List<ProductMatch>>();
-            List<double> NormalizFactor = new List<double>();
-            CreateVirtualSpectrumFromSpikedPeptides(ProjectRatios, ref baseSeq, false, true, 0.01, ref ratios, ref NormalizFactor);
+            List<double> TrackIntensity = new List<double>();
+            List<double> NormalizeFactor = new List<double>();
+            CreateVirtualSpectrumFromSpikedPeptides(ProjectRatios, ref baseSeq, false, true, 0.01, ref ratios, ref TrackIntensity, ref NormalizeFactor);
 
             List<string> ratioNames = new List<string>();
             foreach (Sample sample in ProjectRatios)
@@ -238,45 +239,97 @@ namespace Trinity.UnitTest
 
             int iterPsm = 0;
             double bestScore = double.MaxValue;
-            foreach (Query query in tmp.queries)
+            foreach(Sample sample in ProjectMixed)
             {
-                foreach (PeptideSpectrumMatch psm in query.psms)
+                //PeptideSpectrumMatch bestPsm = null;
+                Console.WriteLine("Sample " + sample.sSDF);
+                /*foreach (Query query in tmp.queries)
                 {
-                    bool keep = false;
-                    foreach (string name in ratioNames)
-                        if (name.CompareTo(psm.Peptide.Sequence) == 0)
-                            keep = true;
-                    if (keep && psm.Peptide.BaseSequence.CompareTo(baseSeq) == 0 && query.precursor.Charge == 2)
+                    if (query.sample == sample && query.spectrum.ScanNumber == 4635)
                     {
-                        iterPsm++;
-
-                        //List<double> capacity = new List<double>();
-                        //foreach (double fragment in tmp.GetFragments(psm, psm.Peptide, 2))
-                        //    capacity.Add(fragment);
-
-                        double overFlow = 0;
-                        double underFlow = 0;
-                        double percentError = 0;
-                        List<double> finalRatios = MaxFlowFromSpectrum(ratios, ratioNames, 1, query.spectrum.Peaks, dbOptions.productMassTolerance, ref overFlow, ref underFlow, ref percentError);
-                        bool AllThere = true;
-                        foreach(double dbl in finalRatios)
-                            if(dbl == 0)
-                                AllThere = false;
-                        if (AllThere || percentError < bestScore )//percentError < 50)
+                        foreach (PeptideSpectrumMatch psm in query.psms)
                         {
-                            if (percentError < bestScore)
-                                bestScore = percentError;
-                            Console.WriteLine(" ----------------- --------------- ----------------- ------------------ ---------------- ");
-                            Console.WriteLine("Max Flow computed (error of " + (float)percentError + "%)");
-                            for (int i = 0; i < ratioNames.Count; i++)
-                                Console.WriteLine("     " + ratioNames[i] + " -> " + (finalRatios[i] / NormalizFactor[i]) + "");
-                            Console.WriteLine(" ----------------- --------------- ----------------- ------------------ ---------------- ");
+                            bool keep = false;
+                            foreach (string name in ratioNames)
+                                if (name.CompareTo(psm.Peptide.Sequence) == 0)
+                                    keep = true;
+                            if (keep && psm.Peptide.BaseSequence.CompareTo(baseSeq) == 0 && query.precursor.Charge == 2 && psm.MatchingProducts > 4)
+                            {
+                                if (bestPsm == null || 
+                                    psm.MatchingIntensityFraction > bestPsm.MatchingIntensityFraction)
+                                    //query.spectrum.PrecursorIntensity > bestPsm.Query.spectrum.PrecursorIntensity)// ||
+                                    //(query.spectrum.PrecursorIntensity > bestPsm.Query.spectrum.PrecursorIntensity && psm.MatchingIntensityFraction > bestPsm.MatchingIntensityFraction))
+                                    bestPsm = psm;
+                            }
                         }
-                        if (percentError < 0.1)
-                            Console.WriteLine("Good solution");
-                        break;
                     }
                 }
+                if(bestPsm != null)
+                {//*/
+                vsCSVWriter writer = new vsCSVWriter(dbOptions.OutputFolder + sample.nameColumn + "_Ratios.csv");
+                foreach (Query query in tmp.queries)
+                {
+                    if (query.sample == sample)
+                    {
+                        foreach (PeptideSpectrumMatch psm in query.psms)
+                        {
+                            bool keep = false;
+                            foreach (string name in ratioNames)
+                                if (name.CompareTo(psm.Peptide.Sequence) == 0)
+                                    keep = true;
+                            
+                            if (keep && psm.Peptide.BaseSequence.CompareTo(baseSeq) == 0 && query.precursor.Charge == 2 && psm.MatchingProducts > 4)
+                            {
+                                iterPsm++;
+
+                                //List<double> capacity = new List<double>();
+                                //foreach (double fragment in tmp.GetFragments(psm, psm.Peptide, 2))
+                                //    capacity.Add(fragment);
+
+                                double overFlow = 0;
+                                double underFlow = 0;
+                                double percentError = 0;
+                                List<double> finalRatios = MaxFlowFromSpectrum(ratios, ratioNames, 100000, query.spectrum.Peaks, dbOptions.productMassTolerance, ref overFlow, ref underFlow, ref percentError);
+                                bool AllThere = true;
+                                foreach (double dbl in finalRatios)
+                                    if (dbl == 0)
+                                        AllThere = false;
+
+                                double normSumRatio = 0;
+                                for (int i = 0; i < finalRatios.Count; i++)
+                                    normSumRatio += finalRatios[i] / NormalizeFactor[i];
+
+                                double sumRatio = 0;
+                                for (int i = 0; i < finalRatios.Count; i++)
+                                    sumRatio += finalRatios[i];
+
+                                if (AllThere || percentError < bestScore)//percentError < 50)
+                                {
+                                    if (percentError < bestScore)
+                                        bestScore = percentError;
+                                    Console.WriteLine(" ----------------- --------------- ----------------- ------------------ ---------------- ");
+                                    Console.WriteLine("Max Flow computed (error of " + (float)percentError + "%)");
+                                    for (int i = 0; i < ratioNames.Count; i++)
+                                        Console.WriteLine(ratioNames[i] + " -> [ " + ((float)(NormalizeFactor[i] * finalRatios[i] / normSumRatio)) * 100 + " ; " + ((float)(finalRatios[i] / sumRatio)) * 100 + " ; " + (float)finalRatios[i] + " ; " + (float)(NormalizeFactor[i] * finalRatios[i]) + " ; " + (finalRatios[i] / sumRatio) * query.precursor.Track.INTENSITY * (500 / TrackIntensity[i]) + " ]");
+                                    Console.WriteLine(" ----------------- --------------- ----------------- ------------------ ---------------- ");
+                                }
+                                string strRatios = query.spectrum.RetentionTimeInMin.ToString() + "," + psm.Query.spectrum.PrecursorIntensity;
+                                for (int i = 0; i < finalRatios.Count; i++)
+                                    strRatios += "," + finalRatios[i];// / NormalizeFactor[i];
+                                for (int i = 0; i < finalRatios.Count; i++)
+                                    strRatios += "," + finalRatios[i] / NormalizeFactor[i];
+                                for (int i = 0; i < finalRatios.Count; i++)
+                                    strRatios += "," + finalRatios[i] * NormalizeFactor[i];
+                                for (int i = 0; i < finalRatios.Count; i++)
+                                    strRatios += "," + finalRatios[i] * query.precursor.Track.INTENSITY * (500 / TrackIntensity[i]);
+                                for (int i = 0; i < finalRatios.Count; i++)
+                                    strRatios += "," + (finalRatios[i] / NormalizeFactor[i]) * query.precursor.Track.INTENSITY * (500 / TrackIntensity[i]);
+                                writer.AddLine(strRatios);
+                            }
+                        }
+                    }
+                }
+                writer.writeToFile();
             }
         }
 
@@ -307,7 +360,7 @@ namespace Trinity.UnitTest
             foreach (MsMsPeak peak in mixedSpectrum)                
                 foreach (float mz in keys)
                 {
-                    if (Proteomics.Utilities.Numerics.CalculateMassError(peak.MZ, mz, tolerance.Units) <= tolerance.Value)
+                    if (Math.Abs(Proteomics.Utilities.Numerics.CalculateMassError(peak.MZ, mz, tolerance.Units)) <= tolerance.Value)
                         mixedFragDic[mz] += peak.Intensity;
                 }
 
@@ -373,7 +426,7 @@ namespace Trinity.UnitTest
             optimalSolutions.Add(newList);
 
             newList = new List<double>();
-            foreach (int localFlow in bestLocalFlows)
+            foreach (long localFlow in bestLocalFlows)
                 newList.Add(localFlow);
             optimalSolutions.Add(newList);
                                     
@@ -386,9 +439,9 @@ namespace Trinity.UnitTest
                     sum += solution[i];
                 double avg = sum / (double)optimalSolutions.Count;
                 average.Add((long)avg);
-            }            
-            
-            virtualSpectrum = BuildVirtualSpectrum(spikedMatches, average, mixedFragDic);
+            }
+
+            virtualSpectrum = BuildVirtualSpectrum(spikedMatches, bestLocalFlows, mixedFragDic);
             //Compute expected error in percentage
             percentError = (ComputeOverflow(virtualSpectrum, mixedFragDic) / sumOfIntensities) * 100.0;
             
@@ -462,7 +515,7 @@ namespace Trinity.UnitTest
                     {
                         if (virtualFrag.ContainsKey(key))
                         {
-                            if (virtualFrag[key] * nbCumul > fragments[key])
+                            if (virtualFrag[key] * nbCumul > fragments[key] + 1)
                                 return nbCumul;
                         }                 
                     }
@@ -508,13 +561,15 @@ namespace Trinity.UnitTest
             underFlow = error;
 
             List<double> result = new List<double>();            
-            foreach (double val in average)
+            foreach(double val in solutions[0])
                 result.Add(val / (double)precision);
+            //foreach (double val in average)
+            //    result.Add(val / (double)precision);
             return result;
         }
 
         public static void CreateVirtualSpectrumFromSpikedPeptides(Samples Project, ref string BaseSequence, bool loadFromRaw, bool bestPSMOnly, double minRatioIntensity,
-                    ref List<List<ProductMatch>> ratios, ref List<double> NormalizFactor)
+                    ref List<List<ProductMatch>> ratios, ref List<double> TrackIntensity, ref List<double> Normalizor)
         {
             DBOptions dbOptions = GetDBOptions(loadFromRaw);
             Propheus propheus = new Propheus(dbOptions, Project);
@@ -528,35 +583,67 @@ namespace Trinity.UnitTest
             int charge = 2;
             Peptide peptide = null;
             ratios.Clear();
+
+            double averagePrecursorIntensity = 0;
+
             foreach (Sample sample in Project)
             {
+                double precursorMaxIntensity = 0;
                 List<PeptideSpectrumMatch> psmList = new List<PeptideSpectrumMatch>();
+                PeptideSpectrumMatch bestPsm = null;
                 foreach (Query query in tmp.queries)
                 {
                     if (query.precursor.Charge == charge && query.precursor.sample == sample)
                     {
                         foreach (PeptideSpectrumMatch psm in query.psms)
-                            if (sample.nameColumn.CompareTo(psm.Peptide.Sequence) == 0 && psm.ProbabilityScore() > 0.020)// && psm.ProbabilityScore() > bestPsmScore)
+                            if (sample.nameColumn.CompareTo(psm.Peptide.Sequence) == 0 && psm.MatchingProducts > 4)//.ProbabilityScore() > 0.020)// && psm.ProbabilityScore() > bestPsmScore)
                             {
                                 peptide = psm.Peptide;
                                 BaseSequence = peptide.BaseSequence;
                                 psmList.Add(psm);
+                                //if (!query.precursor.Track.Invented)
+                                //{
+                                //    nbPrec++;
+                                if (precursorMaxIntensity < query.precursor.Track.INTENSITY)
+                                {
+                                    precursorMaxIntensity = query.precursor.Track.INTENSITY;
+                                    bestPsm = psm;
+                                }
+                                //}
+                                //else
+                                //    nbPrec = nbPrec;
                             }
                     }
                 }
-                List<ProductMatch> tmpList = tmp.GetCommonSpectrum(psmList, peptide, charge);
-                
-                double sumIntentity= 0;
+                if (bestPSMOnly)
+                {
+                    psmList.Clear();
+                    psmList.Add(bestPsm);
+                }
+                List<ProductMatch> tmpList = tmp.GetCommonSpectrum(psmList, peptide, charge - 1);
+                double factor = 1;
+                /*
+                double HighestIntentity= 0;
                 foreach (ProductMatch elem in tmpList)
-                    sumIntentity += elem.obsIntensity;
-                
-                double factor = 500 * (1.0 / sumIntentity);//500fMol spiked approximatly. 
+                    if (elem.obsIntensity > HighestIntentity)
+                        HighestIntentity = elem.obsIntensity;
+
+                factor = 10 * (1.0 / HighestIntentity);
                 for(int i = 0; i < tmpList.Count; i++)
-                    tmpList[i].obsIntensity *= factor;
+                    tmpList[i].obsIntensity *= factor;//*/
+                //Normalizor.Add(factor);
+                averagePrecursorIntensity += precursorMaxIntensity;
 
                 ratios.Add(tmpList);
-                NormalizFactor.Add(factor);
+                TrackIntensity.Add(precursorMaxIntensity);// / (double)nbPrec);
                 tmp.ExportFragmentIntensitiesForAllPSM(psmList, peptide, charge, dbOptions.OutputFolder + sample.nameColumn + ".csv");
+            }
+            for (int i = 0; i < Project.Count; i++)
+            {
+                double factor = averagePrecursorIntensity / TrackIntensity[i];
+                for (int j = 0; j < ratios[i].Count; j++)
+                    ratios[i][j].obsIntensity *= factor;//*/
+                Normalizor.Add(factor);
             }
         }
     }

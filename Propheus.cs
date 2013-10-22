@@ -175,7 +175,7 @@ namespace Trinity
 
             //*/
             long bestTargets = nbTargets;
-            MSSearcher msSearcher = new MSSearcher(dbOptions);
+            MSSearcher msSearcher = new MSSearcher(dbOptions, Project);
             msSearcher.CumulPsm(result.matchedPrecursors);//TODO Check if its still needed
 
             //Step 1 : Cluster psms together based on precursor feature //TODO Implement ProteoProfile Scoring based clustering
@@ -278,7 +278,7 @@ namespace Trinity
             //*/
             allPSMs = null;
             long bestTargets = nbTargets;            
-            MSSearcher msSearcher = new MSSearcher(dbOptions);
+            MSSearcher msSearcher = new MSSearcher(dbOptions, Project);
             msSearcher.CumulPsm(result.matchedPrecursors);//TODO Check if its still needed
 
             //Step 1 : Cluster psms together based on precursor feature //TODO Implement ProteoProfile Scoring based clustering
