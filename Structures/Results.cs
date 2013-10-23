@@ -511,7 +511,7 @@ namespace Trinity
                         {
                             ProductMatch savedPm = new ProductMatch(pm);
                             savedPm.obsIntensity = cumul / (double)nbTimesSeen;
-                            savedPm.weight = nbTimesSeen;
+                            savedPm.weight = nbTimesSeen * pm.obsIntensity;
                             products.Add(savedPm);
                             nbCumuledFrag++;
                         }/*
@@ -535,10 +535,10 @@ namespace Trinity
                         }//*/
                     }
                 }
-            }/*
+            }
             products.Sort(ProductMatch.AscendingWeightComparison);
-            if(products.Count > 10)
-                products.RemoveRange(0, products.Count - 10);//*/
+            if(products.Count > peptide.Length)
+                products.RemoveRange(0, products.Count - peptide.Length);//*/
             return products;
         }
 

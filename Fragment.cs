@@ -117,8 +117,14 @@ namespace Trinity
     /// </summary>
     public class Fragments : GraphML_List<FragmentClass>
     {
-        public IEnumerable<ProductMatch> ComputeFragments(Peptide peptide, int precursorCharge, DBOptions dbOptions)
+        public IEnumerable<ProductMatch> ComputeFragments(Peptide peptide, int precursorKnownCharge, DBOptions dbOptions)
         {
+            int maxCharge;
+            if (precursorKnownCharge > 1)
+                maxCharge = precursorKnownCharge - 1;
+            else
+                 maxCharge = precursorKnownCharge;
+
             string sequence = peptide.BaseSequence;            
             ProductMatch match = new ProductMatch();
 
@@ -149,7 +155,7 @@ namespace Trinity
                     tmp += peptide.VariableModifications[sequence.Length + 2 - r].MonoisotopicMassShift;
                 cumulativeCTerminalMass += AminoAcidMasses.GetMonoisotopicMass(sequence[sequence.Length - r]) + tmp;
 
-                for (int c = precursorCharge; c > 0; c--)
+                for (int c = maxCharge; c > 0; c--)
                 {
                     match.charge = c;
                     foreach (FragmentClass fragment in this)
