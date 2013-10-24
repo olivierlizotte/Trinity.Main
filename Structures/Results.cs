@@ -445,7 +445,7 @@ namespace Trinity
             writer.writeToFile();
         }
 
-        public List<ProductMatch> GetCommonSpectrum(List<PeptideSpectrumMatch> psms, Peptide peptide, int psmCharge)
+        public List<ProductMatch> GetCommonSpectrum(List<PeptideSpectrumMatch> psms, Peptide peptide, int psmCharge, int nbProductsToKeep)
         {
             List<string> fragments = new List<string>();
             foreach (string fragment in FragmentDictionary.Fragments.Keys)
@@ -464,17 +464,13 @@ namespace Trinity
                 if (found)
                     fragments.Add(fragment);
             }
-            /*
-            double cumulIntensity = 0;
-            foreach (PeptideSpectrumMatch psm in psms)
-                foreach (ProductMatch match in psm.AllProductMatches)
-                    cumulIntensity += match.obsIntensity;//*/
 
             int nbExpectedPSM = 0;
             foreach (PeptideSpectrumMatch psm in psms)
                 if (psm.MatchingProducts > 3)
                     nbExpectedPSM++;
             int nbCumuledFrag = 0;
+            //Dictionary<ProductMatch, Dictionary<PeptideSpectrumMatch, int>> dicOfMatchToPSM = new Dictionary<ProductMatch, Dictionary<PeptideSpectrumMatch, int>>();
             List<ProductMatch> products = new List<ProductMatch>();
             for (int i = 1; i <= peptide.Length; i++)
             {
@@ -482,10 +478,15 @@ namespace Trinity
                 {
                     foreach (FragmentClass fragment in dbOptions.fragments)
                     {
-                        double cumul = 0.0;   
+                        //double cumul = 0.0;   
                         int nbTimesSeen = 0;
                         ProductMatch pm = null;
 
+                   //     Dictionary<PeptideSpectrumMatch, int> matchedPSMs = new Dictionary<PeptideSpectrumMatch, int>();
+                        double lastIntensity = 0.0;
+
+                        List<double> fragIntensities = new List<double>();
+                        List<double> fragSpectrumIntensities = new List<double>();
                         foreach (PeptideSpectrumMatch psm in psms)
                         {
                             //if (psm.ProbabilityScore() > 0.02)
@@ -497,8 +498,21 @@ namespace Trinity
                                         pm = match;
                                         if (psm.Query.spectrum.PrecursorIntensity > 0)
                                         {
-                                            cumul += match.obsIntensity;// / psm.Query.spectrum.PrecursorIntensity;//TODO Add precursor intensity                                            
+                                            double intensityFactor = 0;
+                                            if (psm.Query.spectrum.InjectionTime >= 119.999997317791)
+                                                lastIntensity = psm.Query.spectrum.PrecursorIntensity;
+                                            else
+                                            {
+                                                intensityFactor = (psm.Query.spectrum.PrecursorIntensity - lastIntensity) / psm.Query.spectrum.PrecursorIntensity;
+                                            }
+                                            double fragIntensity = match.obsIntensity + match.obsIntensity * intensityFactor;
+                                            fragIntensities.Add(fragIntensity);
+                                            fragSpectrumIntensities.Add(psm.Query.spectrum.PrecursorIntensity);
+                                            //cumul += fragIntensity;// / psm.Query.spectrum.PrecursorIntensity;//TODO Add precursor intensity                                            
                                             nbTimesSeen++;
+                                            
+               //                             if(!matchedPSMs.ContainsKey(psm))
+                 //                               matchedPSMs.Add(psm, 0);
                                         }
                                         else
                                             Console.WriteLine("Null Intensity");
@@ -507,12 +521,29 @@ namespace Trinity
                             }
                         }
 
-                        if (pm != null && cumul > 0 && nbTimesSeen >= nbExpectedPSM * 0.95)
+                        if (pm != null/* && cumul > 0*/ && nbTimesSeen >= nbExpectedPSM * 0.95 && fragIntensities.Count > 0)
                         {
                             ProductMatch savedPm = new ProductMatch(pm);
-                            savedPm.obsIntensity = cumul / (double)nbTimesSeen;
-                            savedPm.weight = nbTimesSeen * pm.obsIntensity;
+                            double precursorMaxIntensity = 0;
+                            foreach (double precInt in fragSpectrumIntensities)
+                                if (precInt > precursorMaxIntensity)
+                                    precursorMaxIntensity = precInt;
+                            double averageFragInt = 0;
+                            double cumulRatio = 0;
+                            for (int k = 0; k < fragSpectrumIntensities.Count; k++)
+                            {
+                                double ratio = fragSpectrumIntensities[k] / precursorMaxIntensity;
+                                if (ratio > 0.1)
+                                {
+                                    averageFragInt += ratio * fragIntensities[k];
+                                    cumulRatio += ratio;
+                                }
+                            }
+                            averageFragInt /= cumulRatio;
+                            savedPm.obsIntensity = averageFragInt;// cumul / (double)nbTimesSeen;
+                            savedPm.weight = nbTimesSeen * savedPm.obsIntensity;// pm.obsIntensity;
                             products.Add(savedPm);
+             //               dicOfMatchToPSM.Add(savedPm, matchedPSMs);
                             nbCumuledFrag++;
                         }/*
                         else
@@ -536,9 +567,10 @@ namespace Trinity
                     }
                 }
             }
+
             products.Sort(ProductMatch.AscendingWeightComparison);
-            if(products.Count > peptide.Length)
-                products.RemoveRange(0, products.Count - peptide.Length);//*/
+            if (products.Count > nbProductsToKeep)
+                products.RemoveRange(0, products.Count - nbProductsToKeep);//*/
             return products;
         }
 

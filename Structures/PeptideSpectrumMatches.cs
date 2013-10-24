@@ -149,6 +149,10 @@ namespace Trinity
         {
             return -left.Query.TrapDistance.CompareTo(right.Query.TrapDistance);
         }
+        public static int AscendingRetentionTime(PeptideSpectrumMatch left, PeptideSpectrumMatch right)
+        {
+            return left.Query.spectrum.RetentionTimeInMin.CompareTo(right.Query.spectrum.RetentionTimeInMin);
+        }
         public static int CompareMatchingIntensity(PeptideSpectrumMatch left, PeptideSpectrumMatch right)
         {
             return -left.MatchingIntensity.CompareTo(right.MatchingIntensity);

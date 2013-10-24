@@ -87,7 +87,7 @@ namespace Trinity
                         Console.WriteLine("Error parsing line : " + csv.LINES_LIST[i]);
                     }
                 }
-                spectra.AddMSMS(new ProductSpectrum(int.Parse(splits[0]), double.Parse(splits[1]), splits[2], mz, double.Parse(splits[4]), charge,Proteomics.Utilities.Numerics.MassFromMZ(mz, charge), peaks, double.Parse(splits[8])));                
+                spectra.AddMSMS(new ProductSpectrum(int.Parse(splits[0]), double.Parse(splits[1]), splits[2], mz, double.Parse(splits[4]), charge, Proteomics.Utilities.Numerics.MassFromMZ(mz, charge), peaks, double.Parse(splits[8]), double.Parse(splits[10])));
             }
             if(!string.IsNullOrEmpty(filenameTracks))
                 spectra.tracks = Tracks.Import(filenameTracks);
@@ -143,6 +143,7 @@ namespace Trinity
                         double precursor_intensity = 0;
                         string fragmentation_method = "unknown";
                         double isolationWindow = 1.0;
+                        double injectionTime =  spec.scanList.scans[0].cvParam(pwiz.CLI.cv.CVID.MS_ion_injection_time).value;
                         foreach (pwiz.CLI.msdata.Precursor precursor in spec.precursors)
                         {
                             fragmentation_method = precursor.activation.cvParams[0].name;
@@ -163,7 +164,6 @@ namespace Trinity
                                     precursor_intensity = ion.cvParams[2].value;
                             }
                         }
-
 
                         int scan_index = i;
                         int scan_number = scan_index + 1;
@@ -241,7 +241,7 @@ namespace Trinity
 
                             double precursor_mass = Numerics.MassFromMZ(precursor_mz, charge);
 
-                            ProductSpectrum spectrum = new ProductSpectrum(scan_number, retention_time, fragmentation_method, precursor_mz, precursor_intensity, charge, precursor_mass, peaks, isolationWindow);
+                            ProductSpectrum spectrum = new ProductSpectrum(scan_number, retention_time, fragmentation_method, precursor_mz, precursor_intensity, charge, precursor_mass, peaks, isolationWindow, injectionTime);
                             spectra.AddMSMS(spectrum);
                             //zones.Add(new Zone(precursor_mz - isolationWindow, precursor_mz + isolationWindow, retention_time));
                         }
