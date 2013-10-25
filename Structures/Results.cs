@@ -445,6 +445,38 @@ namespace Trinity
             writer.writeToFile();
         }
 
+        public static double ComputePrecursorArea(List<PeptideSpectrumMatch> psms)
+        {
+            double fragSpectrumArea = 0;
+            double lastTimeStamp = 0;
+            foreach (PeptideSpectrumMatch psm in psms)
+            {
+                if (psm.Query.spectrum.PrecursorIntensity > 0 && lastTimeStamp > 0)
+                    fragSpectrumArea += psm.Query.spectrum.PrecursorIntensity * (psm.Query.spectrum.RetentionTimeInMin - lastTimeStamp);
+                lastTimeStamp = psm.Query.spectrum.RetentionTimeInMin;
+            }
+            return fragSpectrumArea;
+        }
+
+        public static Dictionary<PeptideSpectrumMatch, double> ComputeMsMsFactor(List<PeptideSpectrumMatch> psms)
+        {
+            Dictionary<PeptideSpectrumMatch, double> fragRatio = new Dictionary<PeptideSpectrumMatch, double>();
+            double lastIntensity = 0;
+            foreach (PeptideSpectrumMatch psm in psms)
+            {
+                if (psm.Query.spectrum.PrecursorIntensity > 0)
+                {
+                    double intensityFactor = 0;
+                    if (psm.Query.spectrum.InjectionTime >= 119.999997317791)
+                        lastIntensity = psm.Query.spectrum.PrecursorIntensity;
+                    else
+                        intensityFactor = (psm.Query.spectrum.PrecursorIntensity - lastIntensity) / lastIntensity;// psm.Query.spectrum.PrecursorIntensity;
+                    fragRatio.Add(psm, intensityFactor);
+                }
+            }
+            return fragRatio;
+        }
+
         public List<ProductMatch> GetCommonSpectrum(List<PeptideSpectrumMatch> psms, Peptide peptide, int psmCharge, int nbProductsToKeep)
         {
             List<string> fragments = new List<string>();
@@ -465,6 +497,9 @@ namespace Trinity
                     fragments.Add(fragment);
             }
 
+            Dictionary<PeptideSpectrumMatch, double> MsMsFactor = ComputeMsMsFactor(psms);
+//            double PrecursorArea = ComputePrecursorArea(psms);
+
             int nbExpectedPSM = 0;
             foreach (PeptideSpectrumMatch psm in psms)
                 if (psm.MatchingProducts > 3)
@@ -478,15 +513,12 @@ namespace Trinity
                 {
                     foreach (FragmentClass fragment in dbOptions.fragments)
                     {
-                        //double cumul = 0.0;   
                         int nbTimesSeen = 0;
                         ProductMatch pm = null;
 
-                   //     Dictionary<PeptideSpectrumMatch, int> matchedPSMs = new Dictionary<PeptideSpectrumMatch, int>();
-                        double lastIntensity = 0.0;
-
-                        List<double> fragIntensities = new List<double>();
-                        List<double> fragSpectrumIntensities = new List<double>();
+                        double averageFragIntensity = 0;
+                        //List<double> fragIntensities = new List<double>();
+                        //double lastTimeStamp = 0;
                         foreach (PeptideSpectrumMatch psm in psms)
                         {
                             //if (psm.ProbabilityScore() > 0.02)
@@ -496,51 +528,43 @@ namespace Trinity
                                     if (fragment.Name == match.fragment && match.fragmentPos == i && match.charge == charge)
                                     {
                                         pm = match;
-                                        if (psm.Query.spectrum.PrecursorIntensity > 0)
+                                        if (psm.Query.spectrum.PrecursorIntensity > 0)// && lastTimeStamp > 0)
                                         {
-                                            double intensityFactor = 0;
-                                            if (psm.Query.spectrum.InjectionTime >= 119.999997317791)
-                                                lastIntensity = psm.Query.spectrum.PrecursorIntensity;
-                                            else
-                                            {
-                                                intensityFactor = (psm.Query.spectrum.PrecursorIntensity - lastIntensity) / psm.Query.spectrum.PrecursorIntensity;
-                                            }
-                                            double fragIntensity = match.obsIntensity + match.obsIntensity * intensityFactor;
-                                            fragIntensities.Add(fragIntensity);
-                                            fragSpectrumIntensities.Add(psm.Query.spectrum.PrecursorIntensity);
+                                            averageFragIntensity += (match.obsIntensity + match.obsIntensity * MsMsFactor[psm]);
+                                            //fragIntensities.Add(fragIntensity);
+                                            //fragSpectrumArea.Add(psm.Query.spectrum.PrecursorIntensity * (psm.Query.spectrum.RetentionTimeInMin - lastTimeStamp));
+                                            
+
                                             //cumul += fragIntensity;// / psm.Query.spectrum.PrecursorIntensity;//TODO Add precursor intensity                                            
                                             nbTimesSeen++;
-                                            
                //                             if(!matchedPSMs.ContainsKey(psm))
                  //                               matchedPSMs.Add(psm, 0);
                                         }
                                         else
                                             Console.WriteLine("Null Intensity");
+                                        //lastTimeStamp = psm.Query.spectrum.RetentionTimeInMin;
                                     }
                                 }
                             }
                         }
 
-                        if (pm != null/* && cumul > 0*/ && nbTimesSeen >= nbExpectedPSM * 0.95 && fragIntensities.Count > 0)
+                        if (pm != null)///* && cumul > 0*/ && fragIntensities.Count > 0)
                         {
                             ProductMatch savedPm = new ProductMatch(pm);
-                            double precursorMaxIntensity = 0;
-                            foreach (double precInt in fragSpectrumIntensities)
-                                if (precInt > precursorMaxIntensity)
-                                    precursorMaxIntensity = precInt;
+                            /*
                             double averageFragInt = 0;
+                            double ratio = (fragSpectrumIntensities[k] * spectrumElapsedTime[k]) / precursorMaxIntensity;
                             double cumulRatio = 0;
-                            for (int k = 0; k < fragSpectrumIntensities.Count; k++)
+                            for (int k = 0; k < fragIntensities.Count; k++)
                             {
-                                double ratio = fragSpectrumIntensities[k] / precursorMaxIntensity;
                                 if (ratio > 0.1)
                                 {
                                     averageFragInt += ratio * fragIntensities[k];
                                     cumulRatio += ratio;
                                 }
                             }
-                            averageFragInt /= cumulRatio;
-                            savedPm.obsIntensity = averageFragInt;// cumul / (double)nbTimesSeen;
+                            averageFragInt /= cumulRatio;//*/
+                            savedPm.obsIntensity = averageFragIntensity;// cumul / (double)nbTimesSeen;
                             savedPm.weight = nbTimesSeen * savedPm.obsIntensity;// pm.obsIntensity;
                             products.Add(savedPm);
              //               dicOfMatchToPSM.Add(savedPm, matchedPSMs);

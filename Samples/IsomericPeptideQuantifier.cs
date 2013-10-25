@@ -183,14 +183,14 @@ namespace Trinity.UnitTest
         
         public static void MaxFlowThis()//string projectSingleInjections, string projectMixed)
         {
-            //Samples ProjectRatios = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_MonoAce_Spiked_19Oct.csv", 0);//Group 2 (all)            
-            //Samples ProjectMixed = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_MonoAce_Varied_19Oct.csv", 0);
+            Samples ProjectRatios = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_MonoAce_Spiked_19Oct.csv", 0);//Group 2 (all)            
+            Samples ProjectMixed = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_MonoAce_Varied_19Oct.csv", 0);
 
             //Samples ProjectRatios = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_DiAce_Spiked_19Oct.csv", 0);//Group 2 (all)            
             //Samples ProjectMixed = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_DiAce_Varied_19Oct.csv", 0);
 
-            Samples ProjectRatios = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_TriAce_Spiked_19Oct.csv", 0);//Group 2 (all)            
-            Samples ProjectMixed = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_TriAce_Varied_19Oct.csv", 0);
+            //Samples ProjectRatios = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_TriAce_Spiked_19Oct.csv", 0);//Group 2 (all)            
+            //Samples ProjectMixed = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_TriAce_Varied_19Oct.csv", 0);
 
             string baseSeq = "";
             int mflowReturnType = 1;
@@ -251,7 +251,7 @@ namespace Trinity.UnitTest
                                 double overFlow = 0;
                                 double underFlow = 0;
                                 double percentError = 0;
-                                List<double> finalRatios = MaxFlowFromSpectrum(ratios, ratioNames, 10000, query.spectrum.Peaks, dbOptions.productMassTolerance,
+                                List<double> finalRatios = MaxFlowFromSpectrum(ratios, ratioNames, 100000, query.spectrum.Peaks, dbOptions.productMassTolerance,
                                                            mflowReturnType, ref overFlow, ref underFlow, ref percentError);
                                 bool AllThere = true;
                                 foreach (double dbl in finalRatios)
@@ -288,18 +288,18 @@ namespace Trinity.UnitTest
                                     {
                                         //sumOfRatio[i] += ((finalRatios[i] * NormalizeFactor[i]) / normSumRatio) * query.spectrum.PrecursorIntensity;
                                         //sumOfRatio[i] += (finalRatios[i] * NormalizeFactor[i]) * query.spectrum.PrecursorIntensity;
-                                        sumOfRatio[i] += finalRatios[i] *query.spectrum.PrecursorIntensity;
-                                        strRatios += "," + ((finalRatios[i] * NormalizeFactor[i]) / normSumRatio) * query.spectrum.PrecursorIntensity;
+                                        sumOfRatio[i] += (finalRatios[i] / sumRatio) * query.spectrum.PrecursorIntensity * NormalizeFactor[i];
+                                        strRatios += "," + finalRatios[i] * query.spectrum.PrecursorIntensity * NormalizeFactor[i];
                                     }
                                     for (int i = 0; i < finalRatios.Count; i++)
-                                        strRatios += "," + (finalRatios[i] * NormalizeFactor[i]) * query.spectrum.PrecursorIntensity;
+                                        strRatios += "," + (finalRatios[i] / sumRatio) * query.spectrum.PrecursorIntensity * NormalizeFactor[i];
                                     for (int i = 0; i < finalRatios.Count; i++)
                                     {
                                         //sumOfRatio[i] +=   (finalRatios[i] * NormalizeFactor[i]) * query.precursor.Track.INTENSITY * (500 / TrackIntensity[i]);
                                         strRatios += "," + (finalRatios[i] * NormalizeFactor[i]) * query.precursor.Track.INTENSITY * (500 / TrackIntensity[i]);
                                     }
                                     for (int i = 0; i < finalRatios.Count; i++)
-                                        strRatios += "," + ((finalRatios[i] * NormalizeFactor[i]) * query.spectrum.TotalIntensity) * query.precursor.Track.INTENSITY * (500 / TrackIntensity[i]);
+                                        strRatios += "," + ((finalRatios[i] * NormalizeFactor[i]) / normSumRatio) * query.spectrum.PrecursorIntensity;
 
                                     dicOfResults.Add(query.spectrum.ScanNumber, strRatios);
                                 }
@@ -326,14 +326,14 @@ namespace Trinity.UnitTest
 
         public static void OptimizeThisMaxFlow()//string projectSingleInjections, string projectMixed)
         {
-            Samples ProjectRatios = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_MonoAce_Spiked_19Oct.csv", 0);//Group 2 (all)            
-            Samples ProjectMixed = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_MonoAce_Varied_19Oct.csv", 0);
+            //Samples ProjectRatios = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_MonoAce_Spiked_19Oct.csv", 0);//Group 2 (all)            
+            //Samples ProjectMixed = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_MonoAce_Varied_19Oct.csv", 0);
 
             //Samples ProjectRatios = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_DiAce_Spiked_19Oct.csv", 0);//Group 2 (all)            
             //Samples ProjectMixed = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_DiAce_Varied_19Oct.csv", 0);
 
-            //Samples ProjectRatios = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_TriAce_Spiked_19Oct.csv", 0);//Group 2 (all)            
-            //Samples ProjectMixed = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_TriAce_Varied_19Oct.csv", 0);
+            Samples ProjectRatios = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_TriAce_Spiked_19Oct.csv", 0);//Group 2 (all)            
+            Samples ProjectMixed = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_TriAce_Varied_19Oct.csv", 0);
 
             DBOptions dbOptions = GetDBOptions(false);
             Propheus propheus = new Propheus(dbOptions, ProjectMixed);
@@ -354,9 +354,9 @@ namespace Trinity.UnitTest
             double bestSsmallestCumulError = double.MaxValue;
             List<string> bestCumulLines = new List<string>();
             for (int mflowReturnType = 0; mflowReturnType <= 2; mflowReturnType++)
-                for (int precision = 1000; precision <= 1000; precision *= 10)
+                for (int precision = 100000; precision <= 100000; precision *= 10)
                     for (int considerOnlyAllThere = 1; considerOnlyAllThere <= 1; considerOnlyAllThere++)
-                        for(int nbProductsToKeep = 12; nbProductsToKeep <= 14; nbProductsToKeep++)
+                        for(int nbProductsToKeep = 5; nbProductsToKeep <= 15; nbProductsToKeep++)
                             for(int nbSpectras = 20; nbSpectras <= 20; nbSpectras++)
                     {
                 string baseSeq = "";
@@ -405,6 +405,9 @@ namespace Trinity.UnitTest
                                     double normSumRatio = 0;
                                     for (int i = 0; i < finalRatios.Count; i++)
                                         normSumRatio += finalRatios[i] * NormalizeFactor[i];
+                                    double sumRatio = 0;
+                                    for (int i = 0; i < finalRatios.Count; i++)
+                                        sumRatio += finalRatios[i];
 
                                     if (!(double.IsNaN(normSumRatio) || normSumRatio == 0))
                                     {
@@ -417,13 +420,14 @@ namespace Trinity.UnitTest
                                             if (AllThere)
                                             {
                                                 for (int i = 0; i < finalRatios.Count; i++)
-                                                    sumOfRatio[i] += ((finalRatios[i] * NormalizeFactor[i]) / normSumRatio) * query.spectrum.PrecursorIntensity;
+                                                    sumOfRatio[i] += (finalRatios[i] / sumRatio) * query.spectrum.PrecursorIntensity * NormalizeFactor[i];
+                                                    //sumOfRatio[i] += ((finalRatios[i] * NormalizeFactor[i]) / normSumRatio) * query.spectrum.PrecursorIntensity;
                                             }
                                         }
                                         else
                                         {
                                             for (int i = 0; i < finalRatios.Count; i++)
-                                                sumOfRatio[i] += ((finalRatios[i] * NormalizeFactor[i]) / normSumRatio) * query.spectrum.PrecursorIntensity;
+                                                sumOfRatio[i] += (finalRatios[i] / sumRatio) * query.spectrum.PrecursorIntensity * NormalizeFactor[i];
                                         }
                                     }
                                 }
@@ -823,7 +827,7 @@ namespace Trinity.UnitTest
                                 else if (!bestPSMOnly && precursorMaxIntensity < query.spectrum.PrecursorIntensity)
                                     {
                                         precursorMaxIntensity = query.spectrum.PrecursorIntensity;//.precursor.Track.INTENSITY;
-                                    }
+                                    }//*/
                                 
                                 //}
                                 //else
@@ -844,6 +848,8 @@ namespace Trinity.UnitTest
                     //    psmList.RemoveRange(nbSpectrumToKeep, psmList.Count - nbSpectrumToKeep);
                 }
                 List<ProductMatch> tmpList = tmp.GetCommonSpectrum(psmList, peptide, charge, nbProductsToKeep);
+                double PrecursorArea = Result.ComputePrecursorArea(psmList);
+
                 //double factor = 1 / (double)psmList.Count;
                 /*
                 double HighestIntentity= 0;
@@ -855,10 +861,10 @@ namespace Trinity.UnitTest
                 for(int i = 0; i < tmpList.Count; i++)
                     tmpList[i].obsIntensity *= factor;//*/
                 //Normalizor.Add(factor);
-                averagePrecursorIntensity += precursorMaxIntensity;
+                averagePrecursorIntensity += PrecursorArea;// precursorMaxIntensity;
 
                 ratios.Add(tmpList);
-                TrackIntensity.Add(precursorMaxIntensity);// / (double)nbPrec);
+                TrackIntensity.Add(PrecursorArea);// / (double)nbPrec);
                 //tmp.ExportFragmentIntensitiesForAllPSM(psmList, peptide, charge, tmp.dbOptions.OutputFolder + sample.nameColumn + ".csv");
             }
             averagePrecursorIntensity /= (double)Project.Count;
