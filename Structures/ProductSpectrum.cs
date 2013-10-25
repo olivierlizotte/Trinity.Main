@@ -91,6 +91,11 @@ namespace Trinity
             return left.PrecursorMass.CompareTo(right.PrecursorMass);
         }
 
+        public static int AscendingRetentionTimeComparison(ProductSpectrum left, ProductSpectrum right)
+        {
+            return left.RetentionTimeInMin.CompareTo(right.RetentionTimeInMin);
+        }
+
         public void AlignSpectrum(double decalMz, double decalRt)
         {
             this.RetentionTimeInMin += decalRt;

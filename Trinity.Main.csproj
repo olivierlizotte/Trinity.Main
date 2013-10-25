@@ -104,6 +104,7 @@
     <Compile Include="Morpheus\Modification.cs" />
     <Compile Include="Morpheus\ModificationDictionary.cs" />
     <Compile Include="Morpheus\ModificationType.cs" />
+    <Compile Include="Samples\IsomericPeptideQuantifier2.cs" />
     <Compile Include="Samples\NBSample_bkp.cs" />
     <Compile Include="Samples\ToCalibrate.cs" />
     <Compile Include="Samples\RT_MHC.cs" />
