@@ -435,7 +435,7 @@ namespace Trinity
                 writer.AddLine(line);
             }
 
-            writer.writeToFile();
+            writer.WriteToFile();
         }
 
         public static void Export(string filename, List<Query> queries)
@@ -453,7 +453,7 @@ namespace Trinity
                 writer.AddLine(line);
             }
 
-            writer.writeToFile();
+            writer.WriteToFile();
         }
 
         public static void Export(string filename, List<PeptideSpectrumMatch> psms)
@@ -466,7 +466,7 @@ namespace Trinity
                     "," + psm.Peptide.BaseSequence + "," + psm.Peptide.Sequence + "," + psm.PrecursorScore + "," + psm.ProductScore + "," + psm.IntensityScore + "," + psm.ProbabilityScore() + "," +
                     psm.PrecursorMzError + "," + psm.Decoy + "," + psm.ProteinScore);
             
-            writer.writeToFile();
+            writer.WriteToFile();
         }
     }
 }

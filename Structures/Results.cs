@@ -223,7 +223,7 @@ namespace Trinity
                 }
                 writer.AddLine("    " + fragment + ", Number of fragments = ," + nbFrag + ",   Intensity = ," + cumulIntensity);
             }
-            writer.writeToFile();
+            writer.WriteToFile();
         }
 
         public void Save()
@@ -442,7 +442,7 @@ namespace Trinity
                 }
                 writer.AddLine(line);
             }
-            writer.writeToFile();
+            writer.WriteToFile();
         }
 
         public static double ComputePrecursorArea(List<PeptideSpectrumMatch> psms)
@@ -838,7 +838,7 @@ namespace Trinity
                 }
                 writer.AddLine(line);
             }
-            writer.writeToFile();
+            writer.WriteToFile();
         }
 
         public void ExportFragmentIntensitiesForAllPSM(List<PeptideSpectrumMatch> psms, Peptide peptide, int psmCharge, string fileName)
@@ -870,7 +870,7 @@ namespace Trinity
                 }
                 writer.AddLine(line);
             }
-            writer.writeToFile();
+            writer.WriteToFile();
         }
 
         public void Export(double fdr, string keyword = "", bool onlyPrecursors = false)

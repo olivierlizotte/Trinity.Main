@@ -268,7 +268,7 @@ namespace Trinity
             writer.AddLine("Sequence,Variable Modification,Score,Decoy,Precursor Mass Error");
             foreach (PeptideMatch pm in peptides)
                 writer.AddLine(pm.peptide.BaseSequence + "," + pm.peptide.Sequence + "," + pm.ProbabilityScore() + "," + pm.peptide.Decoy + "," + pm.GetPrecursorMassError());
-            writer.writeToFile();
+            writer.WriteToFile();
         }
     }
 }

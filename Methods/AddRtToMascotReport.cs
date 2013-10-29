@@ -61,7 +61,7 @@ namespace Trinity.Methods
 
                 writer.AddLine(line);
             }
-            writer.writeToFile();
+            writer.WriteToFile();
         }
     }
 }

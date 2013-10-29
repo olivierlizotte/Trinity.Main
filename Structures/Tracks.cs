@@ -35,7 +35,7 @@ namespace Trinity
 
             foreach (Track track in this)
                 writer.AddLine(track.ToString());
-            writer.writeToFile();
+            writer.WriteToFile();
         }
 
         public static Tracks Import(string filename)

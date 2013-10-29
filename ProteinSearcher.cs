@@ -254,7 +254,7 @@ namespace Trinity
             writer.AddLine(ProteinGroupMatch.Header);
             foreach (ProteinGroupMatch group in proteins)
                 writer.AddLine(group.ToString());
-            writer.writeToFile();
+            writer.WriteToFile();
         }
 
         public static IEnumerable<Peptide> ProteinDigest(DBOptions options, List<Protein> Proteins, bool allowSNP)

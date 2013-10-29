@@ -39,7 +39,7 @@ namespace Trinity.Methods
                 double retention_time = mySpec.scanList.scans[0].cvParam(pwiz.CLI.cv.CVID.MS_scan_start_time).timeInSeconds() / 60.0;
                 csvWriter.AddLine((i + 1) + "," + retention_time + "," + mySpec.cvParam(pwiz.CLI.cv.CVID.MS_ms_level).value);
             }
-            csvWriter.writeToFile();
+            csvWriter.WriteToFile();
         }
     }
 }

@@ -131,7 +131,7 @@ namespace Trinity.UnitTest
                     Console.WriteLine("Zut");
                 writer.AddLine(csvPeptides.LINES_LIST[i] + "," + sb.ToString().Trim());
             }
-            writer.writeToFile();
+            writer.WriteToFile();
         }
 
         /*
@@ -329,7 +329,7 @@ namespace Trinity.UnitTest
                         str += ",,,,";
                 writer.AddLine(str);
             }
-            writer.writeToFile();
+            writer.WriteToFile();
 
             return true;
         }
@@ -613,7 +613,7 @@ namespace Trinity.UnitTest
                     }
                 }
             }
-            writer.writeToFile();
+            writer.WriteToFile();
 
             vsCSVWriter writerCons = new vsCSVWriter(outputConservation);
             foreach(string key in dicOfAA.Keys)
@@ -627,7 +627,7 @@ namespace Trinity.UnitTest
                 meanNoZero += echantillonageNoZero[index];
             }
             writerCons.AddLine("Echantillonnage K," + meanNoZero / (double)nbK);
-            writerCons.writeToFile();
+            writerCons.WriteToFile();
 
             int lineIndex = 0;
             bool keepGoing = true;
@@ -648,7 +648,7 @@ namespace Trinity.UnitTest
                 writerConsAll.AddLine(sb2.ToString());
                 lineIndex++;
             }
-            writerConsAll.writeToFile();
+            writerConsAll.WriteToFile();
             return true;
         }
     }

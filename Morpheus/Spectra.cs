@@ -55,7 +55,7 @@ namespace Trinity
 
             foreach (ProductSpectrum spectrum in this)
                 writer.AddLine(spectrum.ToString());
-            writer.writeToFile();
+            writer.WriteToFile();
         }
 
         public static Spectra Import(string filenameMSMS, string filenameTracks)

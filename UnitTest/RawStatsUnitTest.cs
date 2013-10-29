@@ -54,7 +54,7 @@ namespace Trinity.UnitTest
                     line += "," + charges[i];
                 writer.AddLine(line);
             }
-            writer.writeToFile();
+            writer.WriteToFile();
             return true;
         }
     }

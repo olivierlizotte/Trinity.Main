@@ -312,7 +312,7 @@ namespace Trinity.UnitTest
                 scans.Sort();
                 foreach (int scan in scans)
                     writer.AddLine(dicOfResults[scan]);
-                writer.writeToFile();
+                writer.WriteToFile();
                 foreach (double n in sumOfRatio)
                     lineCumulRatio += "," + n;
                 writerCumul.AddLine(lineCumulRatio);
@@ -321,7 +321,7 @@ namespace Trinity.UnitTest
             for (int i = 0; i < NormalizeFactor.Count; i++)
                 strNorm += "," + NormalizeFactor[i];
             writerCumul.AddLine(strNorm);
-            writerCumul.writeToFile();
+            writerCumul.WriteToFile();
         }
 
         public static void OptimizeThisMaxFlow()//string projectSingleInjections, string projectMixed)
@@ -516,7 +516,7 @@ namespace Trinity.UnitTest
                     for (int i = 0; i < NormalizeFactor.Count; i++)
                         strNorm += "," + NormalizeFactor[i];
                     writer.AddLine(strNorm);
-                    writer.writeToFile();
+                    writer.WriteToFile();
                     Console.WriteLine(bestSsmallestCumulError + " : Return type (" + mflowReturnType + ") Precision (" + precision + " ConsiderOnlyAllThere (" + considerOnlyAllThere + ") nbSpectras (" + nbSpectras + ") nbProductsToKeep (" + nbProductsToKeep + ")");
                 }
             }
