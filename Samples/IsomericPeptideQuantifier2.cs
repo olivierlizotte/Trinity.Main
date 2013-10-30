@@ -108,7 +108,7 @@ namespace Trinity.UnitTest
             return dbOptions;
         }
 
-
+        /*
         public static void Optimize2()
         {
             //0.0289455865219887 : Return type (1) Precision (100000) nbProductsToKeep (13)
@@ -119,20 +119,12 @@ namespace Trinity.UnitTest
             //Samples ProjectRatios = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_DiAce_Spiked_19Oct.csv", 0);//Group 2 (all)            
             //Samples ProjectMixed = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_StableMix_DiAce_19Oct.csv", 0);
 
+            //0.19102016845044 : Return type (0) Precision (1000) nbProductsToKeep (8)
             //0.324913505037886 : Return type (0) Precision (100000) nbProductsToKeep (5)
-            Samples ProjectRatios = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_TriAce_Spiked_19Oct.csv", 0);//Group 2 (all)            
+            Samples ProjectRatios = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_TriAce_Spiked_19Oct.csv", 0);//Group 2 (all)       
             Samples ProjectMixed = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_StableMix_TriAce_19Oct.csv", 0);
 
             DBOptions dbOptions = GetDBOptions(false, false);
-            Result mixedResult = null;
-            {
-                Propheus propheus = new Propheus(dbOptions, ProjectMixed);
-                propheus.Preload(false, false);
-                propheus.PrepareQueries();
-
-                mixedResult = propheus.SearchLatestVersion(propheus.AllQueries, false);
-            }
-            
             Result spikedResult = null;
             {
                 DBOptions dbOptions2 = GetDBOptions(false, false);
@@ -143,17 +135,27 @@ namespace Trinity.UnitTest
 
                 spikedResult = propheus2.SearchLatestVersion(propheus2.AllQueries, false);
             }
+            Result mixedResult = null;
+            List<double> ratioNormalizer = new List<double>();
+            {
+                Propheus propheus = new Propheus(dbOptions, ProjectMixed);
+                propheus.Preload(false, false);
+                propheus.PrepareQueries();
+
+                mixedResult = propheus.SearchLatestVersion(propheus.AllQueries, false);
+            }            
+            
             double smallestCumulError = double.MaxValue;
             int maxIterProducts = 25;
             for (int nbProductsToKeep = 3; nbProductsToKeep <= maxIterProducts; nbProductsToKeep++)
             {
                 Console.Write("\r{0}%   ", ((100 * nbProductsToKeep) / maxIterProducts));
-                for (int precision = 100000; precision <= 1000000; precision *= 10)
+                for (int precision = 1000; precision <= 1000; precision *= 10)
                 {
                     for (int mflowReturnType = 0; mflowReturnType <= 2; mflowReturnType++) 
                     {
                         bool smoothedPrecursor = false;
-                        List<List<double>> ratios = ComputeMaxFlow(dbOptions, ProjectRatios, ProjectMixed, mflowReturnType, nbProductsToKeep, smoothedPrecursor, precision, spikedResult, mixedResult);
+                        List<List<double>> ratios = ComputeMaxFlows(dbOptions, ProjectRatios, ProjectMixed, mflowReturnType, nbProductsToKeep, nbProductsToKeep, smoothedPrecursor, precision, spikedResult, mixedResult);
                     
                         double cumulError = 0;
                         for (int i = 0; i < ratios.Count; i++)
@@ -183,61 +185,144 @@ namespace Trinity.UnitTest
                 }
             }            
             Console.WriteLine("Done!");
-        }
+        }//*/
 
         public static void MaxFlowThis()//string projectSingleInjections, string projectMixed)
         {
             //0.0732351971695529 : Return type (1) Precision (1000000) nbProductsToKeep (5)
             //0.0289455865219887 : Return type (1) Precision (100000) nbProductsToKeep (13)
-            //Samples ProjectRatios = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_MonoAce_Spiked_19Oct.csv", 0);//Group 2 (all)            
-            //Samples ProjectMixed = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_MonoAce_Varied_19Oct.csv", 0);
+            Samples ProjectRatios = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_MonoAce_Spiked_19Oct.csv", 0);//Group 2 (all)            
+            Samples ProjectMixed =  new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_MonoAce_Varied_19Oct.csv", 0);
+            Samples ProjectStable = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_StableMix_MonoAce_19Oct.csv", 0);
 
             //0.305567296686846 : Return type (0) Precision (100000) nbProductsToKeep (5)
             //Samples ProjectRatios = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_DiAce_Spiked_19Oct.csv", 0);//Group 2 (all)            
-            //Samples ProjectMixed = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_DiAce_Varied_19Oct.csv", 0);
+            //Samples ProjectMixed =  new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_DiAce_Varied_19Oct.csv", 0);
+            //Samples ProjectStable = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_StableMix_DiAce_19Oct.csv", 0);
 
             //0.222529420854448 : Return type (2) Precision (100000) nbProductsToKeep (19)
-            Samples ProjectRatios = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_TriAce_Spiked_19Oct.csv", 0);//Group 2 (all)            
-            Samples ProjectMixed = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_TriAce_Varied_19Oct.csv", 0);
+            //Samples ProjectRatios = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_TriAce_Spiked_19Oct.csv", 0);//Group 2 (all)            
+            //Samples ProjectMixed =  new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_TriAce_Varied_19Oct.csv", 0);
+            //Samples ProjectStable = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_StableMix_TriAce_19Oct.csv", 0);
 
-            DBOptions dbOptions = GetDBOptions(false, true);
+            DBOptions dbOptions = GetDBOptions(false, false);
             int mflowReturnType = 0;
-            int nbProducts = 5;// 5;
+            int nbProductsMin = 4;// 4;
+            int nbProductsMax = 14;// 14;
             bool smoothedPrecursor = false;
-            int precision = 100000;
-            List<List<double>> ratios = ComputeMaxFlow(dbOptions, ProjectRatios, ProjectMixed, mflowReturnType, nbProducts, smoothedPrecursor, precision);
+            int precision = 1000;
+            int nbProductsUsed = 0;
+            double aim = 1.0 / (double)ProjectRatios.Count;
 
-            vsCSVWriter writerCumul = new vsCSVWriter(dbOptions.OutputFolder + "CumulRatios6.csv");
+            Result spikedResult = null;
+            {
+                Propheus propheus = new Propheus(dbOptions, ProjectRatios);
+                propheus.Preload(false, false);
+                propheus.PrepareQueries();
+
+                spikedResult = propheus.SearchLatestVersion(propheus.AllQueries, false);
+            }
+            List<double> RatioNormalizer = new List<double>();
+            Result stableResult = null;
+            {
+                Propheus propheus = new Propheus(dbOptions, ProjectStable);
+                propheus.Preload(false, false);
+                propheus.PrepareQueries();
+
+                stableResult = propheus.SearchLatestVersion(propheus.AllQueries, false);
+
+                double smallestNormalization = double.MaxValue;
+                //for (int i = nbProductsMin; i <= nbProductsMax; i++)
+                {
+                    int tmpNbProductsUsed = 0;
+                    //List<List<double>> tmpRatios = ComputeMaxFlows(dbOptions, ProjectRatios, ProjectStable, ref tmpNbProductsUsed, mflowReturnType, i, i, smoothedPrecursor, precision, spikedResult, stableResult);
+                    List<List<double>> tmpRatios = ComputeMaxFlows( dbOptions, ProjectRatios, ProjectStable, 
+                                                                    ref tmpNbProductsUsed, mflowReturnType, 
+                                                                    nbProductsMin, nbProductsMax, smoothedPrecursor, 
+                                                                    precision, spikedResult, stableResult, aim);
+
+                    List<double> tmpRatioNormalizer = new List<double>();
+                    double sum = 0;
+                    foreach (double val in tmpRatios[0])
+                        sum += val;
+
+                    double sumOfCorrection = 0;
+                    foreach (double val in tmpRatios[0])
+                        sumOfCorrection += Math.Abs(aim - val / sum);
+                    if (sumOfCorrection < smallestNormalization)
+                    {
+                        nbProductsUsed = tmpNbProductsUsed;
+                        smallestNormalization = sumOfCorrection;
+                        RatioNormalizer.Clear();
+                        foreach (double val in tmpRatios[0])
+                            RatioNormalizer.Add(aim / (val / sum));
+                    }
+                }
+            }
+
+            nbProductsMin = nbProductsUsed;
+            nbProductsMax = nbProductsUsed;
+            List<List<double>> ratios = ComputeMaxFlows(dbOptions, ProjectRatios, ProjectMixed, ref nbProductsUsed, mflowReturnType, 
+                                                        nbProductsMin, nbProductsMax, smoothedPrecursor, precision, spikedResult);
+
+            vsCSVWriter writerCumul = new vsCSVWriter(dbOptions.OutputFolder + "CumulRatios7.csv");
             for (int i = 0; i < ProjectMixed.Count; i++)
             {
                 string lineCumulRatio = ProjectMixed[i].sSDF;
-                foreach (double n in ratios[i])
-                    lineCumulRatio += "," + n;// / TotalElapsedTime;
+                for (int k = 0; k < ratios[i].Count; k++)
+                    lineCumulRatio += "," + ratios[i][k] * RatioNormalizer[k];
                 writerCumul.AddLine(lineCumulRatio);
             }
             //writerCumul.AddLine(strNorm);
             writerCumul.WriteToFile();
+
+            vsCSVWriter writerStats = new vsCSVWriter(dbOptions.OutputFolder + "Stats.txt");
+            writerStats.AddLine("ProjectRatios : " + ProjectRatios.FileName);
+            writerStats.AddLine("ProjectStable : " + ProjectStable.FileName);
+            writerStats.AddLine("ProjectMixed : " + ProjectMixed.FileName);
+            writerStats.AddLine("Nb Of products considered : " + nbProductsUsed);
+            writerStats.AddLine("Precision : " + precision);
+            writerStats.AddLine("mflowReturnType : " + mflowReturnType);
+            writerStats.AddLine("smoothedPrecursor : " + smoothedPrecursor);
+            writerStats.AddLine("aim (for stable ratios) : " + aim);
+            for (int i = 0; i < RatioNormalizer.Count; i++)
+                writerStats.AddLine("Normalization for " + vsCSV.GetFileName_NoExtension(ProjectRatios[i].sSDF) + " : " + RatioNormalizer[i]);
+
+            writerStats.AddLine(" -- Cross Talk between Spiked Samples -- ");
+            List<List<double>> ratiosForCrossTalk = ComputeMaxFlows(dbOptions, ProjectRatios, ProjectRatios, ref nbProductsUsed, mflowReturnType,
+                                                                    nbProductsMin, nbProductsMax, smoothedPrecursor, precision, spikedResult);
+
+            for (int i = 0; i < ratiosForCrossTalk.Count; i++)
+            {
+                writerStats.AddLine(vsCSV.GetFileName_NoExtension(ProjectRatios[i].sSDF));
+                double sum = 0;
+                foreach (double val in ratiosForCrossTalk[i])
+                    sum += val;
+                writerStats.AddLine("Coverage : " + (float)(100.0 * ratiosForCrossTalk[i][i] / sum));
+                string line = "Spreading : ";
+                foreach (double val in ratiosForCrossTalk[i])
+                    line += (val/sum).ToString() + ",";
+                writerStats.AddLine(line);
+            }
+            writerStats.WriteToFile();
         }    
     
-        public static List<List<double>> ComputeMaxFlow(
+        public static List<List<double>> ComputeMaxFlows(
                                 DBOptions dbOptions,
                                 Samples ProjectRatios,
                                 Samples ProjectMixed,
-                                int mflowReturnType = 2,
-                                int nbProducts = 8,// 5,
+                                ref int nbProductsUsed,
+                                int mflowReturnType = 0,
+                                int nbProductMin = 5,// 5,
+                                int nbProductMax = 15,// 5,
                                 bool smoothedPrecursor = false,
                                 int precision = 100000,
                                 Result precomputedSpiked = null,
-                                Result precomputedMixed  = null)
+                                Result precomputedMixed  = null,
+                                double aim4StableRatio = -1)
         {
             string baseSeq = "";
-            //Types of fragments
-            List<List<ProductMatch>> ratios = new List<List<ProductMatch>>();
-            List<double> TrackIntensity = new List<double>();
-            List<double> NormalizeFactor = new List<double>();
-            CreateVirtualSpectrumFromSpikedPeptides(dbOptions, ProjectRatios, ref baseSeq, false, nbProducts,
-                                                    ref ratios, ref TrackIntensity, ref NormalizeFactor, smoothedPrecursor, precomputedSpiked);
-            
+                        
             List<string> ratioNames = new List<string>();
             foreach (Sample sample in ProjectRatios)
                 ratioNames.Add(sample.nameColumn);//*/
@@ -253,16 +338,234 @@ namespace Trinity.UnitTest
 
                 mixedResult = propheus.SearchLatestVersion(propheus.AllQueries, false);
             }
-            
+
+            Result spikedResult = precomputedSpiked;
+            if (precomputedSpiked == null)
+            {
+                Propheus propheusSpike = new Propheus(dbOptions, ProjectRatios);
+
+                propheusSpike.Preload(false, false);
+                propheusSpike.PrepareQueries();
+
+                spikedResult = propheusSpike.SearchLatestVersion(propheusSpike.AllQueries, false);
+            }
+
+            Dictionary<int, List<List<ProductMatch>>> DicOfRatios = new Dictionary<int,List<List<ProductMatch>>>();
+            Dictionary<int, List<double>>             DicOfTrackIntensity = new Dictionary<int,List<double>>();
+            Dictionary<int, List<double>>             DicOfNormalizeFactor = new Dictionary<int,List<double>>();
+            Dictionary<int, List<List<double>>>       DicOfComputedRatios = new Dictionary<int,List<List<double>>>();
+            Dictionary<int, double>                   DicOfErrors = new Dictionary<int,double>();
+            for (int nbProductsToKeep = nbProductMin; nbProductsToKeep <= nbProductMax; nbProductsToKeep++)
+            {
+                List<List<ProductMatch>> ratios = new List<List<ProductMatch>>();
+                List<double> TrackIntensity = new List<double>();
+                List<double> NormalizeFactor = new List<double>();
+                CreateVirtualSpectrumFromSpikedPeptides(dbOptions, ProjectRatios, ref baseSeq, false, nbProductsToKeep,
+                                                        ref ratios, ref TrackIntensity, ref NormalizeFactor, smoothedPrecursor, spikedResult);
+                DicOfRatios.Add(nbProductsToKeep, ratios);
+                DicOfTrackIntensity.Add(nbProductsToKeep, TrackIntensity);
+                DicOfNormalizeFactor.Add(nbProductsToKeep, NormalizeFactor);
+                DicOfComputedRatios.Add(nbProductsToKeep, new List<List<double>>());
+                DicOfErrors.Add(nbProductsToKeep, 0);
+            }
+
+            double smallestError = double.MaxValue;            
+            List<List<double>> bestListOfSumOfRatio = null;
+            Dictionary<Sample, Dictionary<int, string>> bestDicOfResults = null;
+            for (int nbProductsToKeep = nbProductMin; nbProductsToKeep <= nbProductMax; nbProductsToKeep++)
+            {
+                long iterError = 0;
+                double cumulPercentError = 0;
+                List<List<double>> listOfSumOfRatio = new List<List<double>>();
+                Dictionary<Sample, Dictionary<int, string>> dicOfResultsPerSample = new Dictionary<Sample, Dictionary<int, string>>();
+                foreach(Sample sample in ProjectMixed)
+                {
+                    //Console.WriteLine("Sample " + sample.sSDF);
+
+                    Dictionary<ProductSpectrum, bool> doneSpectrum = new Dictionary<ProductSpectrum, bool>();
+                    Dictionary<int, string> dicOfResults = new Dictionary<int, string>();
+                    List<double> sumOfRatio = new List<double>();
+                    for (int i = 0; i < ProjectRatios.Count; i++ )
+                        sumOfRatio.Add(0);
+
+                    Dictionary<ProductSpectrum, PeptideSpectrumMatch> DicOfSpectrum = new Dictionary<ProductSpectrum, PeptideSpectrumMatch>();
+                    foreach (Query query in mixedResult.queries)
+                    {
+                        if (query.sample == sample)
+                        {
+                            foreach (PeptideSpectrumMatch psm in query.psms)
+                            {
+                                bool keep = false;
+                                foreach (string name in ratioNames)
+                                    if (name.CompareTo(psm.Peptide.Sequence) == 0)
+                                        keep = true;
+
+                                if (keep && !DicOfSpectrum.ContainsKey(query.spectrum) && query.precursor.Charge == 2)// && psm.MatchingProducts > 4)
+                                    DicOfSpectrum.Add(query.spectrum, psm);
+                            }
+                        }
+                    }
+                    List<ProductSpectrum> sortedSpectrum = new List<ProductSpectrum>(DicOfSpectrum.Keys);
+                    sortedSpectrum.Sort(ProductSpectrum.AscendingRetentionTimeComparison);
+                    //double LastTimeStamp = 0;
+                    //double TotalElapsedTime = 0;
+                    foreach(ProductSpectrum key in sortedSpectrum)
+                    {
+                        PeptideSpectrumMatch psm = DicOfSpectrum[key];
+
+                        double overFlow = 0;
+                        double underFlow = 0;
+                        double percentError = 0;
+                        List<double> finalRatios = MaxFlowFromSpectrum(DicOfRatios[nbProductsToKeep], ratioNames, precision, psm.Query.spectrum.Peaks, dbOptions.productMassTolerance,
+                                                                mflowReturnType, ref overFlow, ref underFlow, ref percentError);
+                                                
+                        double normSumRatio = 0;
+                        for (int i = 0; i < finalRatios.Count; i++)
+                            normSumRatio += finalRatios[i] * DicOfNormalizeFactor[nbProductsToKeep][i];
+
+                        double sumRatio = 0;
+                        for (int i = 0; i < finalRatios.Count; i++)
+                            sumRatio += finalRatios[i];
+                        
+                        if (normSumRatio != double.NaN && normSumRatio > 0)// && nbProductsToKeep == 5)
+                        {
+                            if (percentError < 0.95)
+                            {
+                                List<double> avgQuantifiedRatios = new List<double>();
+                                for (int i = 0; i < ProjectRatios.Count; i++)
+                                    avgQuantifiedRatios.Add((finalRatios[i] / sumRatio) * DicOfNormalizeFactor[nbProductsToKeep][i] * psm.Query.spectrum.PrecursorIntensity);
+
+                                string strRatios = psm.Query.spectrum.RetentionTimeInMin.ToString() + "," + psm.Query.spectrum.PrecursorIntensity;
+                                //double ElapsedTime = psm.Query.spectrum.RetentionTimeInMin - LastTimeStamp;
+                                for (int i = 0; i < avgQuantifiedRatios.Count; i++)
+                                {
+                                    sumOfRatio[i] += avgQuantifiedRatios[i];
+                                    strRatios += "," + avgQuantifiedRatios[i];
+                                }
+                                dicOfResults.Add(psm.Query.spectrum.ScanNumber, strRatios);
+                                //TotalElapsedTime += ElapsedTime;
+                            }
+                            else
+                                Console.WriteLine("Bad MaxFlow computation : " + percentError);
+                        }
+
+                        foreach (double ratio in finalRatios)
+                            if (ratio == 0)
+                                percentError += 1.0 / (double)finalRatios.Count;//*/
+                        cumulPercentError += percentError;
+                        iterError++;
+                        //LastTimeStamp = psm.Query.spectrum.RetentionTimeInMin;
+                    }
+                    dicOfResultsPerSample.Add(sample, dicOfResults);
+                    listOfSumOfRatio.Add(sumOfRatio);
+                }
+                cumulPercentError /= (double)iterError;
+                if (aim4StableRatio > 0)
+                {
+                    List<double> tmpRatioNormalizer = new List<double>();
+                    double sum = 0;
+                    foreach (double val in listOfSumOfRatio[0])
+                        sum += val;
+                    double aim = 1.0 / (double)listOfSumOfRatio[0].Count;
+
+                    foreach (double val in listOfSumOfRatio[0])
+                        cumulPercentError += Math.Abs(aim - val / sum);
+                }
+                //cumulPercentError /= (double)nbProductsToKeep;//Average error, per peak/fragment
+                if (cumulPercentError < smallestError)
+                {
+                    nbProductsUsed = nbProductsToKeep;
+                    smallestError = cumulPercentError;
+                    bestListOfSumOfRatio = listOfSumOfRatio;                    
+                    bestDicOfResults = dicOfResultsPerSample;
+                }
+            }
+            if (bestDicOfResults != null)
+            {
+                Console.WriteLine("Best Number of products : " + nbProductsUsed);
+                foreach (Sample sample in bestDicOfResults.Keys)
+                {
+                    vsCSVWriter writer = new vsCSVWriter(dbOptions.OutputFolder + sample.nameColumn + "_Ratios5.csv");
+                    List<int> scans = new List<int>(bestDicOfResults[sample].Keys);
+                    scans.Sort();
+                    foreach (int scan in scans)
+                        writer.AddLine(bestDicOfResults[sample][scan]);
+                    writer.WriteToFile();
+                }
+            }
+            return bestListOfSumOfRatio;
+        }
+
+
+        public static List<List<double>> ComputeMaxFlows_BKP29OCT(
+                                DBOptions dbOptions,
+                                Samples ProjectRatios,
+                                Samples ProjectMixed,
+                                int mflowReturnType = 0,
+                                int nbProductMin = 5,// 5,
+                                int nbProductMax = 15,// 5,
+                                bool smoothedPrecursor = false,
+                                int precision = 100000,
+                                Result precomputedSpiked = null,
+                                Result precomputedMixed = null)
+        {
+            string baseSeq = "";
+
+            List<string> ratioNames = new List<string>();
+            foreach (Sample sample in ProjectRatios)
+                ratioNames.Add(sample.nameColumn);//*/
+
+            //Get PSMs
+            Result mixedResult = precomputedMixed;
+            if (precomputedMixed == null)
+            {
+                Propheus propheus = new Propheus(dbOptions, ProjectMixed);
+
+                propheus.Preload(false, false);
+                propheus.PrepareQueries();
+
+                mixedResult = propheus.SearchLatestVersion(propheus.AllQueries, false);
+            }
+
+            Result spikedResult = precomputedSpiked;
+            if (precomputedSpiked == null)
+            {
+                Propheus propheusSpike = new Propheus(dbOptions, ProjectRatios);
+
+                propheusSpike.Preload(false, false);
+                propheusSpike.PrepareQueries();
+
+                spikedResult = propheusSpike.SearchLatestVersion(propheusSpike.AllQueries, false);
+            }
+
+            Dictionary<int, List<List<ProductMatch>>> DicOfRatios = new Dictionary<int, List<List<ProductMatch>>>();
+            Dictionary<int, List<double>> DicOfTrackIntensity = new Dictionary<int, List<double>>();
+            Dictionary<int, List<double>> DicOfNormalizeFactor = new Dictionary<int, List<double>>();
+            Dictionary<int, List<List<double>>> DicOfComputedRatios = new Dictionary<int, List<List<double>>>();
+            Dictionary<int, double> DicOfErrors = new Dictionary<int, double>();
+            for (int nbProductsToKeep = nbProductMin; nbProductsToKeep <= nbProductMax; nbProductsToKeep++)
+            {
+                List<List<ProductMatch>> ratios = new List<List<ProductMatch>>();
+                List<double> TrackIntensity = new List<double>();
+                List<double> NormalizeFactor = new List<double>();
+                CreateVirtualSpectrumFromSpikedPeptides(dbOptions, ProjectRatios, ref baseSeq, false, nbProductsToKeep,
+                                                        ref ratios, ref TrackIntensity, ref NormalizeFactor, smoothedPrecursor, spikedResult);
+                DicOfRatios.Add(nbProductsToKeep, ratios);
+                DicOfTrackIntensity.Add(nbProductsToKeep, TrackIntensity);
+                DicOfNormalizeFactor.Add(nbProductsToKeep, NormalizeFactor);
+                DicOfComputedRatios.Add(nbProductsToKeep, new List<List<double>>());
+                DicOfErrors.Add(nbProductsToKeep, 0);
+            }
+
             List<List<double>> listOfSumOfRatio = new List<List<double>>();
-            foreach(Sample sample in ProjectMixed)
+            foreach (Sample sample in ProjectMixed)
             {
                 //Console.WriteLine("Sample " + sample.sSDF);
 
                 Dictionary<ProductSpectrum, bool> doneSpectrum = new Dictionary<ProductSpectrum, bool>();
                 Dictionary<int, string> dicOfResults = new Dictionary<int, string>();
                 List<double> sumOfRatio = new List<double>();
-                foreach (double intensity in TrackIntensity)
+                for (int i = 0; i < ProjectRatios.Count; i++)
                     sumOfRatio.Add(0);
 
                 Dictionary<ProductSpectrum, PeptideSpectrumMatch> DicOfSpectrum = new Dictionary<ProductSpectrum, PeptideSpectrumMatch>();
@@ -277,7 +580,7 @@ namespace Trinity.UnitTest
                                 if (name.CompareTo(psm.Peptide.Sequence) == 0)
                                     keep = true;
 
-                            if (keep && !DicOfSpectrum.ContainsKey(query.spectrum) && psm.Peptide.BaseSequence.CompareTo(baseSeq) == 0 && query.precursor.Charge == 2 && psm.MatchingProducts > 4)
+                            if (keep && !DicOfSpectrum.ContainsKey(query.spectrum) && query.precursor.Charge == 2)// && psm.MatchingProducts > 4)
                                 DicOfSpectrum.Add(query.spectrum, psm);
                         }
                     }
@@ -286,38 +589,68 @@ namespace Trinity.UnitTest
                 sortedSpectrum.Sort(ProductSpectrum.AscendingRetentionTimeComparison);
                 double LastTimeStamp = 0;
                 double TotalElapsedTime = 0;
-                foreach(ProductSpectrum key in sortedSpectrum)
+                foreach (ProductSpectrum key in sortedSpectrum)
                 {
                     PeptideSpectrumMatch psm = DicOfSpectrum[key];
 
                     double overFlow = 0;
                     double underFlow = 0;
                     double percentError = 0;
-                    List<double> finalRatios = MaxFlowFromSpectrum(ratios, ratioNames, precision, psm.Query.spectrum.Peaks, dbOptions.productMassTolerance,
-                                                                    mflowReturnType, ref overFlow, ref underFlow, ref percentError);
-                                
-                    double normSumRatio = 0;
-                    for (int i = 0; i < finalRatios.Count; i++)
-                        normSumRatio += finalRatios[i] * NormalizeFactor[i];
+                    List<double> avgQuantifiedRatios = new List<double>();
+                    for (int i = 0; i < ProjectRatios.Count; i++)
+                        avgQuantifiedRatios.Add(0);
 
-                    double sumRatio = 0;
-                    for (int i = 0; i < finalRatios.Count; i++)
-                        sumRatio += finalRatios[i];
+                    int nbIterProducts = 0;
+                    List<List<double>> ratioKeeper = new List<List<double>>();
+                    double cumulError = 0;
+                    for (int nbProductsToKeep = nbProductMin; nbProductsToKeep <= nbProductMax; nbProductsToKeep++)
+                    {
+                        List<double> finalRatios = MaxFlowFromSpectrum(DicOfRatios[nbProductsToKeep], ratioNames, precision, psm.Query.spectrum.Peaks, dbOptions.productMassTolerance,
+                                                                mflowReturnType, ref overFlow, ref underFlow, ref percentError);
 
-                    if (normSumRatio != double.NaN && normSumRatio > 0)
+                        double normSumRatio = 0;
+                        for (int i = 0; i < finalRatios.Count; i++)
+                            normSumRatio += finalRatios[i] * DicOfNormalizeFactor[nbProductsToKeep][i];
+
+                        double sumRatio = 0;
+                        for (int i = 0; i < finalRatios.Count; i++)
+                            sumRatio += finalRatios[i];
+
+                        if (normSumRatio != double.NaN && normSumRatio > 0)// && nbProductsToKeep == 5)
+                        {
+                            double reverseError = 1.0 - percentError;
+                            //if (percentError == 0)
+                            //    reverseError = 0;
+                            for (int i = 0; i < finalRatios.Count; i++)
+                                avgQuantifiedRatios[i] += (finalRatios[i] / sumRatio) * DicOfNormalizeFactor[nbProductsToKeep][i] * reverseError;
+                            nbIterProducts++;
+                            //DicOfComputedRatios[nbProductsToKeep].A
+                            ratioKeeper.Add(finalRatios);
+                            cumulError += reverseError;
+                        }
+                    }
+                    for (int i = 0; i < avgQuantifiedRatios.Count; i++)
+                    {
+                        //avgQuantifiedRatios[i] /= (double)nbIterProducts;
+                        avgQuantifiedRatios[i] *= psm.Query.spectrum.PrecursorIntensity;
+                        avgQuantifiedRatios[i] /= cumulError;
+                    }
+
+                    if (nbIterProducts > 0)
                     {
                         string strRatios = psm.Query.spectrum.RetentionTimeInMin.ToString() + "," + psm.Query.spectrum.PrecursorIntensity;
                         double ElapsedTime = psm.Query.spectrum.RetentionTimeInMin - LastTimeStamp;
-                        for (int i = 0; i < finalRatios.Count; i++)
+                        for (int i = 0; i < avgQuantifiedRatios.Count; i++)
                         {
-                            double quantifiedRatio = (finalRatios[i] / sumRatio) * psm.Query.spectrum.PrecursorIntensity * NormalizeFactor[i];// *ElapsedTime;
+                            double quantifiedRatio = avgQuantifiedRatios[i];//(finalRatios[i] / sumRatio) * psm.Query.spectrum.PrecursorIntensity * NormalizeFactor[i];
+                            //double quantifiedRatio = finalRatios[i] * NormalizeFactor[i] * psm.Query.spectrum.PrecursorIntensity;
                             sumOfRatio[i] += quantifiedRatio;
-                            strRatios += "," +quantifiedRatio;
+                            strRatios += "," + quantifiedRatio;
                         }
-                        for (int i = 0; i < finalRatios.Count; i++)
-                            strRatios += "," + finalRatios[i];
-                        for (int i = 0; i < finalRatios.Count; i++)
-                            strRatios += "," + NormalizeFactor[i];
+                        //for (int i = 0; i < finalRatios.Count; i++)
+                        //    strRatios += "," + finalRatios[i];
+                        //for (int i = 0; i < finalRatios.Count; i++)
+                        //    strRatios += "," + NormalizeFactor[i];
 
                         dicOfResults.Add(psm.Query.spectrum.ScanNumber, strRatios);
                         TotalElapsedTime += ElapsedTime;
@@ -332,9 +665,6 @@ namespace Trinity.UnitTest
                 writer.WriteToFile();
                 listOfSumOfRatio.Add(sumOfRatio);
             }
-            string strNorm = "Normalization";
-            for (int i = 0; i < NormalizeFactor.Count; i++)
-                strNorm += "," + NormalizeFactor[i];
             return listOfSumOfRatio;
         }
 
@@ -551,11 +881,6 @@ namespace Trinity.UnitTest
                                 ref double percentError,
                                 ref List<long> average)
         {
-            //Lists must have same number of fragments, ordered in the same manner
-            double sumOfIntensities = 0;
-            for (int i = 0; i < mixedSpectrum.Count; i++)
-                sumOfIntensities += mixedSpectrum[i].Intensity;
-
             //Create dictionnary of usefull peaks
             Dictionary<float, double> mixedFragDic = new Dictionary<float, double>();
             foreach (List<ProductMatch> fragmentRatio in spikedMatches)
@@ -589,7 +914,7 @@ namespace Trinity.UnitTest
             double bestOverallError = double.MaxValue;
             List<long> bestLocalFlows = new List<long>();
 
-            while (overError > 0 && iterSize < 10000)
+            while (overError > 1 && iterSize < 10000)//anything less than 1 is an acceptable solution
             {
                 bestIndex = -1;
                 double smallestUnderError = double.MaxValue;
@@ -655,7 +980,13 @@ namespace Trinity.UnitTest
 
             virtualSpectrum = BuildVirtualSpectrum(spikedMatches, bestLocalFlows, mixedFragDic);
             //Compute expected error in percentage
-            percentError = (ComputeOverflow(virtualSpectrum, mixedFragDic) / sumOfIntensities) * 100.0;
+            //percentError = (ComputeOverflow(virtualSpectrum, mixedFragDic) / sumOfIntensities) * 100.0;
+            //Lists must have same number of fragments, ordered in the same manner
+            double sumOfIntensities = 0;
+            foreach (double val in mixedFragDic.Values)
+                sumOfIntensities += val;
+            percentError = underError / sumOfIntensities;
+            //percentError = (ComputeOverflow(virtualSpectrum, mixedFragDic) / sumOfIntensities);// *100.0;
             
             return ComputeUnderflow(virtualSpectrum, mixedFragDic);
         }//*/
@@ -778,9 +1109,10 @@ namespace Trinity.UnitTest
         }
 
         public static void CreateVirtualSpectrumFromSpikedPeptides(DBOptions dbOptions, Samples Project, ref string BaseSequence, bool loadFromRaw, int nbProductsToKeep,
-                    ref List<List<ProductMatch>> FinalSpikedProducts, ref List<double> TrackIntensity, ref List<double> Normalizor, bool smoothPrecursor, Result precomputed = null)
+                    ref List<List<ProductMatch>> FinalSpikedProducts, ref List<double> PrecursorAreas, ref List<double> Normalizor, bool smoothPrecursor, Result precomputed)
         {   
             //Annotate spectrums
+            /*
             Result tmp = precomputed;
             if (precomputed == null)
             {
@@ -792,48 +1124,52 @@ namespace Trinity.UnitTest
 
                 tmp = propheus.SearchLatestVersion(propheus.AllQueries, false);
                 tmp.WriteInfoToCsv(false);
-            }
+            }//*/
 
             int charge = 2;
             Peptide peptide = null;
             FinalSpikedProducts.Clear();
             List<List<ProductMatch>> SpikedProducts = new List<List<ProductMatch>>();
-
+            List<double> PeakAvgIntensities = new List<double>();
             //Get list of PSMs per sample
             double averagePrecursorArea = 0;
             List<List<PeptideSpectrumMatch>> listOfPSMs = new List<List<PeptideSpectrumMatch>>();
             foreach (Sample sample in Project)
             {
+                double avgPeakIntensity = 0;
                 List<PeptideSpectrumMatch> psmList = new List<PeptideSpectrumMatch>();
-                foreach (Query query in tmp.queries)
+                foreach (Query query in precomputed.queries)
                 {
                     if (query.precursor.Charge == charge && query.precursor.sample == sample)
                     {
                         foreach (PeptideSpectrumMatch psm in query.psms)
                         {
-                            if (sample.nameColumn.CompareTo(psm.Peptide.Sequence) == 0 && psm.MatchingProducts > 4)//.ProbabilityScore() > 0.020)// && psm.ProbabilityScore() > bestPsmScore)
+                            if (sample.nameColumn.CompareTo(psm.Peptide.Sequence) == 0)// && psm.MatchingProducts > 4)//.ProbabilityScore() > 0.020)// && psm.ProbabilityScore() > bestPsmScore)
                             {
                                 peptide = psm.Peptide;
                                 BaseSequence = peptide.BaseSequence;
                                 psmList.Add(psm);
+                                avgPeakIntensity += query.spectrum.PrecursorIntensity;
                             }
                         }
                     }
                 }
 
+                avgPeakIntensity /= (double)psmList.Count;
                 psmList.Sort(PeptideSpectrumMatches.AscendingRetentionTime);
                 listOfPSMs.Add(psmList);
-                List<ProductMatch> productList = GetCombinedSpectrum(tmp.dbOptions, psmList, peptide, charge);
+                List<ProductMatch> productList = GetCombinedSpectrum(precomputed.dbOptions, psmList, peptide, charge);
 
                 productList.Sort(ProductMatch.AscendingWeightComparison);
                 //if (productList.Count > nbProductsToKeep)
                 //    productList.RemoveRange(0, productList.Count - nbProductsToKeep);//*/
 
-                double PrecursorArea = ComputePrecursorArea(psmList, smoothPrecursor);
-                averagePrecursorArea += PrecursorArea;
+                double precursorArea = ComputePrecursorArea(psmList, smoothPrecursor);
+                averagePrecursorArea += precursorArea;
 
                 SpikedProducts.Add(productList);
-                TrackIntensity.Add(PrecursorArea);// / (double)nbPrec);
+                PrecursorAreas.Add(precursorArea);// / (double)nbPrec);
+                PeakAvgIntensities.Add(avgPeakIntensity);
                 //tmp.ExportFragmentIntensitiesForAllPSM(psmList, peptide, charge, tmp.dbOptions.OutputFolder + sample.nameColumn + ".csv");
             }
             averagePrecursorArea /= (double)Project.Count;
@@ -850,20 +1186,73 @@ namespace Trinity.UnitTest
             }
 
             for(int i = 0; i < Project.Count; i++)
-                FinalSpikedProducts.Add(GetCombinedSpectrum(tmp.dbOptions, listOfPSMs[i], peptide, charge, DicOfFragmentsToKeep));            
-            
+                FinalSpikedProducts.Add(GetCombinedSpectrum(precomputed.dbOptions, listOfPSMs[i], peptide, charge, DicOfFragmentsToKeep));
+                        
+            double avgPrecursors = 0;
+            foreach (double avg in PeakAvgIntensities)
+                avgPrecursors += avg;
+            avgPrecursors /= (double)PeakAvgIntensities.Count;
+
             for (int i = 0; i < Project.Count; i++)
             {
-                double factor = averagePrecursorArea / TrackIntensity[i];// ((averagePrecursorIntensity / TrackIntensity[i]) - 1.0) * 0.1 + 1.0;
+                //Normalize each spectrum based on average precursor intensity
+                double y = (avgPrecursors - PeakAvgIntensities[i]) / PeakAvgIntensities[i];
                 for (int j = 0; j < FinalSpikedProducts[i].Count; j++)
-                    FinalSpikedProducts[i][j].obsIntensity *= factor;//*/
-                Normalizor.Add(factor);
+                    FinalSpikedProducts[i][j].obsIntensity += y * FinalSpikedProducts[i][j].obsIntensity;//*/
             }
+            
+            List<double> listOfsumOfProducts = new List<double>();
+            for (int i = 0; i < Project.Count; i++)
+            {
+                double sumOfProducts = 0;
+                for (int j = 0; j < FinalSpikedProducts[i].Count; j++)
+                    sumOfProducts += FinalSpikedProducts[i][j].obsIntensity;
+                listOfsumOfProducts.Add(sumOfProducts);
+            }
+
+            double avgSumProducts = 0;
+            foreach (double sum in listOfsumOfProducts)
+                avgSumProducts += sum;
+            avgSumProducts /= (double)listOfsumOfProducts.Count;
+
+            for (int i = 0; i < Project.Count; i++)
+            {
+                Normalizor.Add((10000000.0 / listOfsumOfProducts[i]) * (averagePrecursorArea / PrecursorAreas[i]));
+                for (int j = 0; j < FinalSpikedProducts[i].Count; j++)
+                    FinalSpikedProducts[i][j].obsIntensity *= (10000000.0 / listOfsumOfProducts[i]);
+            } 
+            //for (int i = 0; i < Project.Count; i++)
+            //    for (int j = 0; j < FinalSpikedProducts[i].Count; j++)
+            //        FinalSpikedProducts[i][j].obsIntensity *= 10000000.0;// PrecursorAreas[i];
+            //for (int i = 0; i < Project.Count; i++)
+            //{
+                //double factor = averagePrecursorArea / PrecursorAreas[i];
+                //for (int j = 0; j < FinalSpikedProducts[i].Count; j++)
+                //    FinalSpikedProducts[i][j].obsIntensity *= factor;
+                //double factor = y * avgSumProducts;
+                /*
+                if (listOfsumOfProducts[i] > 0)
+                    for (int j = 0; j < FinalSpikedProducts[i].Count; j++)
+                        FinalSpikedProducts[i][j].obsIntensity /= listOfsumOfProducts[i];
+
+                for (int j = 0; j < FinalSpikedProducts[i].Count; j++)
+                    FinalSpikedProducts[i][j].obsIntensity *= 100000000;// PrecursorAreas[i];
+
+                double factor = averagePrecursorArea / PrecursorAreas[i];// ((averagePrecursorIntensity / TrackIntensity[i]) - 1.0) * 0.1 + 1.0;                
+                Normalizor.Add(factor);
+                //*/
+                //double factor = averagePrecursorArea / PrecursorAreas[i];// ((averagePrecursorIntensity / TrackIntensity[i]) - 1.0) * 0.1 + 1.0;
+                //for (int j = 0; j < FinalSpikedProducts[i].Count; j++)
+                //    FinalSpikedProducts[i][j].obsIntensity *= factor * 100;//*/
+                
+              //  Normalizor.Add(factor);//1.0);//factor);
+            //}
         }
 
         public static double ComputePrecursorArea(List<PeptideSpectrumMatch> psms, bool smooth)
         {
             double lastTimeStamp = 0;
+            double lastIntensity = 0;
             List<double> timeGap = new List<double>();
             List<double> precursorIntensities = new List<double>();
             foreach (PeptideSpectrumMatch psm in psms)
@@ -871,9 +1260,13 @@ namespace Trinity.UnitTest
                 if (psm.Query.spectrum.PrecursorIntensity > 0 && lastTimeStamp > 0)
                 {
                     timeGap.Add(psm.Query.spectrum.RetentionTimeInMin - lastTimeStamp);
-                    precursorIntensities.Add(psm.Query.spectrum.PrecursorIntensity);
+                    if(lastIntensity > 0)
+                        precursorIntensities.Add((psm.Query.spectrum.PrecursorIntensity + lastIntensity) * 0.5);
+                    else
+                        precursorIntensities.Add(psm.Query.spectrum.PrecursorIntensity);
                 }
                 lastTimeStamp = psm.Query.spectrum.RetentionTimeInMin;
+                lastIntensity = psm.Query.spectrum.PrecursorIntensity;
             }
             //Smooth the curve
 
@@ -980,9 +1373,13 @@ namespace Trinity.UnitTest
             {
                 ProductMatch newPM = new ProductMatch(matchList[0]);
                 newPM.obsIntensity = 0;
-                foreach (ProductMatch pm in matchList)
-                    newPM.obsIntensity += pm.obsIntensity + pm.obsIntensity * DicOfProductMsMsFactor[pm];
+                if (matchList.Count > 0)
+                {
+                    foreach (ProductMatch pm in matchList)
+                        newPM.obsIntensity += pm.obsIntensity + pm.obsIntensity * DicOfProductMsMsFactor[pm];
 
+                    newPM.obsIntensity /= (double)matchList.Count;
+                }
                 newPM.weight = matchList.Count * newPM.obsIntensity;
                 avgInt += newPM.obsIntensity;
                 products.Add(newPM);
@@ -1017,6 +1414,8 @@ namespace Trinity.UnitTest
                         }
                         if (newMatch.obsIntensity < avgInt * 0.05)
                             newMatch.obsIntensity = 0;
+                        else
+                            newMatch.obsIntensity /= (double)newMatch.weight;
                         newMatch.weight *= newMatch.obsIntensity;
                         products.Add(newMatch);
                     }

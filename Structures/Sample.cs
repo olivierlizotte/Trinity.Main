@@ -13,6 +13,7 @@ namespace Trinity
 {
     public class Samples : GraphML_List<Sample>
     {
+        public string FileName = "";
         public Samples()
         {
         }
@@ -20,6 +21,7 @@ namespace Trinity
         {
             loadProjectFile(projectFileName, maxFractionSpreading);
             Sort(Compare);
+            FileName = projectFileName;
         }
         /*
         public static vsSDF LoadSDF(Sample project)

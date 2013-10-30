@@ -134,6 +134,40 @@ namespace Trinity.UnitTest
             writer.WriteToFile();
         }
 
+        public static void MatchPeptideToProtein()
+        {
+            string pepSeq = "AAIKEESEGKLK";
+            string protID = "comp320_c0_seq1";//comp4598_c0_seq1";//comp1011_c0_seq1";
+            NucleicAcid.InitHash();
+
+            FileStream protein_fasta_database1 = new FileStream(@"G:\Thibault\Olivier\Databases\DMatton\Matton_Illumina_Anthesis_WithReverse.fasta", FileMode.Open, FileAccess.Read, FileShare.Read);
+            List<Protein> proteins1 = new List<Protein>(ProteinFastaReader.ReadProteins(protein_fasta_database1, false));
+
+            foreach (Protein prot in proteins1)
+            {
+                if(prot.Description.CompareTo(protID) == 0)
+                {
+                    for (int shift = 0; shift < 3; shift++)
+                    {
+                        foreach (string seq in NucleicAcid.ConvertNA3ToAAs(prot.BaseSequence, shift, false))
+                        {
+                            if (seq.Contains("*") || seq.Contains("X"))
+                                Console.WriteLine("AWRA");
+                            if (seq.Contains(pepSeq))
+                                Console.WriteLine("FORWARD (" + shift + ") : Found " + pepSeq + " in " + protID + " [" + seq + "]");
+                        }
+
+                        foreach (string seq in NucleicAcid.ConvertNA3ToAAs(prot.BaseSequence, shift, true))
+                        {
+                            if (seq.Contains("*") || seq.Contains("X"))
+                                Console.WriteLine("AWRA");
+                            if (seq.Contains(pepSeq))
+                                Console.WriteLine("REVERSE (" + shift + ") : Found " + pepSeq + " in " + protID + " [" + seq + "]");
+                        }
+                    }
+                }
+            }
+        }
         /*
          * Too long
         public static void YangLiuPeptidesWithAllProteins()
