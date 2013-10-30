@@ -112,6 +112,62 @@ namespace Trinity
             Console.WriteLine("    PeptideSpectrumMatch.dPeptideScore:                  " + options.dPeptideScore);
             Console.WriteLine("------------------------------------------------------------------------------------------ ");
         }
+
+        public double ComputePrecursorArea(bool smooth)
+        {
+            double lastTimeStamp = 0;
+            double lastIntensity = 0;
+            List<double> timeGap = new List<double>();
+            List<double> precursorIntensities = new List<double>();
+            foreach (PeptideSpectrumMatch psm in this)
+            {
+                if (psm.Query.spectrum.PrecursorIntensity > 0 && lastTimeStamp > 0)
+                {
+                    timeGap.Add(psm.Query.spectrum.RetentionTimeInMin - lastTimeStamp);
+                    if (lastIntensity > 0)
+                        precursorIntensities.Add((psm.Query.spectrum.PrecursorIntensity + lastIntensity) * 0.5);
+                    else
+                        precursorIntensities.Add(psm.Query.spectrum.PrecursorIntensity);
+                }
+                lastTimeStamp = psm.Query.spectrum.RetentionTimeInMin;
+                lastIntensity = psm.Query.spectrum.PrecursorIntensity;
+            }
+            //Smooth the curve
+
+            if (smooth)
+            {
+                List<double> timeGapSmooth = new List<double>();
+                List<double> precursorIntensitiesSmoothed = new List<double>();
+                for (int i = 0; i < timeGap.Count; i++)
+                {
+                    double cumulIntensity = 0;
+                    int nbItems = 0;
+                    for (int k = (i - 2 < 0 ? 0 : i - 2); k < timeGap.Count - 2; k++)
+                    {
+                        nbItems++;
+                        cumulIntensity += precursorIntensities[k];
+                    }
+                    if (nbItems > 0)
+                    {
+                        timeGapSmooth.Add(timeGap[0]);
+                        precursorIntensitiesSmoothed.Add(cumulIntensity / (double)nbItems);
+                    }
+                }
+
+                double fragSpectrumArea = 0;
+                for (int i = 0; i < timeGapSmooth.Count; i++)
+                    fragSpectrumArea += timeGapSmooth[i] * precursorIntensitiesSmoothed[i];
+                return fragSpectrumArea;
+            }
+            else
+            {
+                double fragSpectrumArea = 0;
+                for (int i = 0; i < timeGap.Count; i++)
+                    fragSpectrumArea += timeGap[i] * precursorIntensities[i];
+                return fragSpectrumArea;
+            }
+        }
+
         public static int CompareMatchingIntensityFraction(PeptideSpectrumMatch left, PeptideSpectrumMatch right)
         {
             return -left.MatchingIntensityFraction.CompareTo(right.MatchingIntensityFraction);
