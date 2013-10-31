@@ -53,6 +53,9 @@
     <CodeAnalysisIgnoreBuiltInRuleSets>true</CodeAnalysisIgnoreBuiltInRuleSets>
     <CodeAnalysisIgnoreBuiltInRules>false</CodeAnalysisIgnoreBuiltInRules>
     <CodeAnalysisFailOnMissingRules>false</CodeAnalysisFailOnMissingRules>
+    <CodeAnalysisRuleSet>..\..\..\..\..\Program Files (x86)\Microsoft Visual Studio 10.0\Team Tools\Static Analysis Tools\Rule Sets\MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <WarningLevel>4</WarningLevel>
+    <RunCodeAnalysis>true</RunCodeAnalysis>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="MathNet.Numerics">
@@ -104,11 +107,10 @@
     <Compile Include="Morpheus\Modification.cs" />
     <Compile Include="Morpheus\ModificationDictionary.cs" />
     <Compile Include="Morpheus\ModificationType.cs" />
-    <Compile Include="Samples\IsomericPeptideQuantifier2.cs" />
-    <Compile Include="Samples\NBSample_bkp.cs" />
+    <Compile Include="Methods\PositionnalIsomerSolver.cs" />
     <Compile Include="Samples\ToCalibrate.cs" />
     <Compile Include="Samples\RT_MHC.cs" />
-    <Compile Include="Samples\IsomericPeptideQuantifier.cs" />
+    <Compile Include="Samples\HistonePositionnalIsomer.cs" />
     <Compile Include="Structures\MsMsPeak.cs" />
     <Compile Include="MSSearcher.cs" />
     <Compile Include="Structures\Peptide.cs" />
@@ -120,6 +122,7 @@
     <Compile Include="Morpheus\Product.cs" />
     <Compile Include="Morpheus\ProductCaps.cs" />
     <Compile Include="Morpheus\Spectra.cs" />
+    <Compile Include="Structures\ProductMatch.cs" />
     <Compile Include="Structures\ProductSpectrum.cs" />
     <Compile Include="Structures\MS1Spectrum.cs" />
     <Compile Include="Morpheus\ProductType.cs" />

@@ -29,8 +29,8 @@ namespace Trinity.Database.Neo4j
         {
             clientNode = null;
         }
-        private BindingFlags fieldFlags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.GetField;
-        private BindingFlags propertyFlags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.GetProperty;
+        //private BindingFlags fieldFlags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.GetField;
+        //private BindingFlags propertyFlags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.GetProperty;
         private string strGraphList = typeof(IGraphML_List).FullName;
         private string strGraphNode = typeof(IGraphML_Node).FullName;
         

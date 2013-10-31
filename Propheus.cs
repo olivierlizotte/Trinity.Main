@@ -18,6 +18,15 @@ namespace Trinity
     /// </summary>
     public class Propheus
     {
+        public static Result Start(DBOptions dbOptions, Samples project, bool loadMS1 = true, bool filterMS2 = true, bool optimize = true)
+        {
+            Propheus propheus = new Propheus(dbOptions, project);
+            propheus.Preload(loadMS1, filterMS2);
+            propheus.PrepareQueries();
+
+            return propheus.SearchLatestVersion(propheus.AllQueries, optimize);
+        }
+
         public DBOptions dbOptions;
         public Samples Project;
 
@@ -156,6 +165,7 @@ namespace Trinity
             Result result = new Result();
             result.queries = queries;
             result.dbOptions = dbOptions;
+            result.samples = Project;
 
             DBSearcher dbSearcher = new DBSearcher(dbOptions);
             Digestion ps = new Digestion(dbOptions);
@@ -226,6 +236,7 @@ namespace Trinity
             Result result = new Result();
             result.queries = queries;
             result.dbOptions = dbOptions;
+            result.samples = Project;
 
             DBSearcher dbSearcher = new DBSearcher(dbOptions);
             Digestion ps = new Digestion(dbOptions);

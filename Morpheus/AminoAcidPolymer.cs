@@ -42,6 +42,31 @@ namespace Trinity
 
         public int Length { get; private set; }
 
+        public static double ComputeMonoisotopicMass(string pepSeqWithMods)
+        {
+            double mass = Constants.WATER_MONOISOTOPIC_MASS;
+
+            bool cumulMod = false;
+            string strMod = "";
+            for(int i = 0; i < pepSeqWithMods.Length; i++)
+            {
+                if(pepSeqWithMods[i] == '(')
+                {
+                    strMod = "";
+                    cumulMod = true;
+                }
+                else if(pepSeqWithMods[i] == ')')
+                {
+                    cumulMod = false;
+                    mass += ModificationDictionary.Instance[strMod].MonoisotopicMassShift;
+                } else if(cumulMod)
+                    strMod += pepSeqWithMods[i];
+                else
+                    mass += AminoAcidMasses.GetMonoisotopicMass(pepSeqWithMods[i]);
+            }
+            return mass;
+        }
+
         private double _preCalcMonoMass = 0.0;
         public double MonoisotopicMass
         {
@@ -51,29 +76,17 @@ namespace Trinity
                     return _preCalcMonoMass;
                 else
                 {
-                    _preCalcMonoMass = Constants.WATER_MONOISOTOPIC_MASS;
+                    _preCalcMonoMass = ComputeMonoisotopicMass(baseSequence);
 
-                    foreach (char amino_acid in baseSequence)
-                    {
-                        _preCalcMonoMass += AminoAcidMasses.GetMonoisotopicMass(amino_acid);
-                    }
                     if (fixedModifications != null)
-                    {
                         foreach (List<Modification> fixed_modifications in fixedModifications.Values)
-                        {
                             foreach (Modification fixed_modification in fixed_modifications)
-                            {
                                 _preCalcMonoMass += fixed_modification.MonoisotopicMassShift;
-                            }
-                        }
-                    }
+
                     if (variableModifications != null)
-                    {
                         foreach (Modification variable_modification in variableModifications.Values)
-                        {
                             _preCalcMonoMass += variable_modification.MonoisotopicMassShift;
-                        }
-                    }
+
                     return _preCalcMonoMass;
                 }
             }

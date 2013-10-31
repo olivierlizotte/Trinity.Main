@@ -72,7 +72,7 @@ namespace Trinity
             get { return instance; }
         }
 
-        public void Add(Modification modification)
+        private void Add(Modification modification)
         {
             Add(modification.Description, modification);
         }

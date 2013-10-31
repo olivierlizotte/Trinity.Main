@@ -168,6 +168,106 @@ namespace Trinity
             }
         }
 
+        public Dictionary<PeptideSpectrumMatch, double> ComputeMsMsNormalizationFactors()
+        {
+            Dictionary<PeptideSpectrumMatch, double> fragRatio = new Dictionary<PeptideSpectrumMatch, double>();
+            double lastIntensity = 0;
+            foreach (PeptideSpectrumMatch psm in this)
+            {
+                if (psm.Query.spectrum.PrecursorIntensity > 0)
+                {
+                    double intensityFactor = 0;
+                    if (psm.Query.spectrum.InjectionTime >= 119.999997317791)//TODO Find instrument/method specific default or max injection time
+                        lastIntensity = psm.Query.spectrum.PrecursorIntensity;
+                    else
+                    {
+                        double predictedIntensity = (lastIntensity + psm.Query.spectrum.PrecursorIntensity) * 0.5;
+                        intensityFactor = (psm.Query.spectrum.PrecursorIntensity - predictedIntensity) / predictedIntensity;// psm.Query.spectrum.PrecursorIntensity;
+                    }
+                    fragRatio.Add(psm, intensityFactor);
+                }
+            }
+            return fragRatio;
+        }
+
+        public List<ProductMatch> GetCombinedSpectrum(DBOptions dbOptions, Peptide peptide, int psmCharge, Dictionary<double, int> DicOfCommonPM = null)
+        {
+            Dictionary<PeptideSpectrumMatch, double> DicOfPsmFactor = this.ComputeMsMsNormalizationFactors();
+            Dictionary<ProductMatch, double> DicOfProductMsMsFactor = new Dictionary<ProductMatch, double>();
+            Dictionary<string, List<ProductMatch>> DicOfProducts = new Dictionary<string, List<ProductMatch>>();
+
+            foreach (PeptideSpectrumMatch psm in this)
+            {
+                foreach (ProductMatch match in psm.AllProductMatches)
+                {
+                    if (DicOfCommonPM == null || DicOfCommonPM.ContainsKey(match.theoMz))
+                    {
+                        string key = match.fragment + "|" + match.fragmentPos + "|" + match.charge;
+                        if (!DicOfProducts.ContainsKey(key))
+                            DicOfProducts.Add(key, new List<ProductMatch>());
+                        DicOfProducts[key].Add(match);
+                        DicOfProductMsMsFactor.Add(match, DicOfPsmFactor[psm]);
+                    }
+                }
+            }
+
+            double avgInt = 0;
+            List<ProductMatch> products = new List<ProductMatch>();
+            foreach (List<ProductMatch> matchList in DicOfProducts.Values)
+            {
+                ProductMatch newPM = new ProductMatch(matchList[0]);
+                newPM.obsIntensity = 0;
+                if (matchList.Count > 0)
+                {
+                    foreach (ProductMatch pm in matchList)
+                        newPM.obsIntensity += pm.obsIntensity + pm.obsIntensity * DicOfProductMsMsFactor[pm];
+
+                    newPM.obsIntensity /= (double)matchList.Count;
+                }
+                newPM.weight = matchList.Count * newPM.obsIntensity;
+                avgInt += newPM.obsIntensity;
+                products.Add(newPM);
+            }
+            avgInt /= (double)products.Count;
+
+            //Add missed important fragments
+            if (DicOfCommonPM != null)
+            {
+                foreach (double mz in DicOfCommonPM.Keys)
+                {
+                    bool found = false;
+                    foreach (ProductMatch match in products)
+                        if (match.theoMz == mz)
+                            found = true;
+                    if (!found)
+                    {
+                        ProductMatch newMatch = new ProductMatch();
+                        newMatch.theoMz = mz;
+                        newMatch.weight = 0;
+                        newMatch.obsIntensity = 0;
+                        foreach (PeptideSpectrumMatch psm in this)
+                        {
+                            foreach (MsMsPeak peak in psm.Query.spectrum.Peaks)
+                            {
+                                if (Math.Abs(Proteomics.Utilities.Numerics.CalculateMassError(peak.MZ, mz, dbOptions.productMassTolerance.Units)) <= dbOptions.productMassTolerance.Value)
+                                {
+                                    newMatch.weight += 1;
+                                    newMatch.obsIntensity += peak.Intensity + peak.Intensity * DicOfPsmFactor[psm];
+                                }
+                            }
+                        }
+                        if (newMatch.obsIntensity < avgInt * 0.05)
+                            newMatch.obsIntensity = 0;
+                        else
+                            newMatch.obsIntensity /= (double)newMatch.weight;
+                        newMatch.weight *= newMatch.obsIntensity;
+                        products.Add(newMatch);
+                    }
+                }
+            }
+            return products;
+        }
+
         public static int CompareMatchingIntensityFraction(PeptideSpectrumMatch left, PeptideSpectrumMatch right)
         {
             return -left.MatchingIntensityFraction.CompareTo(right.MatchingIntensityFraction);

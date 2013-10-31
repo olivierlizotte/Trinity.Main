@@ -19,29 +19,32 @@ namespace Trinity
 
         static AminoAcidMasses()
         {
-            List<char> aminoAcids = new List<char>();
-            using (StreamReader amino_acids = new StreamReader(Path.Combine(Path.GetDirectoryName(Environment.GetCommandLineArgs()[0]), "Configuration", "amino_acids.tsv")))
+            try
             {
-                string header = amino_acids.ReadLine();
-
-                while(amino_acids.Peek() != -1)
+                List<char> aminoAcids = new List<char>();
+                using (StreamReader amino_acids = new StreamReader(Path.Combine(Path.GetDirectoryName(Environment.GetCommandLineArgs()[0]), "Configuration", "amino_acids.tsv")))
                 {
-                    string line = amino_acids.ReadLine();
-                    string[] fields = line.Split('\t');
+                    string header = amino_acids.ReadLine();
 
-                    char one_letter_code = char.Parse(fields[0]);
-                    if(!char.IsUpper(one_letter_code))
+                    while (amino_acids.Peek() != -1)
                     {
-                        throw new ArgumentOutOfRangeException("Invalid amino acid abbreviation: " + one_letter_code);
+                        string line = amino_acids.ReadLine();
+                        string[] fields = line.Split('\t');
+
+                        char one_letter_code = char.Parse(fields[0]);                        
+                        double monoisotopic_mass = double.Parse(fields[1]);
+                        MONOISOTOPIC_AMINO_ACID_MASSES[one_letter_code - 'A'] = monoisotopic_mass;
+                        double average_mass = double.Parse(fields[2]);
+                        AVERAGE_AMINO_ACID_MASSES[one_letter_code - 'A'] = average_mass;
+                        aminoAcids.Add(one_letter_code);
                     }
-                    double monoisotopic_mass = double.Parse(fields[1]);
-                    MONOISOTOPIC_AMINO_ACID_MASSES[one_letter_code - 'A'] = monoisotopic_mass;
-                    double average_mass = double.Parse(fields[2]);
-                    AVERAGE_AMINO_ACID_MASSES[one_letter_code - 'A'] = average_mass;
-                    aminoAcids.Add(one_letter_code);
                 }
+                AMINO_ACIDS = aminoAcids.ToArray();
             }
-            AMINO_ACIDS = aminoAcids.ToArray();
+            catch (Exception) 
+            {
+                Console.WriteLine("Could not load configuration file amino_acids.tsv");
+            }
         }
 
         public static double GetMonoisotopicMass(char aminoAcid)
