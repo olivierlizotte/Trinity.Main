@@ -74,25 +74,26 @@ namespace Trinity.UnitTest
             //Samples ProjectStable = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_StableMix_MonoAce_19Oct.csv", 0);            
             
             //0.305567296686846 : Return type (0) Precision (100000) nbProductsToKeep (5)
-            //Samples ProjectRatios = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_DiAce_Spiked_19Oct.csv", 0);//Group 2 (all)            
+            //Samples ProjectRatios = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_DiAce_Spiked_19Oct.csv", 0);//Group 2 (all)
             //Samples ProjectMixed =  new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_DiAce_Varied_19Oct.csv", 0);
             //Samples ProjectStable = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_StableMix_DiAce_19Oct.csv", 0);
 
             //0.222529420854448 : Return type (2) Precision (100000) nbProductsToKeep (19)
             //Samples ProjectRatios = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_TriAce_Spiked_19Oct.csv", 0);//Group 2 (all)            
             //Samples ProjectMixed =  new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_TriAce_Varied_19Oct.csv", 0);
-            //Samples ProjectStable = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_StableMix_TriAce_19Oct.csv", 0);
+            //Samples ProjectStable = null;// new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_StableMix_TriAce_19Oct.csv", 0);
 
             Samples ProjectRatios = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_AllAce_Spiked_19Oct.csv", 0);//Group 2 (all)            
             Samples ProjectMixed =  new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_AllAce_Varied_19Oct.csv", 0);
-            Samples ProjectStable = null;//new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_StableMix_TriAce_19Oct.csv", 0);
+            Samples ProjectStable = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_StableMix_AllAce_19Oct.csv", 0);
             
             int nbProductsMin = 5;// 4;
             int nbProductsMax = 5;// 14;
             bool smoothedPrecursor = false;
             int precision = 1000;
+            int maxCharge = 2;
 
-            PositionnalIsomerSolver.Solve(ProjectRatios, ProjectStable, ProjectMixed, dbOptions, nbProductsMin, nbProductsMax, smoothedPrecursor, precision);
+            PositionnalIsomerSolver.Solve(ProjectRatios, ProjectStable, ProjectMixed, dbOptions, nbProductsMin, nbProductsMax, smoothedPrecursor, precision, maxCharge);
         }
     }
 }

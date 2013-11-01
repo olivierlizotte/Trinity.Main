@@ -213,55 +213,58 @@ namespace Trinity
 
             double avgInt = 0;
             List<ProductMatch> products = new List<ProductMatch>();
-            foreach (List<ProductMatch> matchList in DicOfProducts.Values)
+            if (DicOfProductMsMsFactor.Count > 0)
             {
-                ProductMatch newPM = new ProductMatch(matchList[0]);
-                newPM.obsIntensity = 0;
-                if (matchList.Count > 0)
+                foreach (List<ProductMatch> matchList in DicOfProducts.Values)
                 {
-                    foreach (ProductMatch pm in matchList)
-                        newPM.obsIntensity += pm.obsIntensity + pm.obsIntensity * DicOfProductMsMsFactor[pm];
-
-                    newPM.obsIntensity /= (double)matchList.Count;
-                }
-                newPM.weight = matchList.Count * newPM.obsIntensity;
-                avgInt += newPM.obsIntensity;
-                products.Add(newPM);
-            }
-            avgInt /= (double)products.Count;
-
-            //Add missed important fragments
-            if (DicOfCommonPM != null)
-            {
-                foreach (double mz in DicOfCommonPM.Keys)
-                {
-                    bool found = false;
-                    foreach (ProductMatch match in products)
-                        if (match.theoMz == mz)
-                            found = true;
-                    if (!found)
+                    ProductMatch newPM = new ProductMatch(matchList[0]);
+                    newPM.obsIntensity = 0;
+                    if (matchList.Count > 0)
                     {
-                        ProductMatch newMatch = new ProductMatch();
-                        newMatch.theoMz = mz;
-                        newMatch.weight = 0;
-                        newMatch.obsIntensity = 0;
-                        foreach (PeptideSpectrumMatch psm in this)
+                        foreach (ProductMatch pm in matchList)
+                            newPM.obsIntensity += pm.obsIntensity + pm.obsIntensity * DicOfProductMsMsFactor[pm];
+
+                        newPM.obsIntensity /= (double)matchList.Count;
+                    }
+                    newPM.weight = matchList.Count * newPM.obsIntensity;
+                    avgInt += newPM.obsIntensity;
+                    products.Add(newPM);
+                }
+                avgInt /= (double)products.Count;
+
+                //Add missed important fragments
+                if (DicOfCommonPM != null)
+                {
+                    foreach (double mz in DicOfCommonPM.Keys)
+                    {
+                        bool found = false;
+                        foreach (ProductMatch match in products)
+                            if (match.theoMz == mz)
+                                found = true;
+                        if (!found)
                         {
-                            foreach (MsMsPeak peak in psm.Query.spectrum.Peaks)
+                            ProductMatch newMatch = new ProductMatch();
+                            newMatch.theoMz = mz;
+                            newMatch.weight = 0;
+                            newMatch.obsIntensity = 0;
+                            foreach (PeptideSpectrumMatch psm in this)
                             {
-                                if (Math.Abs(Proteomics.Utilities.Numerics.CalculateMassError(peak.MZ, mz, dbOptions.productMassTolerance.Units)) <= dbOptions.productMassTolerance.Value)
+                                foreach (MsMsPeak peak in psm.Query.spectrum.Peaks)
                                 {
-                                    newMatch.weight += 1;
-                                    newMatch.obsIntensity += peak.Intensity + peak.Intensity * DicOfPsmFactor[psm];
+                                    if (Math.Abs(Proteomics.Utilities.Numerics.CalculateMassError(peak.MZ, mz, dbOptions.productMassTolerance.Units)) <= dbOptions.productMassTolerance.Value)
+                                    {
+                                        newMatch.weight += 1;
+                                        newMatch.obsIntensity += peak.Intensity + peak.Intensity * DicOfPsmFactor[psm];
+                                    }
                                 }
                             }
+                            if (newMatch.obsIntensity < avgInt * 0.05)
+                                newMatch.obsIntensity = 0;
+                            else
+                                newMatch.obsIntensity /= (double)newMatch.weight;
+                            newMatch.weight *= newMatch.obsIntensity;
+                            products.Add(newMatch);
                         }
-                        if (newMatch.obsIntensity < avgInt * 0.05)
-                            newMatch.obsIntensity = 0;
-                        else
-                            newMatch.obsIntensity /= (double)newMatch.weight;
-                        newMatch.weight *= newMatch.obsIntensity;
-                        products.Add(newMatch);
                     }
                 }
             }
