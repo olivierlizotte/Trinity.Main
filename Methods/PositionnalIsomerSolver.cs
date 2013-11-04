@@ -88,7 +88,7 @@ namespace Trinity.UnitTest
                 stableResult = Propheus.Start(dbOptions, ProjectStable, false, false, false);
 
             Result mixedResult = Propheus.Start(dbOptions, ProjectMixed, false, false, false);
-
+                        
             for (int charge = 2; charge <= maxCharge; charge++)
             {
                 //Get normalization factor from the stable mix
@@ -165,6 +165,9 @@ namespace Trinity.UnitTest
                     writerStats.WriteToFile();
                 }
             }
+            //Export results of searches
+            spikedResult.Export(0.05);
+            mixedResult.Export(0.05);
         }    
     
         public static List<List<double>> ComputeMaxFlows(
@@ -235,13 +238,13 @@ namespace Trinity.UnitTest
                     foreach (Query query in mixedResult.queries)
                     {
                         if (query.sample == sample && !DicOfSpectrum.ContainsKey(query.spectrum) && query.precursor.Charge == chargeToConsider)
-                        {
+                        {                            
                             PeptideSpectrumMatch psmToKeep = null;
                             foreach (PeptideSpectrumMatch psm in query.psms)
                                 foreach (string name in ratioNames)
                                     if (name.CompareTo(psm.Peptide.Sequence) == 0)
                                         psmToKeep = psm;
-
+                            
                             if (psmToKeep != null)
                             {
                                 double foundKey = 0.0;
@@ -281,6 +284,16 @@ namespace Trinity.UnitTest
                                 psmMatches.Add(DicOfSpectrum[ps]);
 
                         psmMatches.Sort(PeptideSpectrumMatches.AscendingRetentionTime);
+
+                        // -- Export best spectrum -- //
+                        PeptideSpectrumMatch bestPsm = null;
+                        foreach (PeptideSpectrumMatch psm in psmMatches)
+                            if (bestPsm == null || psm.Query.spectrum.TotalIntensity > bestPsm.Query.spectrum.TotalIntensity)
+                                bestPsm = psm;
+                        mixedResult.ExportFragments(bestPsm);
+                        // -- ******************** -- //
+
+
                         Dictionary<PeptideSpectrumMatch, double> DicOfPsmFactor = psmMatches.ComputeMsMsNormalizationFactors();
                         
                         Dictionary<int, string> dicOfResults = new Dictionary<int, string>();
@@ -317,7 +330,7 @@ namespace Trinity.UnitTest
 
                             if (LastTimeStamp > 0 && !double.IsNaN(normSumRatio) && normSumRatio > 0)
                             {
-                                if (percentError < 0.95)
+                                if (percentError < 0.25)//0.95
                                 {
                                     List<double> avgQuantifiedRatios = new List<double>();
 
@@ -434,7 +447,19 @@ namespace Trinity.UnitTest
                 foreach (ProductMatch match in fragmentRatio)
                 {
                     if (!mixedFragDic.ContainsKey((float)match.theoMz))
-                        mixedFragDic.Add((float)match.theoMz, 0);
+                    {
+                        float closest = -1;
+                        foreach (float key in mixedFragDic.Keys)
+                            if (Math.Abs(Proteomics.Utilities.Numerics.CalculateMassError(match.theoMz, key, tolerance.Units)) <= tolerance.Value)
+                                closest = key;
+                        if (closest > 0)
+                        {
+                            Console.WriteLine("Potential problem with selected fragment masses ");
+                            match.theoMz = closest;
+                        }
+                        else
+                            mixedFragDic.Add((float)match.theoMz, 0);
+                    }
                 }
             }
 
@@ -667,7 +692,9 @@ namespace Trinity.UnitTest
                     Normalizor.Add(foundKey, new List<double>());
                 }
             }
-
+            
+            vsCSVWriter writer = new vsCSVWriter(dbOptions.OutputFolder + "FragmentsUsed_" + nbProductsToKeep + "Products.csv");
+            writer.AddLine("Precursor Mass, Peptide Sequence,Fragment,Pos,Charge,Mz,Intensity");
             foreach (double foundKey in FinalSpikedProducts.Keys)
             {
                 Peptide peptide = null;
@@ -736,7 +763,7 @@ namespace Trinity.UnitTest
                 //Get List of desired fragments, and keep masses
                 for (int i = 0; i < Project.Count; i++)
                 {
-                    for (int j = SpikedProducts[i].Count - 1; j > 0 && j > SpikedProducts[i].Count - nbProductsToKeep; j--)
+                    for (int j = SpikedProducts[i].Count - 1; j > 0 && j >= SpikedProducts[i].Count - nbProductsToKeep; j--)
                         if (!DicOfFragmentsToKeep.ContainsKey(SpikedProducts[i][j].theoMz))
                             DicOfFragmentsToKeep.Add(SpikedProducts[i][j].theoMz, 1);
                         else
@@ -744,7 +771,14 @@ namespace Trinity.UnitTest
                 }
 
                 for (int i = 0; i < Project.Count; i++)
-                    FinalSpikedProducts[foundKey].Add(listOfPSMs[i].GetCombinedSpectrum(precomputedResults.dbOptions, peptide, charge, DicOfFragmentsToKeep));
+                {
+                    List<ProductMatch> list = listOfPSMs[i].GetCombinedSpectrum(precomputedResults.dbOptions, peptide, charge, DicOfFragmentsToKeep);
+                                        
+                    foreach (ProductMatch match in list)
+                        writer.AddLine(foundKey + "," + Project[i].nameColumn + "," + match.fragment + "," + match.fragmentPos + "," + match.charge + "," + match.theoMz + "," + match.obsIntensity);
+
+                    FinalSpikedProducts[foundKey].Add(list);
+                }
 
                 double avgPrecursors = 0;
                 int nbInt = 0;
@@ -800,6 +834,7 @@ namespace Trinity.UnitTest
                         Normalizor[foundKey].Add(1.0);
                 }
             }
+            writer.WriteToFile();
         }
     }
 }

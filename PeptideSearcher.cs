@@ -63,7 +63,8 @@ namespace Trinity
         {
             double score = 0;
             foreach(Cluster cluster in clusters)
-                foreach(clCondition condition in cluster.conditions)
+                foreach (clCondition condition in cluster.conditions)
+                    if (condition != null)
                     foreach(clReplicate replicate in condition.replicates)
                         foreach (Precursor precursor in replicate.precursors)
                             if (precursor.ProbabilityScore(peptide) > score)
@@ -76,6 +77,7 @@ namespace Trinity
             double score = 0;
             foreach (Cluster cluster in clusters)
                 foreach (clCondition condition in cluster.conditions)
+                    if (condition != null)
                     foreach (clReplicate replicate in condition.replicates)
                         foreach (Precursor precursor in replicate.precursors)
                             if (precursor.ProbabilityScore() > score)
@@ -108,6 +110,7 @@ namespace Trinity
             double score = 0;
             foreach (Cluster cluster in clusters)
                 foreach (clCondition condition in cluster.conditions)
+                    if(condition != null)
                     foreach (clReplicate replicate in condition.replicates)
                         foreach (Precursor precursor in replicate.precursors)
                             score += precursor.ProbabilityScore(peptide);
@@ -119,6 +122,7 @@ namespace Trinity
             double score = 0;
             foreach (Cluster cluster in clusters)
                 foreach (clCondition condition in cluster.conditions)
+                    if(condition != null)
                     foreach (clReplicate replicate in condition.replicates)
                         foreach (Precursor precursor in replicate.precursors)
                             score += precursor.ProbabilityScore(peptide);
@@ -178,6 +182,7 @@ namespace Trinity
             int nbClusterNewSeq = 0;
             foreach (Cluster cl in clusters)
                 foreach (clCondition condition in cl.conditions)
+                    if(condition != null)
                     foreach (clReplicate replicate in condition.replicates)
                         foreach (Precursor precursor in replicate.precursors)
                             foreach (PeptideSpectrumMatch psm in precursor.psms_AllPossibilities)
@@ -248,6 +253,7 @@ namespace Trinity
             int nbClusterNewSeq = 0;
             foreach(Cluster cl in clusters)
                 foreach (clCondition condition in cl.conditions)
+                    if (condition != null)
                     foreach (clReplicate replicate in condition.replicates)
                         foreach (Precursor precursor in replicate.precursors)
                             foreach (PeptideSpectrumMatch psm in precursor.OptimizedBestPsms())

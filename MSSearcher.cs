@@ -167,6 +167,7 @@ namespace Trinity
             double cumul = 0;
             int nbSeen = 0;
             foreach (clCondition condition in conditions)
+                if(condition != null)
                 foreach(clReplicate replicate in condition.replicates)
                     foreach (Precursor precursor in replicate.precursors)
                     {
@@ -231,6 +232,7 @@ namespace Trinity
         {
             List<PeptideSpectrumMatch> matches = new List<PeptideSpectrumMatch>();
             foreach (clCondition condition in conditions)
+                if(condition != null)
                 foreach (clReplicate replicate in condition.replicates)
                     foreach (Precursor precursor in replicate.precursors)
                         foreach (PeptideSpectrumMatch psm in precursor.OptimizedBestPsms())
@@ -249,6 +251,7 @@ namespace Trinity
         {            
             Dictionary<Peptide, double> peptides = new Dictionary<Peptide, double>();            
             foreach (clCondition condition in conditions)
+                if(condition != null)
                 foreach (clReplicate replicate in condition.replicates)
                     foreach (Precursor precursor in replicate.precursors)
                         foreach (PeptideSpectrumMatch psm in precursor.OptimizedBestPsms())
@@ -284,6 +287,7 @@ namespace Trinity
             double score = 0;
             Precursor best = null;
             foreach (clCondition condition in conditions)
+                if(condition != null)
                 foreach (clReplicate replicate in condition.replicates)
                     foreach (Precursor precursor in replicate.precursors)
                     {

@@ -15,7 +15,7 @@ namespace Trinity.UnitTest
     {
         public static DBOptions GetDBOptions(bool loadFromRaw, bool onlyYions)
         {
-            string outputDir = @"C:\_IRIC\DATA\Test\testNB\Iso2\";
+            string outputDir = @"C:\_IRIC\DATA\Test\testNB\Iso3\";
             string fastaFile = @"G:\Thibault\-=Proteomics_Raw_Data=-\ELITE\FEB13_2013\MSMS files\Peptide.fasta";
             DBOptions dbOptions = new DBOptions(fastaFile);
             dbOptions.precursorMassTolerance = new MassTolerance(8/*8*//*8withoutisotopes*/, MassToleranceUnits.ppm);
@@ -81,7 +81,7 @@ namespace Trinity.UnitTest
             //0.222529420854448 : Return type (2) Precision (100000) nbProductsToKeep (19)
             //Samples ProjectRatios = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_TriAce_Spiked_19Oct.csv", 0);//Group 2 (all)            
             //Samples ProjectMixed =  new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_TriAce_Varied_19Oct.csv", 0);
-            //Samples ProjectStable = null;// new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_StableMix_TriAce_19Oct.csv", 0);
+            //Samples ProjectStable = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_StableMix_TriAce_19Oct.csv", 0);
 
             Samples ProjectRatios = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_AllAce_Spiked_19Oct.csv", 0);//Group 2 (all)            
             Samples ProjectMixed =  new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_AllAce_Varied_19Oct.csv", 0);
