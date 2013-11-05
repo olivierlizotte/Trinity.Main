@@ -202,17 +202,22 @@ namespace Trinity.UnitTest
             Dictionary<int, Dictionary<double, List<double>>>               DicOfTrackIntensity = new Dictionary<int, Dictionary<double, List<double>>>();
             Dictionary<int, Dictionary<double, List<double>>>               DicOfNormalizeFactor = new Dictionary<int, Dictionary<double, List<double>>>();
             Dictionary<int, double>                                         DicOfErrors = new Dictionary<int,double>();
+            Dictionary<int, List<double>>                                   DicOfFragmentMz = new Dictionary<int, List<double>>();
 
             for (int nbProductsToKeep = nbProductMin; nbProductsToKeep <= nbProductMax; nbProductsToKeep++)
             {
                 Dictionary<double, List<List<ProductMatch>>> ratios = new Dictionary<double, List<List<ProductMatch>>>();
                 Dictionary<double, List<double>> TrackIntensity = new Dictionary<double, List<double>>();
                 Dictionary<double, List<double>> NormalizeFactor = new Dictionary<double, List<double>>();
+                List<double> ListFragmentMz = new List<double>();
+
                 BuildSinglePeptideVirtualSpectrum(spikedResult, smoothedPrecursor, nbProductsToKeep, RatioNormalizer,
-                                                        ref ratios, ref TrackIntensity, ref NormalizeFactor, chargeToConsider);
+                                                        ref ratios, ref TrackIntensity, ref NormalizeFactor, ref ListFragmentMz, chargeToConsider);
+
                 DicOfRatios.Add(nbProductsToKeep, ratios);
                 DicOfTrackIntensity.Add(nbProductsToKeep, TrackIntensity);
                 DicOfNormalizeFactor.Add(nbProductsToKeep, NormalizeFactor);
+                DicOfFragmentMz.Add(nbProductsToKeep, ListFragmentMz);
                 DicOfErrors.Add(nbProductsToKeep, 0);
             }
 
@@ -349,6 +354,15 @@ namespace Trinity.UnitTest
                                         sumOfRatio[i] += avgQuantifiedRatios[i];
                                         strRatios += "," + avgQuantifiedRatios[i];
                                     }
+                                    foreach (double mz in DicOfFragmentMz[nbProductsToKeep])
+                                    {
+                                        double intCumul = 0;
+                                        foreach (MsMsPeak peak in psm.Query.spectrum.Peaks)
+                                            if (Math.Abs(Proteomics.Utilities.Numerics.CalculateMassError(mz, peak.MZ, dbOptions.precursorMassTolerance.Units)) <= dbOptions.precursorMassTolerance.Value)
+                                                intCumul += peak.Intensity;
+                                        strRatios += "," + intCumul;
+                                    }
+
                                     dicOfResults.Add(psm.Query.spectrum.ScanNumber, strRatios);
                                     //TotalElapsedTime += ElapsedTime;                                                                                
                                 }
@@ -418,6 +432,13 @@ namespace Trinity.UnitTest
                 foreach (Sample sample in bestDicOfResults.Keys)
                 {//Dictionary<Sample, List<Dictionary<int, string>>> 
                     vsCSVWriter writer = new vsCSVWriter(dbOptions.OutputFolder + sample.nameColumn + "_Ratios5_Charge" + chargeToConsider + ".csv");
+                    string title = "Retention Time,Precursor Intensity";
+                    for(int i = 0; i < ProjectRatios.Count; i++)
+                        title += "," + ProjectRatios[i].nameColumn;
+                    
+                    foreach (double mz in DicOfFragmentMz[nbProductsUsed])
+                        title += "," + mz;
+                    writer.AddLine(title);
                     foreach (Dictionary<int, string> dic in bestDicOfResults[sample])
                     {
                         List<int> scans = new List<int>(dic.Keys);
@@ -488,8 +509,9 @@ namespace Trinity.UnitTest
             while (overError > 1 && iterSize < 10000)//anything less than 1 is an acceptable solution
             {
                 bestIndex = -1;
-                double smallestUnderError = double.MaxValue;
-                double smallestOverError = overError;
+                //double smallestUnderError = double.MaxValue;
+                //double smallestOverError = overError;
+                double worstFlowRate = 0.0;
                 for (int i = 0; i < spikedMatches.Count; i++)
                 {
                     if (localFlows[i] > 0)
@@ -499,11 +521,16 @@ namespace Trinity.UnitTest
                         double tmpErrorMinus = MaxFlowHelper.ComputeUnderflow(virtualSpectrum, mixedFragDic);
                         double tmpErrorPlus = MaxFlowHelper.ComputeOverflow(virtualSpectrum, mixedFragDic);
 
-                        if (tmpErrorPlus < overError && (tmpErrorMinus < smallestUnderError
-                            || (tmpErrorMinus == smallestUnderError && tmpErrorPlus < smallestOverError)))
+                        double tmpFlowRate = Math.Abs(overError - tmpErrorPlus) / Math.Abs(underError - tmpErrorMinus);
+                        if (double.IsNaN(tmpFlowRate))
+                            Console.WriteLine("schnit");
+                        if(tmpFlowRate > worstFlowRate)
+                        //if (tmpErrorPlus < overError && (tmpErrorMinus < smallestUnderError
+                        //    || (tmpErrorMinus == smallestUnderError && tmpErrorPlus < smallestOverError)))
                         {
-                            smallestOverError = tmpErrorPlus;
-                            smallestUnderError = tmpErrorMinus;
+                            worstFlowRate = tmpFlowRate;
+                            //smallestOverError = tmpErrorPlus;
+                            //smallestUnderError = tmpErrorMinus;
                             bestIndex = i;
                         }
                         localFlows[i] += iterSize;
@@ -670,7 +697,7 @@ namespace Trinity.UnitTest
 
         private static void BuildSinglePeptideVirtualSpectrum(Result precomputedResults, bool smoothPrecursor, 
                     int nbProductsToKeep, List<double> RatioNormalizer, ref Dictionary<double, List<List<ProductMatch>>> FinalSpikedProducts, 
-                    ref Dictionary<double, List<double>> PrecursorAreas, ref Dictionary<double, List<double>> Normalizor, int charge)
+                    ref Dictionary<double, List<double>> PrecursorAreas, ref Dictionary<double, List<double>> Normalizor, ref List<double> FragmentMz, int charge)
         {   
             DBOptions dbOptions = precomputedResults.dbOptions;
             Samples Project = precomputedResults.samples;
@@ -693,6 +720,7 @@ namespace Trinity.UnitTest
                 }
             }
             
+            Dictionary<double, int> AllFragments = new Dictionary<double,int>();
             vsCSVWriter writer = new vsCSVWriter(dbOptions.OutputFolder + "FragmentsUsed_" + nbProductsToKeep + "Products.csv");
             writer.AddLine("Precursor Mass, Peptide Sequence,Fragment,Pos,Charge,Mz,Intensity");
             foreach (double foundKey in FinalSpikedProducts.Keys)
@@ -780,6 +808,12 @@ namespace Trinity.UnitTest
                     FinalSpikedProducts[foundKey].Add(list);
                 }
 
+                foreach(double key in DicOfFragmentsToKeep.Keys)
+                    if(!AllFragments.ContainsKey(key))
+                        AllFragments.Add(key, 1);
+                    else
+                        AllFragments[key]++;
+
                 double avgPrecursors = 0;
                 int nbInt = 0;
                 foreach (double avg in PeakAvgIntensities)
@@ -834,6 +868,10 @@ namespace Trinity.UnitTest
                         Normalizor[foundKey].Add(1.0);
                 }
             }
+
+            foreach(double key in AllFragments.Keys)
+                FragmentMz.Add(key);
+
             writer.WriteToFile();
         }
     }
