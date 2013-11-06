@@ -125,25 +125,25 @@ namespace Trinity
             foreach (Precursor precursor in matchedPrecursors)
                 if (precursor.Target)
                     target++;
-            Console.WriteLine("  ---  Number of precursors          : " + target + " targets [" + matchedPrecursors.Count + "]" + "  ---  ");
+            dbOptions.ConSole.WriteLine("  ---  Number of precursors          : " + target + " targets [" + matchedPrecursors.Count + "]" + "  ---  ");
 
             target = 0;
             foreach (PeptideMatch peptide in peptides)
                 if (peptide.Target)
                     target++;
-            Console.WriteLine("  ---  Number of peptides            : " + target + " targets [" + peptides.Count + "]" + "  ---  ");
+            dbOptions.ConSole.WriteLine("  ---  Number of peptides            : " + target + " targets [" + peptides.Count + "]" + "  ---  ");
 
             target = 0;
             foreach (PeptideMatch peptide in peptideSequences)
                 if (peptide.Target)
                     target++;
-            Console.WriteLine("  ---  Number of peptide sequences   : " + target + " targets [" + peptideSequences.Count + "]" + "  ---  ");
+            dbOptions.ConSole.WriteLine("  ---  Number of peptide sequences   : " + target + " targets [" + peptideSequences.Count + "]" + "  ---  ");
 
             target = 0;
             foreach (ProteinGroupMatch protein in proteins)
                 if (protein.Target)
                     target++;
-            Console.WriteLine("  ---  Number of proteins            : " + target + " targets [" + proteins.Count + "]" + "  ---  ");
+            dbOptions.ConSole.WriteLine("  ---  Number of proteins            : " + target + " targets [" + proteins.Count + "]" + "  ---  ");
             if (!light)
             {
                 WriteFragmentation(true);
@@ -539,7 +539,7 @@ namespace Trinity
 
         public void Export(double fdr, string keyword = "", bool onlyPrecursors = false)
         {
-            Console.WriteLine("Exporting at " + (fdr * 100) + "% FDR (Decoy/Target)...");
+            dbOptions.ConSole.WriteLine("Exporting at " + (fdr * 100) + "% FDR (Decoy/Target)...");
 
             List<Precursor> prec = null;
             if (precursors != null)
@@ -560,7 +560,7 @@ namespace Trinity
                 MSSearcher.Export(dbOptions.outputFolder + keyword + "Optimized_precursors.csv", prec);//*/
 
                 prec = matchedPrecursors.ComputeAtFDR(fdr);
-                Console.WriteLine(">   " + prec.Count + " Uptimized V5 Precursors");
+                dbOptions.ConSole.WriteLine(">   " + prec.Count + " Uptimized V5 Precursors");
                 MSSearcher.Export(dbOptions.OutputFolder + keyword + "UptimizedV5_precursors.csv", prec);
             }
 
@@ -569,41 +569,41 @@ namespace Trinity
                 if (queries != null)
                 {
                     List<Query> qs = queries.ComputeAtFDR(fdr);
-                    Console.WriteLine(">   " + qs.Count + " PSMs (Top 10)");
+                    dbOptions.ConSole.WriteLine(">   " + qs.Count + " PSMs (Top 10)");
                     MSSearcher.Export(dbOptions.OutputFolder + keyword + "queries.csv", qs);
                 }
                 if (clusters != null)
                 {
                     //List<PeptideSpectrumMatch> psms = FDR.PSMs(clusters, fdr, 1, 10);
-                    //Console.WriteLine(">   " + psms.Count + " PSMs (Top 10)");
+                    //dbOptions.ConSole.WriteLine(">   " + psms.Count + " PSMs (Top 10)");
                     //MSSearcher.Export(dbOptions.outputFolder + keyword + "psms_Top10.csv", psms);
 
                     //psms = FDR.PSMs(clusters, fdr, 1, 1);
-                    //Console.WriteLine(">   " + psms.Count + " PSMs");
+                    //dbOptions.ConSole.WriteLine(">   " + psms.Count + " PSMs");
                     //MSSearcher.Export(dbOptions.outputFolder + keyword + "psms_Best.csv", psms);
                 }
 
                 if (peptides != null)
                 {
                     List<PeptideMatch> pep = peptideSequences.ComputeAtFDR(fdr);
-                    Console.WriteLine(">   " + pep.Count + " Peptides Sequences (Version 5)");
+                    dbOptions.ConSole.WriteLine(">   " + pep.Count + " Peptides Sequences (Version 5)");
                     PeptideSearcher.Export(dbOptions.OutputFolder + keyword + "peptideSequencesV5_.csv", pep);
 
                     PeptideSearcher sr = new PeptideSearcher(dbOptions);
                     PeptideMatches seqs = sr.Search(clusters, prec, false);
                     pep = seqs.ComputeAtFDR(fdr);
-                    Console.WriteLine(">   " + pep.Count + " Peptides Sequences (Version 5b)");
+                    dbOptions.ConSole.WriteLine(">   " + pep.Count + " Peptides Sequences (Version 5b)");
                     PeptideSearcher.Export(dbOptions.OutputFolder + keyword + "peptideSequencesV5b_PrecursorFDRed.csv", pep);
 
                     pep = peptides.ComputeAtFDR(fdr);
-                    Console.WriteLine(">   " + pep.Count + " Peptides (Version 5)");
+                    dbOptions.ConSole.WriteLine(">   " + pep.Count + " Peptides (Version 5)");
                     PeptideSearcher.Export(dbOptions.OutputFolder + keyword + "peptidesV5_.csv", pep);
 
                 }
                 if (proteins != null)
                 {
                     List<ProteinGroupMatch> prots = proteins.ComputeAtFDR(fdr);
-                    Console.WriteLine(">   " + prots.Count + " Proteins");
+                    dbOptions.ConSole.WriteLine(">   " + prots.Count + " Proteins");
                     ProteinSearcher.Export(dbOptions.OutputFolder + keyword + "proteins_.csv", prots);
                 }
             }

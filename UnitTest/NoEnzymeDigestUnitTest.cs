@@ -19,7 +19,7 @@ namespace Trinity.UnitTest
             //TODO test GPU instead            
             DBOptions dbOptions = MhcSample.CreateOptions("");
             Dictionary<string, int> sequences = new Dictionary<string, int>();
-            List<Protein> proteins = Propheus.ReadProteomeFromFasta(Path.Combine(Path.GetDirectoryName(Environment.GetCommandLineArgs()[0]), "UnitTest", "proteins.fasta"), false);//ETLPAMCNVYYVNCMAPLTE
+            List<Protein> proteins = Propheus.ReadProteomeFromFasta(Path.Combine(Path.GetDirectoryName(Environment.GetCommandLineArgs()[0]), "UnitTest", "proteins.fasta"), false, dbOptions);//ETLPAMCNVYYVNCMAPLTE
             string sequence = proteins[0].BaseSequence;
             double[] proteinMasses = new double[sequence.Length];
 

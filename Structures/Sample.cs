@@ -14,14 +14,17 @@ namespace Trinity
     public class Samples : GraphML_List<Sample>
     {
         public string FileName = "";
+        public DBOptions dbOptions;
         public Samples()
         {
         }
-        public Samples(string projectFileName, int maxFractionSpreading)
+
+        public Samples(string projectFileName, int maxFractionSpreading, DBOptions options)
         {
             loadProjectFile(projectFileName, maxFractionSpreading);
             Sort(Compare);
             FileName = projectFileName;
+            dbOptions = options;
         }
         /*
         public static vsSDF LoadSDF(Sample project)
@@ -90,13 +93,13 @@ namespace Trinity
                     }
                     catch (System.Exception ex)
                     {
-                        Console.WriteLine("Error sfj4aau34 : LineNum = " + lineNum + "   " + ex.Message + "    " + ex.StackTrace);
+                        dbOptions.ConSole.WriteLine("Error sfj4aau34 : LineNum = " + lineNum + "   " + ex.Message + "    " + ex.StackTrace);
                     }
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error sfj4u34 : " + ex.Message + "  \n  " + ex.StackTrace);
+                dbOptions.ConSole.WriteLine("Error sfj4u34 : " + ex.Message + "  \n  " + ex.StackTrace);
             }
             //ITERATIVE_HELPER = iterativeHelper;
 //            GenerateIterativeHelper();

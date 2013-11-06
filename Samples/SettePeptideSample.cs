@@ -15,14 +15,14 @@ namespace Trinity.UnitTest
     {
         public static void Launch()//Trinity.UnitTest.SettePeptideSample.Launch()
         {
+            string outputDir = @"C:\_IRIC\DATA\Test\testMHCSette\";
+            string fastaFile = @"C:\_IRIC\DATA\MHC Sette\MHC_Sette_Peptides_20091001.fasta";
+            string projectFile = @"G:\Thibault\-=Proteomics_Raw_Data=-\ELITE\JUL03_2013\ProjectFile_SETTEpep_OneRAW.csv";
+
+            DBOptions dbOptions = new DBOptions(fastaFile);
             try
             {       
-                string outputDir = @"C:\_IRIC\DATA\Test\testMHCSette\";
-                string fastaFile = @"C:\_IRIC\DATA\MHC Sette\MHC_Sette_Peptides_20091001.fasta";
-                string projectFile = @"G:\Thibault\-=Proteomics_Raw_Data=-\ELITE\JUL03_2013\ProjectFile_SETTEpep_OneRAW.csv"; 
-
-                Samples Project = new Samples(projectFile, 0);
-                DBOptions dbOptions = new DBOptions(fastaFile);
+                Samples Project = new Samples(projectFile, 0, dbOptions);
                 dbOptions.precursorMassTolerance = new MassTolerance(5, MassToleranceUnits.ppm);
                 dbOptions.productMassTolerance = new MassTolerance(0.068, MassToleranceUnits.Da);//0.034 is a 60 000 resolution over 2000 range in mz
                 dbOptions.MaximumPeptideMass = 200000;
@@ -107,8 +107,8 @@ namespace Trinity.UnitTest
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error in SettePeptideSample : " + ex.Message);
-                Console.WriteLine(ex.StackTrace);
+                dbOptions.ConSole.WriteLine("Error in SettePeptideSample : " + ex.Message);
+                dbOptions.ConSole.WriteLine(ex.StackTrace);
             }
         }
     }

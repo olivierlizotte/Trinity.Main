@@ -229,7 +229,7 @@ namespace Trinity
                 cumulDiff += Math.Abs(match.mass_diff) * match.weight;
                 cumulMatch.Add( match );
                 if (match.obsIntensity > highestFragmentIntensity)
-                    Console.WriteLine("fragment intensity higher than most intense fragment ... should not happen!");
+                    options.ConSole.WriteLine("fragment intensity higher than most intense fragment ... should not happen!");
             }
             AllProductMatches = cumulMatch;
             MatchingProductsFraction    = (double)MatchingWeightedProducts / (double) TotalWeightedProducts;

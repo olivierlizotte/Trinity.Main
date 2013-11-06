@@ -28,8 +28,8 @@ namespace Trinity.UnitTest
             //@"G:\Thibault\-=Proteomics_Raw_Data=-\ELITE\JAN22_2013\_Project_FL_Single.csv";
             //G:\Thibault\-=Proteomics_Raw_Data=-\ELITE\JUN27_2012\MR 4Rep DS\MassSense\_Test_ProjectFile_MF3.csv";
             //G:\Thibault\-=Proteomics_Raw_Data=-\ELITE\MAR18_2013\ProjectFile_TestForProPheus.csv";
-            Samples Project = new Samples(projectFile, 0);
             DBOptions dbOptions = new DBOptions(fastaFile);
+            Samples Project = new Samples(projectFile, 0, dbOptions);
             dbOptions.precursorMassTolerance = new MassTolerance(8/*8*//*8withoutisotopes*/, MassToleranceUnits.ppm);
             dbOptions.productMassTolerance = new MassTolerance(0.034/*0.034*//*without isotopes*/, MassToleranceUnits.Da);//0.034 is a 60 000 resolution over 2000 range in mz
             dbOptions.MaximumPeptideMass = 200000;

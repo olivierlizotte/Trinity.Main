@@ -67,9 +67,10 @@ namespace Trinity.UnitTest
                 string projectFile = @"C:\_IRIC\DATA\MHC\project.csv"; //Patient C
                 //@"G:\Thibault\-=Proteomics_Raw_Data=-\ELITE\JUL03_2013\ProjectFile_SETTEpep_OneRAW.csv";//Sette Peptides
                 //C:\_IRIC\DATA\MHC\project.csv";//MHC M One sample 
-                Samples Project = new Samples(projectFile, 0);
 
-                DBOptions dbOptions = CreateOptions( @"C:\_IRIC\DATA\Test\testMhc\");
+                DBOptions dbOptions = CreateOptions(@"C:\_IRIC\DATA\Test\testMhc\");
+                Samples Project = new Samples(projectFile, 0, dbOptions);
+
 
                 //ClusterOptions clusterOptions = new ClusterOptions(Project, outputDir, 5, true, 90, true);//TODO validate its in seconds for all file types
                 /*

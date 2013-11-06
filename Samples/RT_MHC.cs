@@ -15,15 +15,16 @@ namespace Trinity.UnitTest
     {
         public static void Launch()//Trinity.UnitTest.SettePeptideSample.Launch()
         {
-            try
-            {       
-                string outputDir = @"C:\_IRIC\DATA\Test\testRTMHC\";
-                string fastaFile = @"C:\_IRIC\DATA\MHC Sette\MHC_Sette_Peptides_20091001.fasta";
-                string projectFile = //@"G:\Thibault\-=Proteomics_Raw_Data=-\ELITE\AUG06_2013\RT_MHC\Project_TEST_600mM.csv"; 
+            string outputDir = @"C:\_IRIC\DATA\Test\testRTMHC\";
+            string fastaFile = @"C:\_IRIC\DATA\MHC Sette\MHC_Sette_Peptides_20091001.fasta";
+            string projectFile = //@"G:\Thibault\-=Proteomics_Raw_Data=-\ELITE\AUG06_2013\RT_MHC\Project_TEST_600mM.csv"; 
                     @"G:\Thibault\-=Proteomics_Raw_Data=-\ELITE\MAR26_2013\Project_NonFAIMS.csv";
                     //                 @"G:\Thibault\-=Proteomics_Raw_Data=-\ELITE\SEP10_2013\Project_TEST_75_100_300mM.csv";
-                Samples Project = new Samples(projectFile, 0);
-                DBOptions dbOptions = new DBOptions(fastaFile);
+                
+            DBOptions dbOptions = new DBOptions(fastaFile);
+            try
+            {       
+                Samples Project = new Samples(projectFile, 0, dbOptions);
                 dbOptions.precursorMassTolerance = new MassTolerance(5, MassToleranceUnits.ppm);
                 dbOptions.productMassTolerance = new MassTolerance(0.068, MassToleranceUnits.Da);//0.034 is a 60 000 resolution over 2000 range in mz
                 dbOptions.MaximumPeptideMass = 200000;
@@ -68,8 +69,8 @@ namespace Trinity.UnitTest
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error in SettePeptideSample : " + ex.Message);
-                Console.WriteLine(ex.StackTrace);
+                dbOptions.ConSole.WriteLine("Error in SettePeptideSample : " + ex.Message);
+                dbOptions.ConSole.WriteLine(ex.StackTrace);
             }
         }
     }

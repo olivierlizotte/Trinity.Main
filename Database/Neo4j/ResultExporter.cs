@@ -74,7 +74,8 @@ namespace Trinity.Database.Neo4j
         Dictionary<long, IGraphML_Node> dic = new Dictionary<long, IGraphML_Node>();
         //GraphClient client;
         RestClient clientNode;
-        public ResultExporter()
+        DBOptions dbOptions;
+        public ResultExporter(DBOptions dbOptions)
         {
             //client = new GraphClient(new Uri("http://localhost:7474/db/data"));
             //client.Connect();
@@ -126,8 +127,8 @@ namespace Trinity.Database.Neo4j
                                 }
                                 catch (Exception ex)
                                 {
-                                        Console.WriteLine(ex.Message);
-                                        Console.WriteLine(ex.StackTrace);
+                                        dbOptions.ConSole.WriteLine(ex.Message);
+                                        dbOptions.ConSole.WriteLine(ex.StackTrace);
                                 }
                             }
                     }
@@ -175,8 +176,8 @@ namespace Trinity.Database.Neo4j
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.Message);
-                Console.WriteLine(ex.StackTrace);
+                dbOptions.ConSole.WriteLine(ex.Message);
+                dbOptions.ConSole.WriteLine(ex.StackTrace);
             }
             return id;// node.ID;
         }

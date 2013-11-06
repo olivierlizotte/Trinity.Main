@@ -165,7 +165,7 @@ namespace Trinity
 
         public PeptideMatches SearchAll(List<Cluster> clusters, List<Precursor> precursors, bool DiffByMod = true)
         {
-            Console.WriteLine("Creating the list of peptide found...");
+            options.ConSole.WriteLine("Creating the list of peptide found...");
             Dictionary<string, PeptideMatch> peptideMatches = new Dictionary<string, PeptideMatch>();
 
             foreach (Precursor prec in precursors)
@@ -193,13 +193,13 @@ namespace Trinity
                             }
 
             PeptideMatches TotalList = new PeptideMatches(peptideMatches.Values);
-            Console.WriteLine(TotalList.Count + " distinct peptides (based on sequence" + (DiffByMod ? " and modifications)" : ")") + "    [" + nbClusterNewSeq + " added from clusters]");
+            options.ConSole.WriteLine(TotalList.Count + " distinct peptides (based on sequence" + (DiffByMod ? " and modifications)" : ")") + "    [" + nbClusterNewSeq + " added from clusters]");
             return TotalList;
         }
 
         public PeptideMatches SearchClusters(List<Cluster> clusters, List<Precursor> precursors, bool DiffByMod = true)
         {
-            Console.WriteLine("Creating the list of peptide found...");
+            options.ConSole.WriteLine("Creating the list of peptide found...");
             Dictionary<string, PeptideMatch> peptideMatches = new Dictionary<string, PeptideMatch>();
 
             foreach (Precursor prec in precursors)
@@ -230,13 +230,13 @@ namespace Trinity
                             }
 
             PeptideMatches TotalList = new PeptideMatches(peptideMatches.Values);
-            Console.WriteLine(TotalList.Count + " distinct peptides (based on sequence" + (DiffByMod ? " and modifications)" : ")") + "    [" + nbClusterNewSeq + " not unmapped clusters]");
+            options.ConSole.WriteLine(TotalList.Count + " distinct peptides (based on sequence" + (DiffByMod ? " and modifications)" : ")") + "    [" + nbClusterNewSeq + " not unmapped clusters]");
             return TotalList;
         }
 
         public PeptideMatches Search(List<Cluster> clusters, List<Precursor> precursors, bool DiffByMod = true)
         {
-            Console.WriteLine("Creating the list of peptide found...");
+            options.ConSole.WriteLine("Creating the list of peptide found...");
             Dictionary<string, PeptideMatch> peptideMatches = new Dictionary<string, PeptideMatch>();            
          
             foreach(Precursor prec in precursors)
@@ -264,7 +264,7 @@ namespace Trinity
                             }
 
             PeptideMatches TotalList = new PeptideMatches(peptideMatches.Values);
-            Console.WriteLine(TotalList.Count + " distinct peptides (based on sequence" + (DiffByMod ? " and modifications)" : ")") + "    [" + nbClusterNewSeq + " added from clusters]");
+            options.ConSole.WriteLine(TotalList.Count + " distinct peptides (based on sequence" + (DiffByMod ? " and modifications)" : ")") + "    [" + nbClusterNewSeq + " added from clusters]");
             return TotalList;
         }
 

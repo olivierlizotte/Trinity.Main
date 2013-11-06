@@ -46,7 +46,7 @@ namespace Trinity
         }
 
         private FDRizer<Query> uptimizer;
-        public List<Query> ComputeAtFDR(double desired_fdr, bool displayValues = false)
+        public List<Query> ComputeAtFDR(double desired_fdr)
         {
             if (uptimizer == null)
             {
@@ -56,7 +56,7 @@ namespace Trinity
             }
             else
                 uptimizer.ReStart();
-            return uptimizer.Launch(desired_fdr, displayValues);
+            return uptimizer.Launch(desired_fdr);
         }
 
         public static int CompareScore(Query left, Query right)
@@ -246,8 +246,8 @@ namespace Trinity
                 nbSpectrumMatchedToTrack++;
                 averageNbPrecursorPerSpectrum += DicOfSpectrumTracks[spectrum];
             }
-            Console.WriteLine(entry.sSDF + " :" + Precursors.Count + " precursors [" + Isotopes.Count + " isotopes] spreaded in " + Count + " queries [" + nbMissedTrack + " trackless precursors]");
-            Console.WriteLine("Average Precursors per Spectrum : " + averageNbPrecursorPerSpectrum / (double)nbSpectrumMatchedToTrack);
+            dbOptions.ConSole.WriteLine(entry.sSDF + " :" + Precursors.Count + " precursors [" + Isotopes.Count + " isotopes] spreaded in " + Count + " queries [" + nbMissedTrack + " trackless precursors]");
+            dbOptions.ConSole.WriteLine("Average Precursors per Spectrum : " + averageNbPrecursorPerSpectrum / (double)nbSpectrumMatchedToTrack);
         }
 
         public static GraphML_List<Precursor> GetIsotopes(Track track, DBOptions dbOptions, Tracks listTracks, Sample entry)

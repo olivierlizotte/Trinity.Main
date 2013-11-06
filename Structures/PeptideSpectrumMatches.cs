@@ -60,14 +60,14 @@ namespace Trinity
             options.dPrecursor = bestPrecursor;
             options.dIntensityFraction = bestIntensities;
             options.dMatchingProductFraction = bestFragments;
-            
-            Console.WriteLine("New score ratios   ----------------------------------------------------------------------- ");
-            Console.WriteLine("    PeptideSpectrumMatch.dPrecursor:                     " + options.dPrecursor);
-            Console.WriteLine("    PeptideSpectrumMatch.dMatchingProductFraction:       " + options.dMatchingProductFraction);
-            Console.WriteLine("    PeptideSpectrumMatch.dIntensityFraction:             " + options.dIntensityFraction);
-            Console.WriteLine("    PeptideSpectrumMatch.dPeptideScore:                  " + options.dPeptideScore);
-            Console.WriteLine("    PeptideSpectrumMatch.dProtein:                       " + options.dProtein);
-            Console.WriteLine("------------------------------------------------------------------------------------------ ");
+
+            options.ConSole.WriteLine("New score ratios   ----------------------------------------------------------------------- ");
+            options.ConSole.WriteLine("    PeptideSpectrumMatch.dPrecursor:                     " + options.dPrecursor);
+            options.ConSole.WriteLine("    PeptideSpectrumMatch.dMatchingProductFraction:       " + options.dMatchingProductFraction);
+            options.ConSole.WriteLine("    PeptideSpectrumMatch.dIntensityFraction:             " + options.dIntensityFraction);
+            options.ConSole.WriteLine("    PeptideSpectrumMatch.dPeptideScore:                  " + options.dPeptideScore);
+            options.ConSole.WriteLine("    PeptideSpectrumMatch.dProtein:                       " + options.dProtein);
+            options.ConSole.WriteLine("------------------------------------------------------------------------------------------ ");
         }
 
         public void OptimizePSMScoreRatios_PREVIOUSVersion(DBOptions options, double desired_fdr)
@@ -105,12 +105,12 @@ namespace Trinity
             //options.dMatchingProductFraction   = ratioFragments            / totalRatios;
             //options.dIntensityFraction         = ratioIntensities          / totalRatios;
             //options.dPeptideScore              = ratioPeptideScore         / totalRatios;
-            Console.WriteLine("New score ratios  [" + totalRatios + " total ratios] ------------------------------------- ");
-            Console.WriteLine("    PeptideSpectrumMatch.dPrecursor:                     " + options.dPrecursor);
-            Console.WriteLine("    PeptideSpectrumMatch.dMatchingProductFraction:       " + options.dMatchingProductFraction);
-            Console.WriteLine("    PeptideSpectrumMatch.dIntensityFraction:             " + options.dIntensityFraction);
-            Console.WriteLine("    PeptideSpectrumMatch.dPeptideScore:                  " + options.dPeptideScore);
-            Console.WriteLine("------------------------------------------------------------------------------------------ ");
+            options.ConSole.WriteLine("New score ratios  [" + totalRatios + " total ratios] ------------------------------------- ");
+            options.ConSole.WriteLine("    PeptideSpectrumMatch.dPrecursor:                     " + options.dPrecursor);
+            options.ConSole.WriteLine("    PeptideSpectrumMatch.dMatchingProductFraction:       " + options.dMatchingProductFraction);
+            options.ConSole.WriteLine("    PeptideSpectrumMatch.dIntensityFraction:             " + options.dIntensityFraction);
+            options.ConSole.WriteLine("    PeptideSpectrumMatch.dPeptideScore:                  " + options.dPeptideScore);
+            options.ConSole.WriteLine("------------------------------------------------------------------------------------------ ");
         }
 
         public double ComputePrecursorArea(bool smooth)
@@ -275,7 +275,7 @@ namespace Trinity
         {
             return -left.MatchingIntensityFraction.CompareTo(right.MatchingIntensityFraction);
         }
-        public List<PeptideSpectrumMatch> ComputeAtFDR(double desired_fdr, bool precursorErrorOnly, bool display = false)
+        public List<PeptideSpectrumMatch> ComputeAtFDR(double desired_fdr, bool precursorErrorOnly)
         {
             if (uptimizer == null)
             {
@@ -294,7 +294,7 @@ namespace Trinity
                 }
                 uptimizer = new FDRizer<PeptideSpectrumMatch>(this, sorts, null);
             }
-            return uptimizer.Launch(desired_fdr, display);
+            return uptimizer.Launch(desired_fdr);
         }
         /*
             return              dIntensity * MatchingIntensityFraction +

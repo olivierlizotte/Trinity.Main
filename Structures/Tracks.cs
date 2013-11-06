@@ -38,7 +38,7 @@ namespace Trinity
             writer.WriteToFile();
         }
 
-        public static Tracks Import(string filename)
+        public static Tracks Import(string filename, DBOptions dbOptions)
         {
             vsCSV csv = new vsCSV(filename);
             if (csv.LINES_LIST.Count == 0 || csv.LINES_LIST[0].CompareTo(Track.TITLE) != 0)
@@ -53,7 +53,7 @@ namespace Trinity
                 }
                 catch (Exception)
                 {
-                    Console.WriteLine("Error parsing line : " + csv.LINES_LIST[i]);
+                    dbOptions.ConSole.WriteLine("Error parsing line : " + csv.LINES_LIST[i]);
                 }
             }
             return tracks;

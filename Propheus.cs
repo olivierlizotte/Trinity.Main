@@ -48,7 +48,7 @@ namespace Trinity
         /// </summary>
         public void Preload(bool loadMS1, bool filterMS2 = true)
         {
-            AllProteins             = ReadProteomeFromFasta(dbOptions.FastaDatabaseFilepath, !dbOptions.DecoyFusion);
+            AllProteins             = ReadProteomeFromFasta(dbOptions.FastaDatabaseFilepath, !dbOptions.DecoyFusion, dbOptions);
             AllSpectras             = LoadSpectras(loadMS1, filterMS2);
         }
 
@@ -69,7 +69,7 @@ namespace Trinity
         /// <param name="tmp"></param>
         public void Load(Result tmp)
         {
-            AllProteins = ReadProteomeFromFasta(dbOptions.FastaDatabaseFilepath, !dbOptions.DecoyFusion);
+            AllProteins = ReadProteomeFromFasta(dbOptions.FastaDatabaseFilepath, !dbOptions.DecoyFusion, dbOptions);
             AllQueries = tmp.queries;
             
             AllSpectras = new Dictionary<Sample, Spectra>();
@@ -86,9 +86,9 @@ namespace Trinity
         /// <param name="fileName"></param>
         /// <param name="onTheFlyDecoys"> Adds reverse sequnce proteins </param>
         /// <returns></returns>
-        public static List<Protein> ReadProteomeFromFasta(string fileName, bool addReverseProteins)
+        public static List<Protein> ReadProteomeFromFasta(string fileName, bool addReverseProteins, DBOptions dbOptions)
         {
-            Console.WriteLine("Reading FASTA file " + fileName + " ... ");
+            dbOptions.ConSole.WriteLine("Reading FASTA file " + fileName + " ... ");
             //Extract Proteins from Fasta file
             List<Protein>  AllProteins = new List<Protein>();
             FileStream protein_fasta_database = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.Read);
@@ -98,7 +98,7 @@ namespace Trinity
             }
             //AllProteins.Sort(Protein.TargetDecoyComparison);
             protein_fasta_database.Close();
-            Console.WriteLine("Proteins in fasta file : " + AllProteins.Count);
+            dbOptions.ConSole.WriteLine("Proteins in fasta file : " + AllProteins.Count);
             return AllProteins;
         }        
         
@@ -118,21 +118,21 @@ namespace Trinity
                 if(dbOptions.LoadSpectraIfFound && System.IO.File.Exists(trackFile)
                                                 && System.IO.File.Exists(msmsIonFile))
                 {
-                    Console.WriteLine("Loading Sectra from " + trackFile + " AND " + msmsIonFile);                    
+                    dbOptions.ConSole.WriteLine("Loading Sectra from " + trackFile + " AND " + msmsIonFile);                    
                     if(loadMS)
-                        AllSpectras.Add(sample, Spectra.Import(msmsIonFile, trackFile));
+                        AllSpectras.Add(sample, Spectra.Import(msmsIonFile, trackFile, dbOptions));
                     else
-                        AllSpectras.Add(sample, Spectra.Import(msmsIonFile, null));
+                        AllSpectras.Add(sample, Spectra.Import(msmsIonFile, null, dbOptions));
                 }
                 else
                 {
-                    Console.WriteLine("Loading Sectra " + sample.sSDF);
+                    dbOptions.ConSole.WriteLine("Loading Sectra " + sample.sSDF);
 
                     pwiz.CLI.msdata.MSDataFile msFile = new pwiz.CLI.msdata.MSDataFile(sample.sSDF);
                     Spectra spectra = Spectra.Load(msFile, dbOptions, sample.sSDF, loadMS, filterMS2);
                     spectra.Sort(ProductSpectrum.AscendingPrecursorMassComparison);
 
-                    Console.WriteLine(sample.sSDF + " [" + spectra.Count + " msms scans]");
+                    dbOptions.ConSole.WriteLine(sample.sSDF + " [" + spectra.Count + " msms scans]");
                     if (dbOptions.SaveMS1Peaks)
                         spectra.ExportTracks(trackFile);
 
@@ -174,14 +174,14 @@ namespace Trinity
                 result.SetPrecursors(dbSearcher.Search(queries, ps.DigestProteomeOnTheFlyNoEnzyme(AllProteins, queries)));
             else
                 result.SetPrecursors(dbSearcher.Search(queries, ps.DigestProteomeOnTheFly(AllProteins, false, queries)));
-            Console.WriteLine(result.precursors.Count + " precursors matched !");
+            dbOptions.ConSole.WriteLine(result.precursors.Count + " precursors matched !");
                         
             foreach (Precursor precursor in result.precursors)
                 foreach (PeptideSpectrumMatch psm in precursor.psms_AllPossibilities)
                     precursor.psms.Add(psm);
 
             long nbTargets = result.SetPrecursors(result.precursors);
-            Console.WriteLine("Targets before Optimizing Score Ratios : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");
+            dbOptions.ConSole.WriteLine("Targets before Optimizing Score Ratios : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");
 
             //*/
             long bestTargets = nbTargets;
@@ -200,9 +200,9 @@ namespace Trinity
             if (optimize)
             {
                 //result.peptides = UpdatePsmScores(pepSearcher.SearchAll(result.clusters, result.matchedPrecursors, true), result);
-                Console.WriteLine("Found peptides from UpdatePSMScore routine : " + result.peptides);
+                dbOptions.ConSole.WriteLine("Found peptides from UpdatePSMScore routine : " + result.peptides);
                 nbTargets = result.SetPrecursors(result.precursors);
-                Console.WriteLine("Targets after Updating PSM scores : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");
+                dbOptions.ConSole.WriteLine("Targets after Updating PSM scores : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");
                 /*
                 PeptideSpectrumMatches allPSMs = new PeptideSpectrumMatches();
                 foreach (Precursor precursor in result.precursors)
@@ -214,12 +214,12 @@ namespace Trinity
             }
             result.peptides = pepSearcher.SearchClusters(result.clusters, result.matchedPrecursors, true);
             result.peptideSequences = pepSearcher.SearchClusters(result.clusters, result.matchedPrecursors, false);
-            Console.WriteLine("Found peptides from Searchclusters routine : " + result.peptides);
+            dbOptions.ConSole.WriteLine("Found peptides from Searchclusters routine : " + result.peptides);
             
             nbTargets = result.SetPrecursors(result.precursors);
-            Console.WriteLine("Targets after ReRanking peptides : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");//*/
+            dbOptions.ConSole.WriteLine("Targets after ReRanking peptides : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");//*/
             
-            Console.WriteLine(result.matchedPrecursors.Count + " precursors remaining after ProPheus Search!");
+            dbOptions.ConSole.WriteLine(result.matchedPrecursors.Count + " precursors remaining after ProPheus Search!");
             return result;
         }//*/
 
@@ -245,7 +245,7 @@ namespace Trinity
                 result.SetPrecursors(dbSearcher.Search(queries, ps.DigestProteomeOnTheFlyNoEnzyme(AllProteins, queries)));
             else
                 result.SetPrecursors(dbSearcher.Search(queries, ps.DigestProteomeOnTheFly(AllProteins, false, queries)));
-            Console.WriteLine(result.precursors.Count + " precursors matched !");
+            dbOptions.ConSole.WriteLine(result.precursors.Count + " precursors matched !");
             
             PeptideSpectrumMatches allPSMs = new PeptideSpectrumMatches();
             foreach (Precursor precursor in result.precursors)
@@ -257,33 +257,33 @@ namespace Trinity
                 psm.Query.precursor.psms.Add(psm);
 
             long nbTargets = result.SetPrecursors(result.precursors);
-            Console.WriteLine("Targets before Optimizing Score Ratios : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");
+            dbOptions.ConSole.WriteLine("Targets before Optimizing Score Ratios : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");
 
             if (optimize)
             {
                 //allPSMs.OptimizePSMScoreRatios(dbOptions, dbOptions.PSMFalseDiscoveryRate, result);
                 //result.matchedPrecursors.OptimizePSMScoreRatios(dbOptions, dbOptions.PSMFalseDiscoveryRate, result);
                 nbTargets = result.SetPrecursors(result.precursors);
-                Console.WriteLine("Targets : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");
+                dbOptions.ConSole.WriteLine("Targets : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");
                 //*/
                 //TODO Improve alignment results
                 /*
                 Align.AlignPrecursorsByDiff(result, allPSMs);
                 nbTargets = result.SetPrecursors(result.precursors);
-                Console.WriteLine("Targets after precursor alignment : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");
+                dbOptions.ConSole.WriteLine("Targets after precursor alignment : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");
 
                 Align.AlignProductsByDiff(result, allPSMs);
                 nbTargets = result.SetPrecursors(result.precursors);
-                Console.WriteLine("Targets after fragment alignment : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");
+                dbOptions.ConSole.WriteLine("Targets after fragment alignment : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");
                 //*/
                 /*
                 dbOptions.precursorMassTolerance.Value = Align.CropPrecursors(result, allPSMs);
                 nbTargets = result.SetPrecursors(result.precursors);
-                Console.WriteLine("Targets after croping precursors : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");
+                dbOptions.ConSole.WriteLine("Targets after croping precursors : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");
 
                 dbOptions.productMassTolerance.Value = Align.CropProducts(result, allPSMs);
                 nbTargets = result.SetPrecursors(result.precursors);
-                Console.WriteLine("Targets after croping fragments : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");
+                dbOptions.ConSole.WriteLine("Targets after croping fragments : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");
                 //*/
             }
             //*/
@@ -320,18 +320,18 @@ namespace Trinity
 
             if (optimize)
             {
-                Console.WriteLine("Targets before second Optimization of Score Ratios : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");                                
+                dbOptions.ConSole.WriteLine("Targets before second Optimization of Score Ratios : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");                                
                 //result.matchedPrecursors.OptimizePSMScoreRatios(dbOptions, dbOptions.PSMFalseDiscoveryRate, result);
                 nbTargets = result.SetPrecursors(result.precursors);
-                Console.WriteLine("Targets after ReOptimizing PSM Score Ratios : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");//*/
+                dbOptions.ConSole.WriteLine("Targets after ReOptimizing PSM Score Ratios : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");//*/
             }
 
             //Step 5 : Compute the new number of Targets
             nbTargets = result.SetPrecursors(result.precursors);
             if (nbTargets < bestTargets)
-                Console.WriteLine("FAILED to improve PSMs while adding protein and peptide information");
+                dbOptions.ConSole.WriteLine("FAILED to improve PSMs while adding protein and peptide information");
             
-            Console.WriteLine(result.matchedPrecursors.Count + " precursors remaining after ProPheus Search!");                        
+            dbOptions.ConSole.WriteLine(result.matchedPrecursors.Count + " precursors remaining after ProPheus Search!");                        
             return result;
         }//*/
 
@@ -339,7 +339,7 @@ namespace Trinity
         /// Updates scores for the PeptideSpectrumMatches based on newly computed elements (such as protein sequences, peptides, newly computed tolerances)
         /// </summary>
         /// <param name="protein_groups"></param>
-        public static void UpdatePsmScores(List<ProteinGroupMatch> protein_groups)
+        public static void UpdatePsmScores(List<ProteinGroupMatch> protein_groups, DBOptions dbOptions)
         {
             //Push ProteinScores AND Peptide Score down to PSMs
             protein_groups.Sort(ProteinGroupMatch.AscendingProbabilityScore);
@@ -395,7 +395,7 @@ namespace Trinity
 
                                             precursor.psms.Sort(PeptideSpectrumMatch.DescendingOptimizedScoreComparison);
                                             if (precursor.psms.Count == 0)
-                                                Console.WriteLine("Precursor with no match");// = precursor;
+                                                dbOptions.ConSole.WriteLine("Precursor with no match");// = precursor;
                                         }
                 }
             }            
@@ -477,7 +477,7 @@ namespace Trinity
 
                                             precursor.psms.Sort(PeptideSpectrumMatch.DescendingOptimizedScoreComparison);
                                             if (precursor.psms.Count == 0)
-                                                Console.WriteLine("Precursor with no match");// = precursor;
+                                                result.dbOptions.ConSole.WriteLine("Precursor with no match");// = precursor;
                                         }
                 }
             return peptides;

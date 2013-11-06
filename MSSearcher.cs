@@ -388,7 +388,7 @@ namespace Trinity
 
         public GraphML_List<Cluster> Search(Precursors precursors)
         {
-            Console.WriteLine("Grouping precursors based on common features...");
+            options.ConSole.WriteLine("Grouping precursors based on common features...");
             precursors.Sort(Precursor.CompareProbabilityScore);
 
             GraphML_List<Cluster> clusters = new GraphML_List<Cluster>();
@@ -419,7 +419,7 @@ namespace Trinity
                     clusters.Add(group);
                 }
             }
-            Console.WriteLine("Created " + clusters.Count + " clusters");
+            options.ConSole.WriteLine("Created " + clusters.Count + " clusters");
             return clusters;
             //TODO I should not use psms in more than one cluster...
         }

@@ -117,7 +117,7 @@ namespace Trinity.UnitTest
                                                             nbProductsMin, nbProductsMax, smoothedPrecursor, precision, spikedResult, mixedResult, charge);
 
                 if (ratios == null || ratios.Count == 0)
-                    Console.WriteLine("No precursor found with charge " + charge);
+                    dbOptions.ConSole.WriteLine("No precursor found with charge " + charge);
                 else
                 {
                     //Export results to a csv file
@@ -257,7 +257,7 @@ namespace Trinity.UnitTest
                                     if (Math.Abs(Proteomics.Utilities.Numerics.CalculateMassError(psmToKeep.Peptide.MonoisotopicMass, key, dbOptions.precursorMassTolerance.Units)) <= dbOptions.precursorMassTolerance.Value)
                                         foundKey = key;
                                 if(foundKey == 0.0)
-                                    Console.WriteLine("Mass key not found.... not good!");
+                                    dbOptions.ConSole.WriteLine("Mass key not found.... not good!");
 
                                 if(!DicOfSpectrumMasses.ContainsKey(foundKey))
                                 {
@@ -320,7 +320,7 @@ namespace Trinity.UnitTest
                                 else
                                     matches.Add(new List<ProductMatch>());
                             List<double> finalRatios = LaunchMaxFlowFromSpectrum(matches, ratioNames, precision, psm.Query.spectrum.Peaks, dbOptions.productMassTolerance,
-                                                                    DicOfPsmFactor[psm], mflowReturnType, ref overFlow, ref underFlow, ref percentError);
+                                                                    DicOfPsmFactor[psm], mflowReturnType, ref overFlow, ref underFlow, ref percentError, dbOptions.ConSole);
 
                             double normSumRatio = 0;
                             for (int i = 0; i < finalRatios.Count; i++)
@@ -343,7 +343,7 @@ namespace Trinity.UnitTest
                                     {
                                         double avgRatio = (finalRatios[i] / sumRatio) * DicOfNormalizeFactor[nbProductsToKeep][key][i] * localArea;
                                         if (double.IsNaN(avgRatio))
-                                            Console.WriteLine("Oops, NaN in ratios");
+                                            dbOptions.ConSole.WriteLine("Oops, NaN in ratios");
                                         avgQuantifiedRatios.Add(avgRatio);
                                     }
 
@@ -367,7 +367,7 @@ namespace Trinity.UnitTest
                                     //TotalElapsedTime += ElapsedTime;                                                                                
                                 }
                                 else
-                                    Console.WriteLine("Bad MaxFlow computation : " + percentError);
+                                    dbOptions.ConSole.WriteLine("Bad MaxFlow computation : " + percentError);
                             }
 
                             precursorArea += localArea;
@@ -428,7 +428,7 @@ namespace Trinity.UnitTest
             }
             if (bestDicOfResults != null)
             {
-                Console.WriteLine("Best Number of products : " + nbProductsUsed);
+                dbOptions.ConSole.WriteLine("Best Number of products : " + nbProductsUsed);
                 foreach (Sample sample in bestDicOfResults.Keys)
                 {//Dictionary<Sample, List<Dictionary<int, string>>> 
                     vsCSVWriter writer = new vsCSVWriter(dbOptions.OutputFolder + sample.nameColumn + "_Ratios5_Charge" + chargeToConsider + ".csv");
@@ -459,7 +459,7 @@ namespace Trinity.UnitTest
                                     List<MsMsPeak> mixedSpectrum, MassTolerance tolerance,
                                 ref List<List<double>> optimalSolutions,
                                 ref double percentError,
-                                ref List<long> average)
+                                ref List<long> average, IConSol ConSole)
         {
             //Create dictionnary of usefull peaks
             Dictionary<float, double> mixedFragDic = new Dictionary<float, double>();
@@ -475,7 +475,7 @@ namespace Trinity.UnitTest
                                 closest = key;
                         if (closest > 0)
                         {
-                            Console.WriteLine("Potential problem with selected fragment masses ");
+                            ConSole.WriteLine("Potential problem with selected fragment masses ");
                             match.theoMz = closest;
                         }
                         else
@@ -523,7 +523,7 @@ namespace Trinity.UnitTest
 
                         double tmpFlowRate = Math.Abs(overError - tmpErrorPlus) / Math.Abs(underError - tmpErrorMinus);
                         if (double.IsNaN(tmpFlowRate))
-                            Console.WriteLine("schnit");
+                            ConSole.WriteLine("schnit");
                         if(tmpFlowRate > worstFlowRate)
                         //if (tmpErrorPlus < overError && (tmpErrorMinus < smallestUnderError
                         //    || (tmpErrorMinus == smallestUnderError && tmpErrorPlus < smallestOverError)))
@@ -642,7 +642,7 @@ namespace Trinity.UnitTest
         private static List<double> LaunchMaxFlowFromSpectrum(List<List<ProductMatch>> ratiosToFit, List<string> ratioNames, 
                                             int precision, GraphML_List<MsMsPeak> capacity, MassTolerance tolerance, 
                                             double boostRatioForSpectrum, int returnType,//0 for max flow, 1 for best flow, 2 for average
-                                            ref double overFlow, ref double underFlow, ref double errorInPercent)
+                                            ref double overFlow, ref double underFlow, ref double errorInPercent, IConSol ConSole)
         {
             List<List<double>> solutions = new List<List<double>>();
             List<long> average = new List<long>();
@@ -667,7 +667,7 @@ namespace Trinity.UnitTest
                 tmpRatiosToFit.Add(pms);
             }
 
-            double error = ComputeMaxFlow(tmpRatiosToFit, expandedCapacity, tolerance, ref solutions, ref errorInPercent, ref average);
+            double error = ComputeMaxFlow(tmpRatiosToFit, expandedCapacity, tolerance, ref solutions, ref errorInPercent, ref average, ConSole);
 
             double sumOfIntensities = 0;
             foreach (MsMsPeak peak in expandedCapacity)

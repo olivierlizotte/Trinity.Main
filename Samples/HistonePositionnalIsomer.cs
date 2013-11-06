@@ -13,11 +13,11 @@ namespace Trinity.UnitTest
 {
     public class HistonePositionnalIsomer
     {
-        public static DBOptions GetDBOptions(bool loadFromRaw, bool onlyYions)
+        public static DBOptions GetDBOptions(bool loadFromRaw, bool onlyYions, IConSol console)
         {
             string outputDir = @"C:\_IRIC\DATA\Test\testNB\Iso3\";
             string fastaFile = @"G:\Thibault\-=Proteomics_Raw_Data=-\ELITE\FEB13_2013\MSMS files\Peptide.fasta";
-            DBOptions dbOptions = new DBOptions(fastaFile);
+            DBOptions dbOptions = new DBOptions(fastaFile, console);
             dbOptions.precursorMassTolerance = new MassTolerance(8/*8*//*8withoutisotopes*/, MassToleranceUnits.ppm);
             dbOptions.productMassTolerance = new MassTolerance(20/*8*//*8withoutisotopes*/, MassToleranceUnits.ppm);
             //dbOptions.productMassTolerance = new MassTolerance(0.05/*0.034*//*without isotopes*/, MassToleranceUnits.Da);//0.034 is a 60 000 resolution over 2000 range in mz
@@ -64,29 +64,61 @@ namespace Trinity.UnitTest
             return dbOptions;
         }
 
-        public static void Launch()
+        public static void MonoAce(IConSol console)
         {
-            DBOptions dbOptions = GetDBOptions(false, false);
-            //0.0732351971695529 : Return type (1) Precision (1000000) nbProductsToKeep (5)
-            //0.0289455865219887 : Return type (1) Precision (100000) nbProductsToKeep (13)
-            Samples ProjectRatios = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_MonoAce_Spiked_19Oct.csv", 0);//Group 2 (all)            
-            Samples ProjectMixed = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_MonoAce_Varied_19Oct.csv", 0);
-            Samples ProjectStable = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_StableMix_MonoAce_19Oct.csv", 0);            
+            DBOptions dbOptions = GetDBOptions(false, false, console);
+            Samples ProjectRatios = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_MonoAce_Spiked_19Oct.csv", 0, dbOptions);//Group 2 (all)            
+            Samples ProjectMixed = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_MonoAce_Varied_19Oct.csv", 0, dbOptions);
+            Samples ProjectStable = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_StableMix_MonoAce_19Oct.csv", 0, dbOptions);            
             
-            //0.305567296686846 : Return type (0) Precision (100000) nbProductsToKeep (5)
-            //Samples ProjectRatios = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_DiAce_Spiked_19Oct.csv", 0);//Group 2 (all)
-            //Samples ProjectMixed =  new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_DiAce_Varied_19Oct.csv", 0);
-            //Samples ProjectStable = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_StableMix_DiAce_19Oct.csv", 0);
+            int nbProductsMin = 4;// 4;
+            int nbProductsMax = 8;// 14;
+            bool smoothedPrecursor = false;
+            int precision = 10000;
+            int maxCharge = 2;
 
-            //0.222529420854448 : Return type (2) Precision (100000) nbProductsToKeep (19)
-            //Samples ProjectRatios = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_TriAce_Spiked_19Oct.csv", 0);//Group 2 (all)            
-            //Samples ProjectMixed =  new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_TriAce_Varied_19Oct.csv", 0);
-            //Samples ProjectStable = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_StableMix_TriAce_19Oct.csv", 0);
+            PositionnalIsomerSolver.Solve(ProjectRatios, ProjectStable, ProjectMixed, dbOptions, nbProductsMin, nbProductsMax, smoothedPrecursor, precision, maxCharge);
+        }
 
-            //Samples ProjectRatios = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_AllAce_Spiked_19Oct.csv", 0);//Group 2 (all)            
-            //Samples ProjectMixed =  new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_AllAce_Varied_19Oct.csv", 0);
-            //Samples ProjectStable = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_StableMix_AllAce_19Oct.csv", 0);
-            
+        public static void DiAce(IConSol console)
+        {
+            DBOptions dbOptions = GetDBOptions(false, false, console);
+            Samples ProjectRatios = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_DiAce_Spiked_19Oct.csv", 0, dbOptions);
+            Samples ProjectMixed =  new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_DiAce_Varied_19Oct.csv", 0, dbOptions);
+            Samples ProjectStable = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_StableMix_DiAce_19Oct.csv", 0, dbOptions);
+
+            int nbProductsMin = 4;// 4;
+            int nbProductsMax = 8;// 14;
+            bool smoothedPrecursor = false;
+            int precision = 10000;
+            int maxCharge = 2;
+
+            PositionnalIsomerSolver.Solve(ProjectRatios, ProjectStable, ProjectMixed, dbOptions, nbProductsMin, nbProductsMax, smoothedPrecursor, precision, maxCharge);
+        }
+
+        public static void TriAce(IConSol console)
+        {
+            DBOptions dbOptions = GetDBOptions(false, false, console);
+            Samples ProjectRatios = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_TriAce_Spiked_19Oct.csv", 0, dbOptions);
+            Samples ProjectMixed = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_TriAce_Varied_19Oct.csv", 0, dbOptions);
+            Samples ProjectStable = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_StableMix_TriAce_19Oct.csv", 0, dbOptions);
+
+            int nbProductsMin = 4;// 4;
+            int nbProductsMax = 8;// 14;
+            bool smoothedPrecursor = false;
+            int precision = 10000;
+            int maxCharge = 2;
+
+            PositionnalIsomerSolver.Solve(ProjectRatios, ProjectStable, ProjectMixed, dbOptions, nbProductsMin, nbProductsMax, smoothedPrecursor, precision, maxCharge);
+        }
+
+        public static void Mixed(IConSol console)
+        {
+            DBOptions dbOptions = GetDBOptions(false, false, console);
+            Samples ProjectRatios = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_AllAce_Spiked_19Oct.csv", 0, dbOptions);
+            Samples ProjectMixed = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_AllAce_Varied_19Oct.csv", 0, dbOptions);
+            Samples ProjectStable = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_StableMix_AllAce_19Oct.csv", 0, dbOptions);
+
             int nbProductsMin = 4;// 4;
             int nbProductsMax = 8;// 14;
             bool smoothedPrecursor = false;

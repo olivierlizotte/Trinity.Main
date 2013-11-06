@@ -28,8 +28,9 @@ namespace Trinity.UnitTest
             //@"G:\Thibault\-=Proteomics_Raw_Data=-\ELITE\JAN22_2013\_Project_FL_Single.csv";
             //G:\Thibault\-=Proteomics_Raw_Data=-\ELITE\JUN27_2012\MR 4Rep DS\MassSense\_Test_ProjectFile_MF3.csv";
             //G:\Thibault\-=Proteomics_Raw_Data=-\ELITE\MAR18_2013\ProjectFile_TestForProPheus.csv";
-            Samples Project = new Samples(projectFile, 0);
-            DBOptions dbOptions = new DBOptions(fastaFile);
+
+            DBOptions dbOptions = new DBOptions(fastaFile); 
+            Samples Project = new Samples(projectFile, 0, dbOptions);
             dbOptions.precursorMassTolerance = new MassTolerance(80, MassToleranceUnits.ppm);
             dbOptions.productMassTolerance = new MassTolerance(80, MassToleranceUnits.ppm);//0.034 is a 60 000 resolution over 2000 range in mz
             dbOptions.MaximumPeptideMass = 200000;
@@ -108,7 +109,7 @@ namespace Trinity.UnitTest
                 }
             }
             avgShift /= (double)nbPsmTarget;
-            Console.WriteLine("Average shift : " + avgShift);
+            dbOptions.ConSole.WriteLine("Average shift : " + avgShift);
 
             //tmp.WriteInfoToCsv(true);
             //tmp.Export(0.02, "FirstPass_02_");

@@ -21,7 +21,7 @@ namespace Trinity
         public ProteinGroupMatches(IEnumerable<ProteinGroupMatch> list) : base(list) { }
         public ProteinGroupMatches() { }
         private FDRizer<ProteinGroupMatch> uptimizer;
-        public List<ProteinGroupMatch> ComputeAtFDR(double desired_fdr, bool displayValues = false)
+        public List<ProteinGroupMatch> ComputeAtFDR(double desired_fdr)
         {
             if (uptimizer == null)
             {
@@ -32,7 +32,7 @@ namespace Trinity
             }
             else
                 uptimizer.ReStart();
-            return uptimizer.Launch(desired_fdr, displayValues);
+            return uptimizer.Launch(desired_fdr);
         }
         public static int CompareProbabilityScore(ProteinGroupMatch left, ProteinGroupMatch right)
         {
@@ -97,23 +97,11 @@ namespace Trinity
         
         public static int DescendingProbabilityScore(ProteinGroupMatch left, ProteinGroupMatch right)
         {
-            try
-            {
-                int comparison = -(left.ProbabilityScore().CompareTo(right.ProbabilityScore()));
-                if (comparison != 0)
-                {
-                    return comparison;
-                }
-                else
-                {
-                    return left.Target.CompareTo(right.Target);
-                }
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e.Message);
-            }
-            return 0;
+            int comparison = -(left.ProbabilityScore().CompareTo(right.ProbabilityScore()));
+            if (comparison != 0)
+                return comparison;
+            else
+                return left.Target.CompareTo(right.Target);
         }
 
         public static int AscendingProbabilityScore(ProteinGroupMatch left, ProteinGroupMatch right)
@@ -205,7 +193,7 @@ namespace Trinity
                 }
             }
 
-            Console.WriteLine("Merging undistinguishable proteins...");
+            options.ConSole.WriteLine("Merging undistinguishable proteins...");
 
             foreach(Protein protein in allPossibleProteins.Keys)
                 allPossibleProteins[protein].Sort();
@@ -244,7 +232,7 @@ namespace Trinity
                 }
                 proteinMatches.Add(groupMatch);
             }
-            Console.WriteLine("Found " + proteinMatches.Count + " protein groups.");
+            options.ConSole.WriteLine("Found " + proteinMatches.Count + " protein groups.");
             return proteinMatches;
         }
 

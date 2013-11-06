@@ -75,7 +75,7 @@ namespace Trinity
         /// <returns></returns>
         public Precursors Search(Queries queries, IEnumerable<Tuple<Peptide, int>> fittingPeptides)
         {
-            Console.WriteLine("Mapping " + queries.Count + " queries to the digested proteome ... ");
+            queries.dbOptions.ConSole.WriteLine("Mapping " + queries.Count + " queries to the digested proteome ... ");
 
             long nbQueryConsidered = 0;
             //Parallel.ForEach<Tuple<Peptide, int>>(fittingPeptides, (Tuple<Peptide, int> hit) =>
@@ -112,7 +112,7 @@ namespace Trinity
                     nbQueryConsidered += indexPrecursor - hit.Item2;
                 }
                 else
-                    Console.WriteLine("WTF####");
+                    options.ConSole.WriteLine("WTF####");
             }//);
 
             //Push PSMs to Precursor
@@ -170,7 +170,7 @@ namespace Trinity
             foreach (Query query in queries)
                 if(query.psms.Count > 0)
                     nbAssignedQuery++;
-            Console.WriteLine(nbAssignedQuery + " queries matched [" + nbAssignedPrecursor + " precursors] out of " + nbQueryConsidered + " psm computed");
+            options.ConSole.WriteLine(nbAssignedQuery + " queries matched [" + nbAssignedPrecursor + " precursors] out of " + nbQueryConsidered + " psm computed");
                         
             return queries.Precursors;
         }

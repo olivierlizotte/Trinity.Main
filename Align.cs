@@ -114,7 +114,7 @@ namespace Trinity
             }
             double variance = Numerics.Variance(errorProduct);
             double stdev = Numerics.StandardDeviation(errorProduct);
-            Console.WriteLine("Computed Product Variance = " + variance + "          STDev = " + stdev);
+            result.dbOptions.ConSole.WriteLine("Computed Product Variance = " + variance + "          STDev = " + stdev);
             if (variance < stdev)
                 variance = stdev;
             //variance = result.dbOptions.productMassTolerance.Value * ((2 * variance) / result.dbOptions.productMassTolerance.Value);            
@@ -149,7 +149,7 @@ namespace Trinity
                     }
                 }
             }            
-            Console.WriteLine("Removed " + nbRemovedProduct + " [" + nbRemovedPSM + " removed PSMs] Fragment matches outside the variance [" + variance + "]");
+            result.dbOptions.ConSole.WriteLine("Removed " + nbRemovedProduct + " [" + nbRemovedPSM + " removed PSMs] Fragment matches outside the variance [" + variance + "]");
             return variance;
         }
 
@@ -170,7 +170,7 @@ namespace Trinity
             }
             double variance = Numerics.Variance(errorPrecursor);
             double stdev    = Numerics.StandardDeviation(errorPrecursor);
-            Console.WriteLine("Computed Precursor Variance = " + variance + "          STDev = " + stdev);
+            result.dbOptions.ConSole.WriteLine("Computed Precursor Variance = " + variance + "          STDev = " + stdev);
             if (variance < stdev)
                 variance = stdev;
             //variance = result.dbOptions.precursorMassTolerance.Value * ((2 * variance) / result.dbOptions.precursorMassTolerance.Value);
@@ -191,7 +191,7 @@ namespace Trinity
                         i++;
                 }
             }
-            Console.WriteLine("Removed " + nbRemovedPSM + " [" + allPSMs.Count + " remaining] Peptide Spectrum matches outside the variance [" + variance + "]");
+            result.dbOptions.ConSole.WriteLine("Removed " + nbRemovedPSM + " [" + allPSMs.Count + " remaining] Peptide Spectrum matches outside the variance [" + variance + "]");
             return variance;
         }
     }

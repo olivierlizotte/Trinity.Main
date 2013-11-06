@@ -67,18 +67,27 @@ namespace Trinity
         public MassTolerance precursorMassTolerance;
         public MassTolerance productMassTolerance;
 
+        public IConSol ConSole;
         /// <summary>
         /// Parameter less constructor used for save states
         /// </summary>
-        public DBOptions()
+        public DBOptions(IConSol console = null)
         {
             fixedModifications = new GraphML_List<Modification>();
             variableModifications = new GraphML_List<Modification>();
             fragments = new Fragments();
+            if (console == null)
+                ConSole = new ConSolCommandLine();
+            else
+                ConSole = console;
         }
 
-        public DBOptions(string fasta)
+        public DBOptions(string fasta, IConSol console = null)
         {
+            if (console == null)
+                ConSole = new ConSolCommandLine();
+            else
+                ConSole = console;
             //Create with default values
             this.DecoyFusion = true;
             this.FastaDatabaseFilepath = fasta;

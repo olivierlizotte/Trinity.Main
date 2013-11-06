@@ -58,7 +58,7 @@ namespace Trinity
             writer.WriteToFile();
         }
 
-        public static Spectra Import(string filenameMSMS, string filenameTracks)
+        public static Spectra Import(string filenameMSMS, string filenameTracks, DBOptions dbOptions)
         {
             Spectra spectra = new Spectra();
             vsCSV csv = new vsCSV(filenameMSMS);
@@ -84,13 +84,13 @@ namespace Trinity
                     }
                     catch (Exception)
                     {
-                        Console.WriteLine("Error parsing line : " + csv.LINES_LIST[i]);
+                        dbOptions.ConSole.WriteLine("Error parsing line : " + csv.LINES_LIST[i]);
                     }
                 }
                 spectra.AddMSMS(new ProductSpectrum(int.Parse(splits[0]), double.Parse(splits[1]), splits[2], mz, double.Parse(splits[4]), charge, Proteomics.Utilities.Numerics.MassFromMZ(mz, charge), peaks, double.Parse(splits[8]), double.Parse(splits[10])));
             }
             if(!string.IsNullOrEmpty(filenameTracks))
-                spectra.tracks = Tracks.Import(filenameTracks);
+                spectra.tracks = Tracks.Import(filenameTracks, dbOptions);
             return spectra;
         }
 
@@ -150,7 +150,7 @@ namespace Trinity
                             if (precursor.isolationWindow.cvParams.Count > 2 && (double)precursor.isolationWindow.cvParams[1].value == (double)precursor.isolationWindow.cvParams[2].value)
                                 isolationWindow = precursor.isolationWindow.cvParams[1].value;
                             else if (precursor.isolationWindow.cvParams.Count > 2)
-                                Console.WriteLine("Weird Isolation Window");
+                                options.ConSole.WriteLine("Weird Isolation Window");
 
                             foreach (pwiz.CLI.msdata.SelectedIon ion in precursor.selectedIons)
                             {
@@ -159,7 +159,7 @@ namespace Trinity
                                 if (ion.cvParams.Count > 1)
                                     charge = (int)ion.cvParams[1].value;
                                 //else
-                                //    Console.WriteLine("No charge computed for precursor ");
+                                //    dbOptions.ConSole.WriteLine("No charge computed for precursor ");
                                 if (ion.cvParams.Count > 2)
                                     precursor_intensity = ion.cvParams[2].value;
                             }
@@ -174,7 +174,7 @@ namespace Trinity
                         int num_peaks = mz.data.Count;
                         if (num_peaks != intensity.data.Count)
                         {
-                            Console.WriteLine("PreoteWizard reports peaks arrays (mz/intensity) of different sizes : (" + num_peaks + "/" + intensity.data.Count + ")");
+                            options.ConSole.WriteLine("PreoteWizard reports peaks arrays (mz/intensity) of different sizes : (" + num_peaks + "/" + intensity.data.Count + ")");
                             if (intensity.data.Count < num_peaks)
                                 num_peaks = intensity.data.Count;
                         }
@@ -293,7 +293,7 @@ namespace Trinity
                                 if (cumulIsotopes > nbChargedTracks)
                                 {
                                     nbChargedTracks = cumulIsotopes;
-                                    Console.WriteLine(missingScans + "," + centroid + "," + minPeaks + "," + valleyFactor + ",weightedMean");
+                                    dbOptions.ConSole.WriteLine(missingScans + "," + centroid + "," + minPeaks + "," + valleyFactor + ",weightedMean");
                                 }
                             
                                 //Gaussian
@@ -305,7 +305,7 @@ namespace Trinity
                                 if (cumulIsotopes > nbChargedTracks)
                                 {
                                     nbChargedTracks = cumulIsotopes;
-                                    Console.WriteLine(missingScans + "," + centroid + "," + minPeaks + "," + valleyFactor + ",Gaussian");
+                                    dbOptions.ConSole.WriteLine(missingScans + "," + centroid + "," + minPeaks + "," + valleyFactor + ",Gaussian");
                                 }
                             }
                         }
@@ -323,8 +323,8 @@ namespace Trinity
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.StackTrace);
-                Console.WriteLine(ex.Message);
+                options.ConSole.WriteLine(ex.StackTrace);
+                options.ConSole.WriteLine(ex.Message);
             }
             return spectra;
         }
