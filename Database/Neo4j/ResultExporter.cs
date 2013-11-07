@@ -3,10 +3,61 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using RestSharp;
-using System.Reflection;
+
 
 namespace Trinity.Database.Neo4j
 {
+    public static class ResultsToNeo4j
+    {
+        public static string Export(Result rez)
+        {
+            RestClient client = new RestClient("http://localhost:7474");
+
+            RestRequest request = new RestRequest("db/data/node", Method.POST);
+            request.AddParameter("Type", "Result");
+            request.AddParameter("TimeStamp", DateTime.Now.ToLongDateString());
+            //request.AddParameter("id", "node"); // adds to POST or URL querystring based on Method
+            IRestResponse response = client.Execute(request);
+            string[] splits = response.Content.Split('\r');
+            string self = "";
+            for(int i = 0; i < splits.Length; i++)
+                if (splits[i].StartsWith("  \"self\" :"))
+                {
+                    self = splits[i].Substring(12, splits[i].Length - 12 - 2);
+                    break;
+                }
+            return self;
+            //Console.WriteLine(response.Content);
+            //return 5;
+        }
+    }
+            /*
+            client.PostAsync(request, null);
+            request.Po
+            client.PostAsync(new RestRequest(
+            var response = await client.SendAsync(new HttpRequestMessage(HttpMethod.Post, "cypher/") { Content = new StringContent("{\"query\":\"create me\"}", Encoding.UTF8, "application/json") });
+            if(response.StatusCode != HttpStatusCode.OK)
+                Console.WriteLine("Not ok");
+
+    for (int j = 0; j < iterations; j++)
+    {
+        DateTime start = DateTime.Now;
+        for (int i = 0; i < amount; i++)
+        {
+            var response = await client.SendAsync(new HttpRequestMessage(HttpMethod.Post, "cypher/") { Content = new StringContent("{\"query\":\"create me\"}", Encoding.UTF8, "application/json") });
+            if(response.StatusCode != HttpStatusCode.OK)
+                Console.WriteLine("Not ok");
+        }
+        TimeSpan timeTaken = DateTime.Now - start;
+        Console.WriteLine("took {0}ms", timeTaken.TotalMilliseconds);
+    }
+            RestClient restClient = new RestClient("//localhost:7474/db/data/node");
+            RestRequest restRequest = new RestRequest();
+            //restRequest.
+            //restClient.Post(
+        }
+    }//*/
+
     /// <summary>
     /// Entity base class - includes all properties that should be common among all entities
     /// </summary>
@@ -74,8 +125,8 @@ namespace Trinity.Database.Neo4j
         Dictionary<long, IGraphML_Node> dic = new Dictionary<long, IGraphML_Node>();
         //GraphClient client;
         RestClient clientNode;
-        DBOptions dbOptions;
-        public ResultExporter(DBOptions dbOptions)
+        Result results;
+        public ResultExporter(Result resultToExport)
         {
             //client = new GraphClient(new Uri("http://localhost:7474/db/data"));
             //client.Connect();
@@ -176,8 +227,8 @@ namespace Trinity.Database.Neo4j
             }
             catch (Exception ex)
             {
-                dbOptions.ConSole.WriteLine(ex.Message);
-                dbOptions.ConSole.WriteLine(ex.StackTrace);
+                results.dbOptions.ConSole.WriteLine(ex.Message);
+                results.dbOptions.ConSole.WriteLine(ex.StackTrace);
             }
             return id;// node.ID;
         }

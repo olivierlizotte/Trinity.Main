@@ -521,8 +521,11 @@ namespace Trinity.UnitTest
                         double tmpErrorMinus = MaxFlowHelper.ComputeUnderflow(virtualSpectrum, mixedFragDic);
                         double tmpErrorPlus = MaxFlowHelper.ComputeOverflow(virtualSpectrum, mixedFragDic);
 
-                        double tmpFlowRate = Math.Abs(overError - tmpErrorPlus) / Math.Abs(underError - tmpErrorMinus);
-                        if (double.IsNaN(tmpFlowRate))
+                        double tmpFlowRate = Math.Abs(overError - tmpErrorPlus);
+                        double underDiff = Math.Abs(underError - tmpErrorMinus);
+                        if (underDiff >= 1)
+                            tmpFlowRate /= underDiff;
+                        if (double.IsNaN(tmpFlowRate) || double.IsInfinity(tmpFlowRate))
                             ConSole.WriteLine("schnit");
                         if(tmpFlowRate > worstFlowRate)
                         //if (tmpErrorPlus < overError && (tmpErrorMinus < smallestUnderError

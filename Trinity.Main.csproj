@@ -111,6 +111,7 @@
     <Compile Include="Samples\ToCalibrate.cs" />
     <Compile Include="Samples\RT_MHC.cs" />
     <Compile Include="Samples\HistonePositionnalIsomer.cs" />
+    <Compile Include="Structures\AnnotatedSpectrum.cs" />
     <Compile Include="Structures\MsMsPeak.cs" />
     <Compile Include="MSSearcher.cs" />
     <Compile Include="Structures\Peptide.cs" />

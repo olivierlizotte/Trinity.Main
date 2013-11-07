@@ -71,7 +71,7 @@ namespace Trinity.UnitTest
             Samples ProjectMixed = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_MonoAce_Varied_19Oct.csv", 0, dbOptions);
             Samples ProjectStable = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_StableMix_MonoAce_19Oct.csv", 0, dbOptions);            
             
-            int nbProductsMin = 4;// 4;
+            int nbProductsMin = 5;// 4;
             int nbProductsMax = 8;// 14;
             bool smoothedPrecursor = false;
             int precision = 10000;
@@ -87,7 +87,7 @@ namespace Trinity.UnitTest
             Samples ProjectMixed =  new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_DiAce_Varied_19Oct.csv", 0, dbOptions);
             Samples ProjectStable = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_StableMix_DiAce_19Oct.csv", 0, dbOptions);
 
-            int nbProductsMin = 4;// 4;
+            int nbProductsMin = 5;// 4;
             int nbProductsMax = 8;// 14;
             bool smoothedPrecursor = false;
             int precision = 10000;
@@ -103,7 +103,7 @@ namespace Trinity.UnitTest
             Samples ProjectMixed = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_TriAce_Varied_19Oct.csv", 0, dbOptions);
             Samples ProjectStable = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_StableMix_TriAce_19Oct.csv", 0, dbOptions);
 
-            int nbProductsMin = 4;// 4;
+            int nbProductsMin = 5;// 4;
             int nbProductsMax = 8;// 14;
             bool smoothedPrecursor = false;
             int precision = 10000;
@@ -119,13 +119,46 @@ namespace Trinity.UnitTest
             Samples ProjectMixed = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_AllAce_Varied_19Oct.csv", 0, dbOptions);
             Samples ProjectStable = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_StableMix_AllAce_19Oct.csv", 0, dbOptions);
 
-            int nbProductsMin = 4;// 4;
+            int nbProductsMin = 5;// 4;
             int nbProductsMax = 8;// 14;
             bool smoothedPrecursor = false;
             int precision = 10000;
             int maxCharge = 2;
 
             PositionnalIsomerSolver.Solve(ProjectRatios, ProjectStable, ProjectMixed, dbOptions, nbProductsMin, nbProductsMax, smoothedPrecursor, precision, maxCharge);
+        }
+
+        public static AnnotatedSpectrum AnnotatedSpectrumSample(IConSol console)
+        {
+            DBOptions dbOptions = GetDBOptions(false, false, console);
+            Samples ProjectRatios = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_MonoAce_Spiked_19Oct.csv", 0, dbOptions);//Group 2 (all)  
+
+            Result rez = Propheus.Start(dbOptions, ProjectRatios, false, false, false);
+            PeptideSpectrumMatch bestPsm = null;
+            foreach(Query query in rez.queries)
+                foreach(PeptideSpectrumMatch psm in query.psms)
+                    if(psm.Peptide.Sequence.CompareTo("GK(acetylation of K)GGK(propionylation of K)GLGK(propionylation of K)GGAK(propionylation of K)R") == 0 && 
+                        (bestPsm == null || bestPsm.ProbabilityScore() < query.psms[0].ProbabilityScore()))
+                        bestPsm = psm;
+            AnnotatedSpectrum aSpec = new AnnotatedSpectrum(ProjectRatios[0], bestPsm.Query.spectrum, bestPsm.Peptide );
+            return aSpec;
+        }
+
+        public static AnnotatedSpectrum TestNeo4j(IConSol console)
+        {
+            DBOptions dbOptions = GetDBOptions(false, false, console);
+            Samples ProjectRatios = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_MonoAce_Spiked_19Oct.csv", 0, dbOptions);//Group 2 (all)  
+
+            Result rez = Propheus.Start(dbOptions, ProjectRatios, false, false, false);
+            Database.Neo4j.ResultsToNeo4j.Export(rez);
+            PeptideSpectrumMatch bestPsm = null;
+            foreach (Query query in rez.queries)
+                foreach (PeptideSpectrumMatch psm in query.psms)
+                    if (psm.Peptide.Sequence.CompareTo("GK(acetylation of K)GGK(propionylation of K)GLGK(propionylation of K)GGAK(propionylation of K)R") == 0 &&
+                        (bestPsm == null || bestPsm.ProbabilityScore() < query.psms[0].ProbabilityScore()))
+                        bestPsm = psm;
+            AnnotatedSpectrum aSpec = new AnnotatedSpectrum(ProjectRatios[0], bestPsm.Query.spectrum, bestPsm.Peptide);
+            return aSpec;
         }
     }
 }
