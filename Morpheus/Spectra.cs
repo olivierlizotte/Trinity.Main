@@ -87,7 +87,7 @@ namespace Trinity
                         dbOptions.ConSole.WriteLine("Error parsing line : " + csv.LINES_LIST[i]);
                     }
                 }
-                spectra.AddMSMS(new ProductSpectrum(int.Parse(splits[0]), double.Parse(splits[1]), splits[2], mz, double.Parse(splits[4]), charge, Proteomics.Utilities.Numerics.MassFromMZ(mz, charge), peaks, double.Parse(splits[8]), double.Parse(splits[10])));
+                spectra.AddMSMS(new ProductSpectrum(int.Parse(splits[0]), double.Parse(splits[1]), splits[2], mz, double.Parse(splits[4]), charge, Proteomics.Utilities.Numerics.MassFromMZ(mz, charge), peaks, double.Parse(splits[8]), double.Parse(splits[10]), double.Parse(splits[11])));
             }
             if(!string.IsNullOrEmpty(filenameTracks))
                 spectra.tracks = Tracks.Import(filenameTracks, dbOptions);
@@ -128,6 +128,7 @@ namespace Trinity
 
                 //TODO DONT forget to remove the limiter
                 //int maxNbMSMS = 10;
+                double LastMs1InjectionTime = 0;
                 for (int i = 0; i < num_spectra/* && i < 200*/; i++)//TODO Fix that later!
                 {
                     //Spectrum
@@ -241,7 +242,7 @@ namespace Trinity
 
                             double precursor_mass = Numerics.MassFromMZ(precursor_mz, charge);
 
-                            ProductSpectrum spectrum = new ProductSpectrum(scan_number, retention_time, fragmentation_method, precursor_mz, precursor_intensity, charge, precursor_mass, peaks, isolationWindow, injectionTime);
+                            ProductSpectrum spectrum = new ProductSpectrum(scan_number, retention_time, fragmentation_method, precursor_mz, precursor_intensity, charge, precursor_mass, peaks, isolationWindow, injectionTime, LastMs1InjectionTime);
                             spectra.AddMSMS(spectrum);
                             //zones.Add(new Zone(precursor_mz - isolationWindow, precursor_mz + isolationWindow, retention_time));
                         }
@@ -251,6 +252,7 @@ namespace Trinity
                     }
                     else //Is an MS
                     {
+                        LastMs1InjectionTime = spec.scanList.scans[0].cvParam(pwiz.CLI.cv.CVID.MS_ion_injection_time).value;
                         if (loadMS)
                         {
                             double retention_time = spec.scanList.scans[0].cvParam(pwiz.CLI.cv.CVID.MS_scan_start_time).timeInSeconds() / 60.0;

@@ -108,6 +108,7 @@
     <Compile Include="Morpheus\ModificationDictionary.cs" />
     <Compile Include="Morpheus\ModificationType.cs" />
     <Compile Include="Methods\PositionnalIsomerSolver.cs" />
+    <Compile Include="Samples\Assignment.cs" />
     <Compile Include="Samples\ToCalibrate.cs" />
     <Compile Include="Samples\RT_MHC.cs" />
     <Compile Include="Samples\HistonePositionnalIsomer.cs" />

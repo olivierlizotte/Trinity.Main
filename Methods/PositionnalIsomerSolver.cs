@@ -305,6 +305,7 @@ namespace Trinity.UnitTest
                         
                         //double precursorArea = psmMatches.ComputePrecursorArea(smoothedPrecursor);
                         double precursorArea = 0.0;
+                        double LastIntensityPerUnitOrTime = 0;
                         double LastTimeStamp = 0;
                         //double TotalElapsedTime = 0;
                         //foreach(ProductSpectrum key in sortedSpectrum)
@@ -326,16 +327,21 @@ namespace Trinity.UnitTest
                             for (int i = 0; i < finalRatios.Count; i++)
                                 normSumRatio += finalRatios[i] * DicOfNormalizeFactor[nbProductsToKeep][key][i];
 
-                            double sumRatio = 0;
-                            for (int i = 0; i < finalRatios.Count; i++)
-                                sumRatio += finalRatios[i];
+                            double sumRatio = 1.0;
+                            //for (int i = 0; i < finalRatios.Count; i++)
+                            //    sumRatio += finalRatios[i];
 
-                            double ElapsedTime = psm.Query.spectrum.RetentionTimeInMin - LastTimeStamp;
-                            double localArea = psm.Query.spectrum.PrecursorIntensity * ElapsedTime;
+                            double ElapsedTime = (psm.Query.spectrum.RetentionTimeInMin - LastTimeStamp) * 60.0 * 1000.0;
+                            double IntensityPerUnitOfTime = psm.Query.spectrum.PrecursorIntensity / psm.Query.spectrum.Ms1InjectionTime;// * ElapsedTime;
+                                   
+                            double localArea = (IntensityPerUnitOfTime + LastIntensityPerUnitOrTime) * 0.5 * ElapsedTime;                            
 
-                            if (LastTimeStamp > 0 && !double.IsNaN(normSumRatio) && normSumRatio > 0)
+                            if (LastTimeStamp > 0)
                             {
-                                if (percentError < 0.25)//0.95
+                                //if (IntensityPerUnitOfTime > 1.75 * LastIntensityPerUnitOrTime)
+                                //    Console.WriteLine("oops?");
+                                precursorArea += localArea;
+                                if (percentError < 0.25 && !double.IsNaN(normSumRatio) && normSumRatio > 0)//0.95
                                 {
                                     List<double> avgQuantifiedRatios = new List<double>();
 
@@ -347,7 +353,7 @@ namespace Trinity.UnitTest
                                         avgQuantifiedRatios.Add(avgRatio);
                                     }
 
-                                    string strRatios = psm.Query.spectrum.RetentionTimeInMin.ToString() + "," + psm.Query.spectrum.PrecursorIntensity;
+                                    string strRatios = psm.Query.spectrum.RetentionTimeInMin.ToString() + "," + localArea;
 
                                     for (int i = 0; i < avgQuantifiedRatios.Count; i++)
                                     {
@@ -368,29 +374,29 @@ namespace Trinity.UnitTest
                                 }
                                 else
                                     dbOptions.ConSole.WriteLine("Bad MaxFlow computation : " + percentError);
+
+                                foreach (double ratio in finalRatios)
+                                    if (ratio == 0)
+                                        percentError += 1.0 / (double)finalRatios.Count;//*/
+                                cumulPercentError += percentError;
+                                iterError++;
                             }
 
-                            precursorArea += localArea;
-
-                            foreach (double ratio in finalRatios)
-                                if (ratio == 0)
-                                    percentError += 1.0 / (double)finalRatios.Count;//*/
-                            cumulPercentError += percentError;
-                            iterError++;
-                            LastTimeStamp = psm.Query.spectrum.RetentionTimeInMin;                            
+                            LastTimeStamp = psm.Query.spectrum.RetentionTimeInMin;     
+                            LastIntensityPerUnitOrTime = IntensityPerUnitOfTime;
                         }
 
                         dicOfResultsPerSample[sample].Add(dicOfResults);
 
                         //Use SumOfRatio as the fraction for the entire Precursor area
-                        double sumArea = 0;
+                        /*double sumArea = 0;
                         foreach (double val in sumOfRatio)
                             sumArea += val;
                         
                         List<double> relativeSumOfRatio = new List<double>();
                         for (int i = 0; i < sumOfRatio.Count; i++)
                             sumOfRatio[i] = (sumOfRatio[i] / sumArea) * precursorArea;
-
+                        //*/
                         if (listOfSumOfRatioPerPrecursor.Count == 0)
                             foreach (double area in sumOfRatio)
                                 listOfSumOfRatioPerPrecursor.Add(area);
@@ -679,23 +685,38 @@ namespace Trinity.UnitTest
             overFlow = 0;
             underFlow = error;
 
-            List<double> result = new List<double>();
+            List<double> result = null;
             switch (returnType)
             {
                 case 0:
-                    foreach (double val in solutions[0])
-                        result.Add(val / (double)precision);
+                    result = GetResult(solutions[0], precision, underFlow, sumOfIntensities);
                     break;
                 case 1:
-                    foreach (double val in solutions[1])
-                        result.Add(val / (double)precision);
+                    result = GetResult(solutions[1], precision, underFlow, sumOfIntensities);
                     break;
                 case 2:
+                    List<double> tmpAverage = new List<double>();                    
                     foreach (double val in average)
-                        result.Add(val / (double)precision);
+                        tmpAverage.Add(val);
+                    result = GetResult(tmpAverage, precision, underFlow, sumOfIntensities);
                     break;
             }
             return result;
+        }
+
+        private static List<double> GetResult(List<double> solution, int precision, double underFlow, double sumOfIntensities)
+        {
+            List<double> rez = new List<double>();
+            double sumVal = 0.0;
+            foreach(double val in solution)
+                sumVal += val;
+            
+            sumVal += (underFlow / sumOfIntensities) * precision;
+
+            foreach (double val in solution)
+                rez.Add(val / sumVal);
+
+            return rez;
         }
 
         private static void BuildSinglePeptideVirtualSpectrum(Result precomputedResults, bool smoothPrecursor, 

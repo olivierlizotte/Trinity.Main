@@ -26,6 +26,9 @@ namespace Trinity.Database.Neo4j
                     self = splits[i].Substring(12, splits[i].Length - 12 - 2);
                     break;
                 }
+
+
+
             return self;
             //Console.WriteLine(response.Content);
             //return 5;

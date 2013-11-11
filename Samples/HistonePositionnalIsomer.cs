@@ -72,9 +72,9 @@ namespace Trinity.UnitTest
             Samples ProjectStable = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_StableMix_MonoAce_19Oct.csv", 0, dbOptions);            
             
             int nbProductsMin = 5;// 4;
-            int nbProductsMax = 8;// 14;
+            int nbProductsMax = 5;// 14;
             bool smoothedPrecursor = false;
-            int precision = 10000;
+            int precision = 1000;//10000
             int maxCharge = 2;
 
             PositionnalIsomerSolver.Solve(ProjectRatios, ProjectStable, ProjectMixed, dbOptions, nbProductsMin, nbProductsMax, smoothedPrecursor, precision, maxCharge);
@@ -82,15 +82,15 @@ namespace Trinity.UnitTest
 
         public static void DiAce(IConSol console)
         {
-            DBOptions dbOptions = GetDBOptions(false, false, console);
+            DBOptions dbOptions = GetDBOptions(true, false, console);
             Samples ProjectRatios = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_DiAce_Spiked_19Oct.csv", 0, dbOptions);
             Samples ProjectMixed =  new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_DiAce_Varied_19Oct.csv", 0, dbOptions);
             Samples ProjectStable = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_StableMix_DiAce_19Oct.csv", 0, dbOptions);
 
             int nbProductsMin = 5;// 4;
-            int nbProductsMax = 8;// 14;
+            int nbProductsMax = 5;// 14;
             bool smoothedPrecursor = false;
-            int precision = 10000;
+            int precision = 1000;
             int maxCharge = 2;
 
             PositionnalIsomerSolver.Solve(ProjectRatios, ProjectStable, ProjectMixed, dbOptions, nbProductsMin, nbProductsMax, smoothedPrecursor, precision, maxCharge);
@@ -98,15 +98,15 @@ namespace Trinity.UnitTest
 
         public static void TriAce(IConSol console)
         {
-            DBOptions dbOptions = GetDBOptions(false, false, console);
+            DBOptions dbOptions = GetDBOptions(true, false, console);
             Samples ProjectRatios = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_TriAce_Spiked_19Oct.csv", 0, dbOptions);
             Samples ProjectMixed = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_TriAce_Varied_19Oct.csv", 0, dbOptions);
             Samples ProjectStable = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_StableMix_TriAce_19Oct.csv", 0, dbOptions);
 
             int nbProductsMin = 5;// 4;
-            int nbProductsMax = 8;// 14;
+            int nbProductsMax = 5;// 14;
             bool smoothedPrecursor = false;
-            int precision = 10000;
+            int precision = 1000;
             int maxCharge = 2;
 
             PositionnalIsomerSolver.Solve(ProjectRatios, ProjectStable, ProjectMixed, dbOptions, nbProductsMin, nbProductsMax, smoothedPrecursor, precision, maxCharge);
@@ -114,15 +114,15 @@ namespace Trinity.UnitTest
 
         public static void Mixed(IConSol console)
         {
-            DBOptions dbOptions = GetDBOptions(false, false, console);
+            DBOptions dbOptions = GetDBOptions(true, false, console);
             Samples ProjectRatios = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_AllAce_Spiked_19Oct.csv", 0, dbOptions);
             Samples ProjectMixed = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_AllAce_Varied_19Oct.csv", 0, dbOptions);
             Samples ProjectStable = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_StableMix_AllAce_19Oct.csv", 0, dbOptions);
 
             int nbProductsMin = 5;// 4;
-            int nbProductsMax = 8;// 14;
+            int nbProductsMax = 5;// 14;
             bool smoothedPrecursor = false;
-            int precision = 10000;
+            int precision = 1000;
             int maxCharge = 2;
 
             PositionnalIsomerSolver.Solve(ProjectRatios, ProjectStable, ProjectMixed, dbOptions, nbProductsMin, nbProductsMax, smoothedPrecursor, precision, maxCharge);

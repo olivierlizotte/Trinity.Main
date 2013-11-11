@@ -25,13 +25,14 @@ namespace Trinity
         public double MostIntensePeak { get; set; }
         public double IsolationWindow { get; set; }
         public double InjectionTime { get; set; }
+        public double Ms1InjectionTime { get; set; }
         public int INDEX;
 
         public ProductSpectrum()
         {
             Peaks = new GraphML_List<MsMsPeak>();
         }
-        public ProductSpectrum(int scanNumber, double retentionTimeInMin, string fragmentationMethod, double precursorMZ, double precursorIntensity, int precursorCharge, double precursorMass, GraphML_List<MsMsPeak> peaks, double isolationWindow, double injectionTime)
+        public ProductSpectrum(int scanNumber, double retentionTimeInMin, string fragmentationMethod, double precursorMZ, double precursorIntensity, int precursorCharge, double precursorMass, GraphML_List<MsMsPeak> peaks, double isolationWindow, double injectionTime, double ms1InjectionTime)
         {
             this.INDEX = COMPTEUR++;
             //this.Filename = filename;
@@ -44,6 +45,7 @@ namespace Trinity
             this.PrecursorMass = precursorMass;
             this.IsolationWindow = isolationWindow;
             this.InjectionTime = injectionTime;
+            this.Ms1InjectionTime = ms1InjectionTime;
 
             this.TotalIntensity = 0.0;
             this.MostIntensePeak = 0.0;
@@ -65,7 +67,7 @@ namespace Trinity
         public override string ToString()
         {
             System.Text.StringBuilder sb = new System.Text.StringBuilder();
-            sb.AppendLine(ScanNumber + "," + RetentionTimeInMin + "," + FragmentationMethod + "," + PrecursorMZ + "," + PrecursorIntensity + "," + PrecursorCharge + "," + PrecursorMass + "," + TotalIntensity + "," + IsolationWindow + "," + Peaks.Count + "," + InjectionTime);
+            sb.AppendLine(ScanNumber + "," + RetentionTimeInMin + "," + FragmentationMethod + "," + PrecursorMZ + "," + PrecursorIntensity + "," + PrecursorCharge + "," + PrecursorMass + "," + TotalIntensity + "," + IsolationWindow + "," + Peaks.Count + "," + InjectionTime + "," + Ms1InjectionTime);
             foreach (MsMsPeak peak in Peaks)
                 sb.AppendLine(peak.ToString());
             return sb.ToString();

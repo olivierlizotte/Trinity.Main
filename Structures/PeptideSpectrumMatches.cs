@@ -116,21 +116,24 @@ namespace Trinity
         public double ComputePrecursorArea(bool smooth)
         {
             double lastTimeStamp = 0;
-            double lastIntensity = 0;
+            double lastIntensityPerUnitOfTime = 0;
             List<double> timeGap = new List<double>();
             List<double> precursorIntensities = new List<double>();
             foreach (PeptideSpectrumMatch psm in this)
             {
-                if (psm.Query.spectrum.PrecursorIntensity > 0 && lastTimeStamp > 0)
+                if (psm.Query.spectrum.Ms1InjectionTime > 0)
                 {
-                    timeGap.Add(psm.Query.spectrum.RetentionTimeInMin - lastTimeStamp);
-                    if (lastIntensity > 0)
-                        precursorIntensities.Add((psm.Query.spectrum.PrecursorIntensity + lastIntensity) * 0.5);
-                    else
-                        precursorIntensities.Add(psm.Query.spectrum.PrecursorIntensity);
+                    if (psm.Query.spectrum.PrecursorIntensity > 0 && lastTimeStamp > 0)
+                    {
+                        timeGap.Add((psm.Query.spectrum.RetentionTimeInMin - lastTimeStamp) * 60.0 * 1000.0);
+                        if (lastIntensityPerUnitOfTime > 0)
+                            precursorIntensities.Add((psm.Query.spectrum.PrecursorIntensity / psm.Query.spectrum.Ms1InjectionTime + lastIntensityPerUnitOfTime) * 0.5);
+                        else
+                            precursorIntensities.Add(psm.Query.spectrum.PrecursorIntensity / psm.Query.spectrum.Ms1InjectionTime);
+                    }
+                    lastIntensityPerUnitOfTime = psm.Query.spectrum.PrecursorIntensity / psm.Query.spectrum.Ms1InjectionTime;
+                    lastTimeStamp = psm.Query.spectrum.RetentionTimeInMin;
                 }
-                lastTimeStamp = psm.Query.spectrum.RetentionTimeInMin;
-                lastIntensity = psm.Query.spectrum.PrecursorIntensity;
             }
             //Smooth the curve
 
