@@ -11,6 +11,7 @@ namespace Trinity
         public double obsMz;
         public int charge;
         public double obsIntensity;
+        public double normalizedIntensity;
         public double mass_diff;
         public string fragment;
         public int fragmentPos;
@@ -24,18 +25,21 @@ namespace Trinity
             this.theoMz = match.theoMz;
             this.obsMz = match.obsMz;
             this.obsIntensity = match.obsIntensity;
+            this.normalizedIntensity = match.normalizedIntensity;
             this.mass_diff = match.mass_diff;
             this.charge = match.charge;
             this.fragment = match.fragment;
             this.fragmentPos = match.fragmentPos;
             this.weight = match.weight;
         }
+
         public static int AscendingWeightComparison(ProductMatch left, ProductMatch right)
         {
             if (left.weight == right.weight)
                 return left.obsIntensity.CompareTo(right.obsIntensity);
             return left.weight.CompareTo(right.weight);
         }
+
         public override string ToString()
         {
             return "[" + obsMz + ";" + obsIntensity + "]";

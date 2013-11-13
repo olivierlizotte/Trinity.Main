@@ -199,7 +199,7 @@ namespace Trinity.UnitTest
             Result spikedResult = precomputedSpiked;
 
             Dictionary<int, Dictionary<double, List<List<ProductMatch>>>>   DicOfRatios = new Dictionary<int, Dictionary<double, List<List<ProductMatch>>>>();
-            Dictionary<int, Dictionary<double, List<double>>>               DicOfTrackIntensity = new Dictionary<int, Dictionary<double, List<double>>>();
+            //Dictionary<int, Dictionary<double, List<double>>>               DicOfPrecursorAreas = new Dictionary<int, Dictionary<double, List<double>>>();
             Dictionary<int, Dictionary<double, List<double>>>               DicOfNormalizeFactor = new Dictionary<int, Dictionary<double, List<double>>>();
             Dictionary<int, double>                                         DicOfErrors = new Dictionary<int,double>();
             Dictionary<int, List<double>>                                   DicOfFragmentMz = new Dictionary<int, List<double>>();
@@ -207,15 +207,15 @@ namespace Trinity.UnitTest
             for (int nbProductsToKeep = nbProductMin; nbProductsToKeep <= nbProductMax; nbProductsToKeep++)
             {
                 Dictionary<double, List<List<ProductMatch>>> ratios = new Dictionary<double, List<List<ProductMatch>>>();
-                Dictionary<double, List<double>> TrackIntensity = new Dictionary<double, List<double>>();
+                Dictionary<double, List<double>> PrecursorAreas = new Dictionary<double, List<double>>();
                 Dictionary<double, List<double>> NormalizeFactor = new Dictionary<double, List<double>>();
                 List<double> ListFragmentMz = new List<double>();
 
                 BuildSinglePeptideVirtualSpectrum(spikedResult, smoothedPrecursor, nbProductsToKeep, RatioNormalizer,
-                                                        ref ratios, ref TrackIntensity, ref NormalizeFactor, ref ListFragmentMz, chargeToConsider);
+                                                        ref ratios, ref PrecursorAreas, ref NormalizeFactor, ref ListFragmentMz, chargeToConsider);
 
                 DicOfRatios.Add(nbProductsToKeep, ratios);
-                DicOfTrackIntensity.Add(nbProductsToKeep, TrackIntensity);
+                //DicOfPrecursorAreas.Add(nbProductsToKeep, PrecursorAreas);
                 DicOfNormalizeFactor.Add(nbProductsToKeep, NormalizeFactor);
                 DicOfFragmentMz.Add(nbProductsToKeep, ListFragmentMz);
                 DicOfErrors.Add(nbProductsToKeep, 0);
@@ -299,13 +299,11 @@ namespace Trinity.UnitTest
                         // -- ******************** -- //
 
 
-                        Dictionary<PeptideSpectrumMatch, double> DicOfPsmFactor = psmMatches.ComputeMsMsNormalizationFactors();
+                        //Dictionary<PeptideSpectrumMatch, double> DicOfPsmFactor = psmMatches.ComputeMsMsNormalizationFactors();
                         
                         Dictionary<int, string> dicOfResults = new Dictionary<int, string>();
                         
-                        //double precursorArea = psmMatches.ComputePrecursorArea(smoothedPrecursor);
-                        double precursorArea = 0.0;
-                        double LastIntensityPerUnitOrTime = 0;
+                        double UsedPrecursorArea = 0.0;                        
                         double LastTimeStamp = 0;
                         //double TotalElapsedTime = 0;
                         //foreach(ProductSpectrum key in sortedSpectrum)
@@ -321,44 +319,45 @@ namespace Trinity.UnitTest
                                 else
                                     matches.Add(new List<ProductMatch>());
                             List<double> finalRatios = LaunchMaxFlowFromSpectrum(matches, ratioNames, precision, psm.Query.spectrum.Peaks, dbOptions.productMassTolerance,
-                                                                    DicOfPsmFactor[psm], mflowReturnType, ref overFlow, ref underFlow, ref percentError, dbOptions.ConSole);
+                                                                    mflowReturnType, psm.Query.spectrum.PrecursorIntensityPerMilliSecond * psm.Query.spectrum.InjectionTime, ref overFlow, ref underFlow, ref percentError, dbOptions.ConSole);
 
-                            double normSumRatio = 0;
-                            for (int i = 0; i < finalRatios.Count; i++)
-                                normSumRatio += finalRatios[i] * DicOfNormalizeFactor[nbProductsToKeep][key][i];
+                            //double normSumRatio = 0;
+                            //for (int i = 0; i < finalRatios.Count; i++)
+                            //    normSumRatio += finalRatios[i] * DicOfNormalizeFactor[nbProductsToKeep][key][i];
 
-                            double sumRatio = 1.0;
+                            //double sumRatio = 0.0;
                             //for (int i = 0; i < finalRatios.Count; i++)
                             //    sumRatio += finalRatios[i];
 
                             double ElapsedTime = (psm.Query.spectrum.RetentionTimeInMin - LastTimeStamp) * 60.0 * 1000.0;
-                            double IntensityPerUnitOfTime = psm.Query.spectrum.PrecursorIntensity / psm.Query.spectrum.Ms1InjectionTime;// * ElapsedTime;
-                                   
-                            double localArea = (IntensityPerUnitOfTime + LastIntensityPerUnitOrTime) * 0.5 * ElapsedTime;                            
+
+                            double localArea = psm.Query.spectrum.PrecursorIntensityPerMilliSecond * ElapsedTime;                            
 
                             if (LastTimeStamp > 0)
                             {
                                 //if (IntensityPerUnitOfTime > 1.75 * LastIntensityPerUnitOrTime)
                                 //    Console.WriteLine("oops?");
-                                precursorArea += localArea;
-                                if (percentError < 0.25 && !double.IsNaN(normSumRatio) && normSumRatio > 0)//0.95
+                                //precursorArea += localArea;
+                                if (percentError < 0.25)// && !double.IsNaN(normSumRatio) && normSumRatio > 0)//0.95
                                 {
+                                    UsedPrecursorArea += localArea;
                                     List<double> avgQuantifiedRatios = new List<double>();
 
                                     for (int i = 0; i < ProjectRatios.Count; i++)
                                     {
-                                        double avgRatio = (finalRatios[i] / sumRatio) * DicOfNormalizeFactor[nbProductsToKeep][key][i] * localArea;
+                                        //double avgRatio = (finalRatios[i] / sumRatio) * DicOfNormalizeFactor[nbProductsToKeep][key][i] * localArea;
+                                        double avgRatio = finalRatios[i] * DicOfNormalizeFactor[nbProductsToKeep][key][i] * localArea * RatioNormalizer[i];
                                         if (double.IsNaN(avgRatio))
                                             dbOptions.ConSole.WriteLine("Oops, NaN in ratios");
                                         avgQuantifiedRatios.Add(avgRatio);
                                     }
 
-                                    string strRatios = psm.Query.spectrum.RetentionTimeInMin.ToString() + "," + localArea;
+                                    string strRatios = psm.Query.spectrum.RetentionTimeInMin.ToString() + "," + psm.Query.spectrum.PrecursorIntensityPerMilliSecond;
 
                                     for (int i = 0; i < avgQuantifiedRatios.Count; i++)
                                     {
                                         sumOfRatio[i] += avgQuantifiedRatios[i];
-                                        strRatios += "," + avgQuantifiedRatios[i];
+                                        strRatios += "," + finalRatios[i] * DicOfNormalizeFactor[nbProductsToKeep][key][i] * RatioNormalizer[i] * psm.Query.spectrum.PrecursorIntensityPerMilliSecond;
                                     }
                                     foreach (double mz in DicOfFragmentMz[nbProductsToKeep])
                                     {
@@ -382,9 +381,12 @@ namespace Trinity.UnitTest
                                 iterError++;
                             }
 
-                            LastTimeStamp = psm.Query.spectrum.RetentionTimeInMin;     
-                            LastIntensityPerUnitOrTime = IntensityPerUnitOfTime;
+                            LastTimeStamp = psm.Query.spectrum.RetentionTimeInMin;    
                         }
+
+                        //Interpolate unused spectrum
+                        double ComputedPrecursorArea = psmMatches.ComputePrecursorArea(smoothedPrecursor);
+                        double factorOfUnusedLocalAreas = (ComputedPrecursorArea - UsedPrecursorArea) / UsedPrecursorArea;
 
                         dicOfResultsPerSample[sample].Add(dicOfResults);
 
@@ -399,10 +401,10 @@ namespace Trinity.UnitTest
                         //*/
                         if (listOfSumOfRatioPerPrecursor.Count == 0)
                             foreach (double area in sumOfRatio)
-                                listOfSumOfRatioPerPrecursor.Add(area);
+                                listOfSumOfRatioPerPrecursor.Add(area + area * factorOfUnusedLocalAreas);
                         else
                             for (int i = 0; i < sumOfRatio.Count; i++)
-                                listOfSumOfRatioPerPrecursor[i] += sumOfRatio[i];
+                                listOfSumOfRatioPerPrecursor[i] += sumOfRatio[i] + sumOfRatio[i] * factorOfUnusedLocalAreas;
                     }//precursor
 
                     listOfSumOfRatio.Add(listOfSumOfRatioPerPrecursor);//Per Precursor
@@ -437,7 +439,7 @@ namespace Trinity.UnitTest
                 dbOptions.ConSole.WriteLine("Best Number of products : " + nbProductsUsed);
                 foreach (Sample sample in bestDicOfResults.Keys)
                 {//Dictionary<Sample, List<Dictionary<int, string>>> 
-                    vsCSVWriter writer = new vsCSVWriter(dbOptions.OutputFolder + sample.nameColumn + "_Ratios5_Charge" + chargeToConsider + ".csv");
+                    vsCSVWriter writer = new vsCSVWriter(dbOptions.OutputFolder + sample.nameColumn + "_Ratios7_Charge" + chargeToConsider + ".csv");
                     string title = "Retention Time,Precursor Intensity";
                     for(int i = 0; i < ProjectRatios.Count; i++)
                         title += "," + ProjectRatios[i].nameColumn;
@@ -454,9 +456,9 @@ namespace Trinity.UnitTest
                     }
                     writer.WriteToFile();
                 }
-                foreach (List<double> sampleRatio in bestListOfSumOfRatio)
-                    for (int i = 0; i < sampleRatio.Count; i++)
-                        sampleRatio[i] *= RatioNormalizer[i];
+                //foreach (List<double> sampleRatio in bestListOfSumOfRatio)
+                //    for (int i = 0; i < sampleRatio.Count; i++)
+                //        sampleRatio[i] *= RatioNormalizer[i];
             }
             return bestListOfSumOfRatio;
         }
@@ -565,7 +567,7 @@ namespace Trinity.UnitTest
             optimalSolutions.Clear();
 
             List<double> newList = new List<double>();
-            foreach (int localFlow in localFlows)
+            foreach (long localFlow in localFlows)
                 newList.Add(localFlow);
             optimalSolutions.Add(newList);
 
@@ -575,22 +577,26 @@ namespace Trinity.UnitTest
             optimalSolutions.Add(newList);
                                     
             //Compute average
-            average.Clear();
-            for (int i = 0; i < optimalSolutions[0].Count; i++)
+            if (bestOverallError < double.MaxValue)
             {
-                double sum = 0.0;
-                foreach (List<double> solution in optimalSolutions)
-                    sum += solution[i];
-                double avg = sum / (double)optimalSolutions.Count;
-                average.Add((long)avg);
+                average.Clear();
+                for (int i = 0; i < optimalSolutions[0].Count; i++)
+                {
+                    double sum = 0.0;
+                    foreach (List<double> solution in optimalSolutions)
+                        sum += solution[i];
+                    double avg = sum / (double)optimalSolutions.Count;
+                    average.Add((long)avg);
+                }
             }
 
             //Compute expected error in percentage
-            virtualSpectrum = BuildVirtualSpectrum(spikedMatches, bestLocalFlows, mixedFragDic);
-            double sumOfIntensities = 0;
+                double sumOfIntensities = 0;
             foreach (double val in mixedFragDic.Values)
                 sumOfIntensities += val;
             percentError = underError / sumOfIntensities;
+
+            virtualSpectrum = BuildVirtualSpectrum(spikedMatches, localFlows, mixedFragDic);            
 
             return MaxFlowHelper.ComputeUnderflow(virtualSpectrum, mixedFragDic);
         }//*/
@@ -650,7 +656,8 @@ namespace Trinity.UnitTest
 
         private static List<double> LaunchMaxFlowFromSpectrum(List<List<ProductMatch>> ratiosToFit, List<string> ratioNames, 
                                             int precision, GraphML_List<MsMsPeak> capacity, MassTolerance tolerance, 
-                                            double boostRatioForSpectrum, int returnType,//0 for max flow, 1 for best flow, 2 for average
+                                            int returnType,//0 for max flow, 1 for best flow, 2 for average
+                                            double PrecursorIntensityInCTrap,
                                             ref double overFlow, ref double underFlow, ref double errorInPercent, IConSol ConSole)
         {
             List<List<double>> solutions = new List<List<double>>();
@@ -659,7 +666,7 @@ namespace Trinity.UnitTest
             double sumOfProducts = 0;
             foreach (MsMsPeak peak in capacity)
             {
-                double intensity = peak.Intensity + peak.Intensity * boostRatioForSpectrum;
+                double intensity = peak.Intensity;// +peak.Intensity * boostRatioForSpectrum;
                 expandedCapacity.Add(new MsMsPeak(peak.MZ, intensity * precision, peak.Charge));
                 sumOfProducts += peak.Intensity;
             }
@@ -670,7 +677,8 @@ namespace Trinity.UnitTest
                 foreach (ProductMatch pm in list)
                 {
                     ProductMatch newPm = new ProductMatch(pm);
-                    newPm.obsIntensity *= sumOfProducts;
+                    //newPm.obsIntensity *= sumOfProducts;
+                    newPm.obsIntensity = newPm.normalizedIntensity * PrecursorIntensityInCTrap;
                     pms.Add(newPm);
                 }
                 tmpRatiosToFit.Add(pms);
@@ -746,21 +754,21 @@ namespace Trinity.UnitTest
             
             Dictionary<double, int> AllFragments = new Dictionary<double,int>();
             vsCSVWriter writer = new vsCSVWriter(dbOptions.OutputFolder + "FragmentsUsed_" + nbProductsToKeep + "Products.csv");
-            writer.AddLine("Precursor Mass, Peptide Sequence,Fragment,Pos,Charge,Mz,Intensity");
+            writer.AddLine("Precursor Mass, Peptide Sequence,Fragment,Pos,Charge,Mz,Intensity,Normalized Intensity");
             foreach (double foundKey in FinalSpikedProducts.Keys)
             {
                 Peptide peptide = null;
                 List<List<ProductMatch>> SpikedProducts = new List<List<ProductMatch>>();
-                List<double> PeakAvgIntensities = new List<double>();
+                //List<double> PeakAvgIntensities = new List<double>();
                 //Get list of PSMs per sample
                 double averagePrecursorArea = 0;
-                double avgMsMsProductIntensity = 0;
-                int nbAveragedSpectrum = 0;
+                //double avgMsMsProductIntensity = 0;
+                //int nbAveragedSpectrum = 0;
                 int nbAverageArea = 0;
                 List<PeptideSpectrumMatches> listOfPSMs = new List<PeptideSpectrumMatches>();
                 foreach (Sample sample in Project)
                 {
-                    double avgPeakIntensity = 0;
+                    //double avgPeakIntensity = 0;
                     PeptideSpectrumMatches psmList = new PeptideSpectrumMatches();
                     foreach (Query query in precomputedResults.queries)
                     {
@@ -774,9 +782,9 @@ namespace Trinity.UnitTest
                                     {
                                         peptide = psm.Peptide;
                                         psmList.Add(psm);
-                                        avgPeakIntensity += query.spectrum.PrecursorIntensity;
-                                        avgMsMsProductIntensity += query.spectrum.TotalIntensity;
-                                        nbAveragedSpectrum++;
+                                        //avgPeakIntensity += query.spectrum.PrecursorIntensity;
+                                        //avgMsMsProductIntensity += query.spectrum.TotalIntensity;
+                                        //nbAveragedSpectrum++;
                                     }
                                 }
                             }
@@ -785,7 +793,7 @@ namespace Trinity.UnitTest
 
                     if (psmList.Count > 0)
                     {
-                        avgPeakIntensity /= (double)psmList.Count;
+                        //avgPeakIntensity /= (double)psmList.Count;
                         psmList.Sort(PeptideSpectrumMatches.AscendingRetentionTime);
                         listOfPSMs.Add(psmList);
                         List<ProductMatch> productList = psmList.GetCombinedSpectrum(precomputedResults.dbOptions, peptide, charge);
@@ -798,17 +806,17 @@ namespace Trinity.UnitTest
 
                         SpikedProducts.Add(productList);
                         PrecursorAreas[foundKey].Add(precursorArea);
-                        PeakAvgIntensities.Add(avgPeakIntensity);
+                        //PeakAvgIntensities.Add(avgPeakIntensity);
                     }
                     else
                     {
                         listOfPSMs.Add(psmList);
                         SpikedProducts.Add(new List<ProductMatch>());
                         PrecursorAreas[foundKey].Add(0);
-                        PeakAvgIntensities.Add(0);
+                        //PeakAvgIntensities.Add(0);
                     }
                 }
-                avgMsMsProductIntensity /= nbAveragedSpectrum;
+                //avgMsMsProductIntensity /= nbAveragedSpectrum;
                 averagePrecursorArea /= (double)nbAverageArea;
 
                 Dictionary<double, int> DicOfFragmentsToKeep = new Dictionary<double, int>();
@@ -827,7 +835,7 @@ namespace Trinity.UnitTest
                     List<ProductMatch> list = listOfPSMs[i].GetCombinedSpectrum(precomputedResults.dbOptions, peptide, charge, DicOfFragmentsToKeep);
                                         
                     foreach (ProductMatch match in list)
-                        writer.AddLine(foundKey + "," + Project[i].nameColumn + "," + match.fragment + "," + match.fragmentPos + "," + match.charge + "," + match.theoMz + "," + match.obsIntensity);
+                        writer.AddLine(foundKey + "," + Project[i].nameColumn + "," + match.fragment + "," + match.fragmentPos + "," + match.charge + "," + match.theoMz + "," + match.obsIntensity + "," + match.normalizedIntensity);
 
                     FinalSpikedProducts[foundKey].Add(list);
                 }
@@ -837,7 +845,7 @@ namespace Trinity.UnitTest
                         AllFragments.Add(key, 1);
                     else
                         AllFragments[key]++;
-
+                /*
                 double avgPrecursors = 0;
                 int nbInt = 0;
                 foreach (double avg in PeakAvgIntensities)
@@ -847,7 +855,7 @@ namespace Trinity.UnitTest
                     avgPrecursors += avg;
                 }
                 avgPrecursors /= (double)nbInt;
-
+                /*
                 for (int i = 0; i < Project.Count; i++)
                 {
                     //Normalize each spectrum based on average precursor intensity
@@ -855,18 +863,18 @@ namespace Trinity.UnitTest
                     {
                         double y = (avgPrecursors - PeakAvgIntensities[i]) / PeakAvgIntensities[i];
                         for (int j = 0; j < FinalSpikedProducts[foundKey][i].Count; j++)
-                            FinalSpikedProducts[foundKey][i][j].obsIntensity += y * FinalSpikedProducts[foundKey][i][j].obsIntensity;//*/
+                            FinalSpikedProducts[foundKey][i][j].obsIntensity += y * FinalSpikedProducts[foundKey][i][j].obsIntensity;
                     }
-                }
+                }//*/
 
                 List<double> listOfsumOfProducts = new List<double>();
                 double avgRatioSum = 0;
-                nbInt = 0;
+                int nbInt = 0;
                 for (int i = 0; i < Project.Count; i++)
                 {
                     double sumOfProducts = 0;
                     for (int j = 0; j < FinalSpikedProducts[foundKey][i].Count; j++)
-                        sumOfProducts += FinalSpikedProducts[foundKey][i][j].obsIntensity;
+                        sumOfProducts += FinalSpikedProducts[foundKey][i][j].normalizedIntensity;
                     listOfsumOfProducts.Add(sumOfProducts);
 
                     avgRatioSum += sumOfProducts; 
@@ -882,11 +890,12 @@ namespace Trinity.UnitTest
                     {
                         double lossOfPrecIntensity = Math.Log(averagePrecursorArea, 2) / Math.Log(PrecursorAreas[foundKey][i], 2);
                         double lossofFragmentIntensity = Math.Pow(avgRatioSum, 2) / Math.Pow(listOfsumOfProducts[i], 2);
+
                         //Normalizor[foundKey].Add((spectrumWeight / listOfsumOfProducts[i]) * (averagePrecursorArea / PrecursorAreas[foundKey][i]) * RatioNormalizer[i]);
                         //Normalizor[foundKey].Add(lossOfPrecIntensity * lossofFragmentIntensity);//(averagePrecursorArea / PrecursorAreas[foundKey][i]) * RatioNormalizer[i]);
                         Normalizor[foundKey].Add(lossofFragmentIntensity * lossOfPrecIntensity);//(averagePrecursorArea / PrecursorAreas[foundKey][i]) * RatioNormalizer[i]);
-                        for (int j = 0; j < FinalSpikedProducts[foundKey][i].Count; j++)
-                            FinalSpikedProducts[foundKey][i][j].obsIntensity /= listOfsumOfProducts[i];
+                        //for (int j = 0; j < FinalSpikedProducts[foundKey][i].Count; j++)
+                        //    FinalSpikedProducts[foundKey][i][j].normalizedIntensity /= listOfsumOfProducts[i];
                     }
                     else
                         Normalizor[foundKey].Add(1.0);

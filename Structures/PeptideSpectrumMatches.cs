@@ -119,6 +119,63 @@ namespace Trinity
             double lastIntensityPerUnitOfTime = 0;
             List<double> timeGap = new List<double>();
             List<double> precursorIntensities = new List<double>();
+            this.Sort(PeptideSpectrumMatches.AscendingRetentionTime);
+
+            foreach (PeptideSpectrumMatch psm in this)
+            {
+                if (psm.Query.spectrum.Ms1InjectionTime > 0)
+                {
+                    if (psm.Query.spectrum.PrecursorIntensity > 0 && lastTimeStamp > 0)
+                    {
+                        timeGap.Add((psm.Query.spectrum.RetentionTimeInMin - lastTimeStamp) * 60.0 * 1000.0);
+                        precursorIntensities.Add(psm.Query.spectrum.PrecursorIntensityPerMilliSecond);
+                    }
+                    lastIntensityPerUnitOfTime = psm.Query.spectrum.PrecursorIntensityPerMilliSecond;
+                    lastTimeStamp = psm.Query.spectrum.RetentionTimeInMin;
+                }
+            }
+            //Smooth the curve
+
+            if (smooth)
+            {
+                List<double> timeGapSmooth = new List<double>();
+                List<double> precursorIntensitiesSmoothed = new List<double>();
+                for (int i = 0; i < timeGap.Count; i++)
+                {
+                    double cumulIntensity = 0;
+                    int nbItems = 0;
+                    for (int k = (i - 2 < 0 ? 0 : i - 2); k < timeGap.Count - 2; k++)
+                    {
+                        nbItems++;
+                        cumulIntensity += precursorIntensities[k];
+                    }
+                    if (nbItems > 0)
+                    {
+                        timeGapSmooth.Add(timeGap[0]);
+                        precursorIntensitiesSmoothed.Add(cumulIntensity / (double)nbItems);
+                    }
+                }
+
+                double fragSpectrumArea = 0;
+                for (int i = 0; i < timeGapSmooth.Count; i++)
+                    fragSpectrumArea += timeGapSmooth[i] * precursorIntensitiesSmoothed[i];
+                return fragSpectrumArea;
+            }
+            else
+            {
+                double fragSpectrumArea = 0;
+                for (int i = 0; i < timeGap.Count; i++)
+                    fragSpectrumArea += timeGap[i] * precursorIntensities[i];
+                return fragSpectrumArea;
+            }
+        }
+
+        public double ComputePrecursorAreaBKP(bool smooth)
+        {
+            double lastTimeStamp = 0;
+            double lastIntensityPerUnitOfTime = 0;
+            List<double> timeGap = new List<double>();
+            List<double> precursorIntensities = new List<double>();
             foreach (PeptideSpectrumMatch psm in this)
             {
                 if (psm.Query.spectrum.Ms1InjectionTime > 0)
@@ -184,19 +241,19 @@ namespace Trinity
                         lastIntensity = psm.Query.spectrum.PrecursorIntensity;
                     else
                     {
-                        double predictedIntensity = (lastIntensity + psm.Query.spectrum.PrecursorIntensity) * 0.5;
+                        double predictedIntensity = (lastIntensity);// + psm.Query.spectrum.PrecursorIntensity) * 0.5;
                         intensityFactor = (psm.Query.spectrum.PrecursorIntensity - predictedIntensity) / predictedIntensity;// psm.Query.spectrum.PrecursorIntensity;
                     }
                     fragRatio.Add(psm, intensityFactor);
                 }
             }
             return fragRatio;
-        }
+        }        
 
         public List<ProductMatch> GetCombinedSpectrum(DBOptions dbOptions, Peptide peptide, int psmCharge, Dictionary<double, int> DicOfCommonPM = null)
         {
-            Dictionary<PeptideSpectrumMatch, double> DicOfPsmFactor = this.ComputeMsMsNormalizationFactors();
-            Dictionary<ProductMatch, double> DicOfProductMsMsFactor = new Dictionary<ProductMatch, double>();
+            //Dictionary<PeptideSpectrumMatch, double> DicOfPsmFactor = this.ComputeMsMsNormalizationFactors();
+            //Dictionary<ProductMatch, double> DicOfProductMsMsFactor = new Dictionary<ProductMatch, double>();
             Dictionary<string, List<ProductMatch>> DicOfProducts = new Dictionary<string, List<ProductMatch>>();
 
             foreach (PeptideSpectrumMatch psm in this)
@@ -209,14 +266,14 @@ namespace Trinity
                         if (!DicOfProducts.ContainsKey(key))
                             DicOfProducts.Add(key, new List<ProductMatch>());
                         DicOfProducts[key].Add(match);
-                        DicOfProductMsMsFactor.Add(match, DicOfPsmFactor[psm]);
+                        //DicOfProductMsMsFactor.Add(match, DicOfPsmFactor[psm]);
                     }
                 }
             }
 
             double avgInt = 0;
             List<ProductMatch> products = new List<ProductMatch>();
-            if (DicOfProductMsMsFactor.Count > 0)
+            //if (DicOfProductMsMsFactor.Count > 0)
             {
                 foreach (List<ProductMatch> matchList in DicOfProducts.Values)
                 {
@@ -225,12 +282,17 @@ namespace Trinity
                     if (matchList.Count > 0)
                     {
                         foreach (ProductMatch pm in matchList)
-                            newPM.obsIntensity += pm.obsIntensity + pm.obsIntensity * DicOfProductMsMsFactor[pm];
+                        {
+                            newPM.obsIntensity += pm.obsIntensity;// +pm.obsIntensity * DicOfProductMsMsFactor[pm];
+                            //newPM.obsIntensity += pm.obsIntensity + pm.obsIntensity * DicOfProductMsMsFactor[pm];
+                            newPM.normalizedIntensity += pm.normalizedIntensity;
+                        }
 
                         newPM.obsIntensity /= (double)matchList.Count;
+                        newPM.normalizedIntensity /= (double)matchList.Count;
                     }
                     newPM.weight = matchList.Count * newPM.obsIntensity;
-                    avgInt += newPM.obsIntensity;
+                    avgInt += newPM.normalizedIntensity;
                     products.Add(newPM);
                 }
                 avgInt /= (double)products.Count;
@@ -250,6 +312,7 @@ namespace Trinity
                             newMatch.theoMz = mz;
                             newMatch.weight = 0;
                             newMatch.obsIntensity = 0;
+                            newMatch.normalizedIntensity = 0;
                             foreach (PeptideSpectrumMatch psm in this)
                             {
                                 foreach (MsMsPeak peak in psm.Query.spectrum.Peaks)
@@ -257,14 +320,21 @@ namespace Trinity
                                     if (Math.Abs(Proteomics.Utilities.Numerics.CalculateMassError(peak.MZ, mz, dbOptions.productMassTolerance.Units)) <= dbOptions.productMassTolerance.Value)
                                     {
                                         newMatch.weight += 1;
-                                        newMatch.obsIntensity += peak.Intensity + peak.Intensity * DicOfPsmFactor[psm];
+                                        newMatch.obsIntensity += peak.Intensity;// + peak.Intensity * DicOfPsmFactor[psm];
+                                        newMatch.normalizedIntensity += peak.Intensity / (psm.Query.spectrum.PrecursorIntensityPerMilliSecond * psm.Query.spectrum.InjectionTime);
                                     }
                                 }
                             }
-                            if (newMatch.obsIntensity < avgInt * 0.05)
+                            if (newMatch.normalizedIntensity < avgInt * 0.05)
+                            {
+                                newMatch.normalizedIntensity = 0;
                                 newMatch.obsIntensity = 0;
+                            }
                             else
+                            {
                                 newMatch.obsIntensity /= (double)newMatch.weight;
+                                newMatch.normalizedIntensity /= (double) newMatch.weight;
+                            }
                             newMatch.weight *= newMatch.obsIntensity;
                             products.Add(newMatch);
                         }

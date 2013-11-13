@@ -191,6 +191,7 @@ namespace Trinity
                     pMatch.charge = matchTheo.charge;// peaks[bestIndex].Charge;
                     pMatch.fragment = matchTheo.fragment;
                     pMatch.fragmentPos = matchTheo.fragmentPos;
+                    pMatch.normalizedIntensity = pMatch.obsIntensity / (Query.spectrum.InjectionTime * Query.spectrum.PrecursorIntensityPerMilliSecond);
                     yield return pMatch;
                     //break;
                 }
@@ -227,6 +228,7 @@ namespace Trinity
                 MatchingWeightedProducts  += match.weight;
                 MatchingIntensity += match.obsIntensity;
                 cumulDiff += Math.Abs(match.mass_diff) * match.weight;
+                
                 cumulMatch.Add( match );
                 if (match.obsIntensity > highestFragmentIntensity)
                     options.ConSole.WriteLine("fragment intensity higher than most intense fragment ... should not happen!");
