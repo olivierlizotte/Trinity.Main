@@ -114,10 +114,10 @@ namespace Trinity.UnitTest
 
         public static void Mixed(IConSol console)
         {
-            DBOptions dbOptions = GetDBOptions(true, false, console);
+            DBOptions dbOptions = GetDBOptions(false, false, console);
             Samples ProjectRatios = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_AllAce_Spiked_19Oct.csv", 0, dbOptions);
             Samples ProjectMixed = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_AllAce_Varied_19Oct.csv", 0, dbOptions);
-            Samples ProjectStable = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_StableMix_AllAce_19Oct.csv", 0, dbOptions);
+            Samples ProjectStable = null;// new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_StableMix_AllAce_19Oct.csv", 0, dbOptions);
 
             int nbProductsMin = 5;// 4;
             int nbProductsMax = 5;// 14;

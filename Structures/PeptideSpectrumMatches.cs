@@ -252,50 +252,74 @@ namespace Trinity
 
         public List<ProductMatch> GetCombinedSpectrum(DBOptions dbOptions, Peptide peptide, int psmCharge, Dictionary<double, int> DicOfCommonPM = null)
         {
-            //Dictionary<PeptideSpectrumMatch, double> DicOfPsmFactor = this.ComputeMsMsNormalizationFactors();
+            Dictionary<PeptideSpectrumMatch, double> DicOfPsmFactor = new Dictionary<PeptideSpectrumMatch, double>();// this.ComputeMsMsNormalizationFactors();
             //Dictionary<ProductMatch, double> DicOfProductMsMsFactor = new Dictionary<ProductMatch, double>();
-            Dictionary<string, List<ProductMatch>> DicOfProducts = new Dictionary<string, List<ProductMatch>>();
+            Dictionary<string, Dictionary<PeptideSpectrumMatch, ProductMatch>> DicOfProducts = new Dictionary<string, Dictionary<PeptideSpectrumMatch, ProductMatch>>();
 
+            double avgProbability = 0;
             foreach (PeptideSpectrumMatch psm in this)
             {
+                bool usedPsm = false;
                 foreach (ProductMatch match in psm.AllProductMatches)
                 {
                     if (DicOfCommonPM == null || DicOfCommonPM.ContainsKey(match.theoMz))
                     {
                         string key = match.fragment + "|" + match.fragmentPos + "|" + match.charge;
                         if (!DicOfProducts.ContainsKey(key))
-                            DicOfProducts.Add(key, new List<ProductMatch>());
-                        DicOfProducts[key].Add(match);
+                            DicOfProducts.Add(key, new Dictionary<PeptideSpectrumMatch, ProductMatch>());
+                        DicOfProducts[key].Add(psm, match);
                         //DicOfProductMsMsFactor.Add(match, DicOfPsmFactor[psm]);
+                        usedPsm = true;
                     }
                 }
+                if (usedPsm)
+                {
+                    DicOfPsmFactor.Add(psm, psm.ProbabilityScore());//.MatchingIntensity);
+                    avgProbability += psm.ProbabilityScore();
+                }
             }
+            avgProbability /= (double)DicOfPsmFactor.Count;
 
-            double avgInt = 0;
+            double avgNormedInt = 0;
             List<ProductMatch> products = new List<ProductMatch>();
             //if (DicOfProductMsMsFactor.Count > 0)
             {
-                foreach (List<ProductMatch> matchList in DicOfProducts.Values)
+                foreach (Dictionary<PeptideSpectrumMatch, ProductMatch> matchList in DicOfProducts.Values)
                 {
-                    ProductMatch newPM = new ProductMatch(matchList[0]);
-                    newPM.obsIntensity = 0;
+                    ProductMatch newPM = null;
                     if (matchList.Count > 0)
                     {
-                        foreach (ProductMatch pm in matchList)
+                        double sumPsmFactor = 0;
+                        foreach (PeptideSpectrumMatch psm in matchList.Keys)
                         {
-                            newPM.obsIntensity += pm.obsIntensity;// +pm.obsIntensity * DicOfProductMsMsFactor[pm];
-                            //newPM.obsIntensity += pm.obsIntensity + pm.obsIntensity * DicOfProductMsMsFactor[pm];
-                            newPM.normalizedIntensity += pm.normalizedIntensity;
+                            if (psm.ProbabilityScore() > avgProbability)//Keep only above average spectrum
+                            {
+                                ProductMatch pm = matchList[psm];
+                                if (newPM == null)
+                                {
+                                    newPM = new ProductMatch(pm);
+                                    newPM.obsIntensity = 0;
+                                    newPM.normalizedIntensity = 0;
+                                }
+                                newPM.obsIntensity += pm.obsIntensity * DicOfPsmFactor[psm];// +pm.obsIntensity * DicOfProductMsMsFactor[pm];
+                                //newPM.obsIntensity += pm.obsIntensity + pm.obsIntensity * DicOfProductMsMsFactor[pm];
+                                newPM.normalizedIntensity += pm.normalizedIntensity * DicOfPsmFactor[psm];
+                                sumPsmFactor += DicOfPsmFactor[psm];
+                            }
                         }
+                        if (sumPsmFactor > 0 && newPM != null)
+                        {
+                            newPM.obsIntensity /= sumPsmFactor;
+                            newPM.normalizedIntensity /= sumPsmFactor;
 
-                        newPM.obsIntensity /= (double)matchList.Count;
-                        newPM.normalizedIntensity /= (double)matchList.Count;
+                            newPM.weight = matchList.Count * newPM.normalizedIntensity;
+                            avgNormedInt += newPM.normalizedIntensity;
+                            products.Add(newPM);
+                        }
                     }
-                    newPM.weight = matchList.Count * newPM.obsIntensity;
-                    avgInt += newPM.normalizedIntensity;
-                    products.Add(newPM);
                 }
-                avgInt /= (double)products.Count;
+                if(products.Count > 0)
+                    avgNormedInt /= (double)products.Count;
 
                 //Add missed important fragments
                 if (DicOfCommonPM != null)
@@ -308,6 +332,7 @@ namespace Trinity
                                 found = true;
                         if (!found)
                         {
+                            double sumPsmFactor = 0;
                             ProductMatch newMatch = new ProductMatch();
                             newMatch.theoMz = mz;
                             newMatch.weight = 0;
@@ -319,28 +344,35 @@ namespace Trinity
                                 {
                                     if (Math.Abs(Proteomics.Utilities.Numerics.CalculateMassError(peak.MZ, mz, dbOptions.productMassTolerance.Units)) <= dbOptions.productMassTolerance.Value)
                                     {
+                                        newMatch.obsIntensity += peak.Intensity * DicOfPsmFactor[psm];
+                                        newMatch.normalizedIntensity += (peak.Intensity / (psm.Query.spectrum.PrecursorIntensityPerMilliSecond * psm.Query.spectrum.InjectionTime)) * DicOfPsmFactor[psm];
+                                        sumPsmFactor += DicOfPsmFactor[psm];
                                         newMatch.weight += 1;
-                                        newMatch.obsIntensity += peak.Intensity;// + peak.Intensity * DicOfPsmFactor[psm];
-                                        newMatch.normalizedIntensity += peak.Intensity / (psm.Query.spectrum.PrecursorIntensityPerMilliSecond * psm.Query.spectrum.InjectionTime);
+//                                        newMatch.obsIntensity += peak.Intensity;// + peak.Intensity * DicOfPsmFactor[psm];
+//                                        newMatch.normalizedIntensity += peak.Intensity / (psm.Query.spectrum.PrecursorIntensityPerMilliSecond * psm.Query.spectrum.InjectionTime);
                                     }
                                 }
                             }
-                            if (newMatch.normalizedIntensity < avgInt * 0.05)
+                            if (newMatch.weight > 0)
                             {
-                                newMatch.normalizedIntensity = 0;
-                                newMatch.obsIntensity = 0;
+                                newMatch.obsIntensity /= sumPsmFactor;
+                                newMatch.normalizedIntensity /= sumPsmFactor;
                             }
-                            else
-                            {
-                                newMatch.obsIntensity /= (double)newMatch.weight;
-                                newMatch.normalizedIntensity /= (double) newMatch.weight;
-                            }
-                            newMatch.weight *= newMatch.obsIntensity;
+                            newMatch.weight *= newMatch.normalizedIntensity;
                             products.Add(newMatch);
                         }
                     }
                 }
+                
+                //Keep only most intense fragments (5% of average normalized intensity)
+                foreach(ProductMatch pm in products)
+                    if (pm.normalizedIntensity < avgNormedInt * 0.1)//0.05
+                    {
+                        pm.normalizedIntensity = 0;
+                        pm.obsIntensity = 0;
+                    }
             }
+
             return products;
         }
 
