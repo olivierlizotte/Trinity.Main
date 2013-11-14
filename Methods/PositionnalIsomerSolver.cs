@@ -50,6 +50,11 @@ namespace Trinity.UnitTest
                         if (tmpRatios[sampleMixed][sRatio] > 0)
                         {
                             double aimRatio = aim / (tmpRatios[sampleMixed][sRatio] / sum);
+
+                            //double aimRatioLog = Math.Log(aimRatio, 2);
+                            //double aimRatioMult = Math.Pow(aimRatio, 2);
+
+                            //Console.WriteLine("ADA " + aimRatioLog + "    " + aimRatioMult);
                             if (RatioNormalizer[sRatio] == 1.0 || Math.Abs(1.0 - aimRatio) < Math.Abs(1.0 - RatioNormalizer[sRatio]))
                                 RatioNormalizer[sRatio] = aimRatio;
                         }
@@ -63,8 +68,8 @@ namespace Trinity.UnitTest
                             sampleNormalizer.Add(sampleRatio, 0);
 
                         sampleNormalizer[sampleRatio] += tmpRatios[sampleMixed][sampleRatio] * RatioNormalizer[sampleRatio];
-                }
-
+                    }
+                /*
                 double sumOfSamples = 0;
                 foreach (Sample sample in sampleNormalizer.Keys)
                     sumOfSamples += sampleNormalizer[sample];
@@ -131,8 +136,12 @@ namespace Trinity.UnitTest
                     foreach(Sample mixedSample in ProjectMixed)
                     {
                         string lineCumulRatio = mixedSample.sSDF;
-                        foreach(Sample sRatio in ProjectRatios)                            
-                            lineCumulRatio += "," + ratios[mixedSample][sRatio];
+                        foreach (Sample ratioSample in ProjectRatios)
+                            if (ratios[mixedSample].ContainsKey(ratioSample))
+                                lineCumulRatio += "," + ratios[mixedSample][ratioSample];
+                            else
+                                lineCumulRatio += ",0.0";
+
                         writerCumul.AddLine(lineCumulRatio);
                     }
                     writerCumul.WriteToFile();
@@ -232,11 +241,11 @@ namespace Trinity.UnitTest
                 double cumulPercentError = 0;
                 Dictionary<Sample, Dictionary<Sample, double>> listOfSumOfRatio = new Dictionary<Sample, Dictionary<Sample, double>>();
                 Dictionary<Sample, List<Dictionary<int, string>>> dicOfResultsPerSample = new Dictionary<Sample, List<Dictionary<int, string>>>();
-                foreach (Sample sample in ProjectMixed)
+                foreach (Sample mixedSample in ProjectMixed)
                 {
                     //Dictionary<double, double> listOfSumOfRatioPerPrecursor = new Dictionary<double, double>();
                     Dictionary<Sample, double> DicOfSumOfRatioPerPeptide = new Dictionary<Sample, double>();
-                    dicOfResultsPerSample.Add(sample, new List<Dictionary<int, string>>());
+                    dicOfResultsPerSample.Add(mixedSample, new List<Dictionary<int, string>>());
                     //Dictionary<ProductSpectrum, bool> doneSpectrum = new Dictionary<ProductSpectrum, bool>();
                     //Dictionary<PeptideSpectrumMatch, ProductSpectrum> DicOfSpectrum = new Dictionary<ProductSpectrum, PeptideSpectrumMatch>();
                     Dictionary<ProductSpectrum, PeptideSpectrumMatch> DicOfSpectrum = new Dictionary<ProductSpectrum, PeptideSpectrumMatch>();
@@ -245,7 +254,7 @@ namespace Trinity.UnitTest
                     Dictionary<double, List<ProductSpectrum>> DicOfSpectrumMasses = new Dictionary<double, List<ProductSpectrum>>();
                     foreach (Query query in mixedResult.queries)
                     {
-                        if (query.sample == sample && !DicOfSpectrum.ContainsKey(query.spectrum) && query.precursor.Charge == chargeToConsider)
+                        if (query.sample == mixedSample && !DicOfSpectrum.ContainsKey(query.spectrum) && query.precursor.Charge == chargeToConsider)
                         {                            
                             PeptideSpectrumMatch psmToKeep = null;
                             foreach (PeptideSpectrumMatch psm in query.psms)
@@ -281,8 +290,6 @@ namespace Trinity.UnitTest
                     foreach (double key in DicOfSpectrumMasses.Keys)
                     {
                         Dictionary<Sample, double> sumOfRatio = new Dictionary<Sample, double>();
-                        foreach(Sample sRatio in ProjectRatios)
-                            sumOfRatio.Add(sRatio, 0);
 
                         List<ProductSpectrum> sortedSpectrum = DicOfSpectrumMasses[key];
                         sortedSpectrum.Sort(ProductSpectrum.AscendingRetentionTimeComparison);
@@ -357,10 +364,17 @@ namespace Trinity.UnitTest
 
                                     string strRatios = psm.Query.spectrum.RetentionTimeInMin.ToString() + "," + psm.Query.spectrum.PrecursorIntensityPerMilliSecond;
 
-                                    foreach (Sample sRatio in avgQuantifiedRatios.Keys)
+                                    foreach (Sample sRatio in ProjectRatios)
                                     {
-                                        sumOfRatio[sRatio] += avgQuantifiedRatios[sRatio];
-                                        strRatios += "," + finalRatios[sRatio] * DicOfNormalizeFactor[nbProductsToKeep][key][sRatio] * RatioNormalizer[sRatio] * psm.Query.spectrum.PrecursorIntensityPerMilliSecond;
+                                        if (avgQuantifiedRatios.ContainsKey(sRatio))
+                                        {
+                                            if (!sumOfRatio.ContainsKey(sRatio))
+                                                sumOfRatio.Add(sRatio, 0.0);
+                                            sumOfRatio[sRatio] += avgQuantifiedRatios[sRatio];
+                                            strRatios += "," + finalRatios[sRatio] * DicOfNormalizeFactor[nbProductsToKeep][key][sRatio] * RatioNormalizer[sRatio] * psm.Query.spectrum.PrecursorIntensityPerMilliSecond;
+                                        }
+                                        else
+                                            strRatios += ",0.0";
                                     }
                                     foreach (double mz in DicOfFragmentMz[nbProductsToKeep])
                                     {
@@ -385,13 +399,13 @@ namespace Trinity.UnitTest
                             }
 
                             LastTimeStamp = psm.Query.spectrum.RetentionTimeInMin;    
-                        }
+                        }//end of foreach psm
 
                         //Interpolate unused spectrum
                         double ComputedPrecursorArea = psmMatches.ComputePrecursorArea(smoothedPrecursor);
                         double factorOfUnusedLocalAreas = (ComputedPrecursorArea - UsedPrecursorArea) / UsedPrecursorArea;
 
-                        dicOfResultsPerSample[sample].Add(dicOfResults);
+                        dicOfResultsPerSample[mixedSample].Add(dicOfResults);
 
                         //Use SumOfRatio as the fraction for the entire Precursor area
                         /*double sumArea = 0;
@@ -403,17 +417,17 @@ namespace Trinity.UnitTest
                             sumOfRatio[i] = (sumOfRatio[i] / sumArea) * precursorArea;
                         //*/
                         
-                        foreach (Sample sRatio in sumOfRatio.Keys)
+                        foreach (Sample ratioSample in sumOfRatio.Keys)
                         {
-                            if(!DicOfSumOfRatioPerPeptide.ContainsKey(sRatio))
-                                DicOfSumOfRatioPerPeptide.Add(sRatio, 0);
-                            DicOfSumOfRatioPerPeptide[sRatio] += sumOfRatio[sRatio] + sumOfRatio[sRatio] * factorOfUnusedLocalAreas;
+                            if(!DicOfSumOfRatioPerPeptide.ContainsKey(ratioSample))
+                                DicOfSumOfRatioPerPeptide.Add(ratioSample, 0);
+                            DicOfSumOfRatioPerPeptide[ratioSample] += sumOfRatio[ratioSample] + sumOfRatio[ratioSample] * factorOfUnusedLocalAreas;
                         }
-                    }//precursor
+                    }//end of foreach precursor mass
 
-                    listOfSumOfRatio.Add(sample, DicOfSumOfRatioPerPeptide);//Per Precursor
+                    listOfSumOfRatio.Add(mixedSample, DicOfSumOfRatioPerPeptide);//Per Precursor
 
-                }//sample
+                }//end of foreach mixed sample
 
                 cumulPercentError /= (double)iterError;
                 if (aim4StableRatio > 0)
@@ -437,13 +451,14 @@ namespace Trinity.UnitTest
                     bestListOfSumOfRatio = listOfSumOfRatio;
                     bestDicOfResults = dicOfResultsPerSample;
                 }
-            }
+            }//end of foreach nbProductUsed
+
             if (bestDicOfResults != null)
             {
                 dbOptions.ConSole.WriteLine("Best Number of products : " + nbProductsUsed);
-                foreach (Sample sample in bestDicOfResults.Keys)
+                foreach (Sample mixedSample in bestDicOfResults.Keys)
                 {//Dictionary<Sample, List<Dictionary<int, string>>> 
-                    vsCSVWriter writer = new vsCSVWriter(dbOptions.OutputFolder + sample.nameColumn + "_Ratios7_Charge" + chargeToConsider + ".csv");
+                    vsCSVWriter writer = new vsCSVWriter(dbOptions.OutputFolder + mixedSample.nameColumn + "_Ratios7_Charge" + chargeToConsider + ".csv");
                     string title = "Retention Time,Precursor Intensity";
                     for(int i = 0; i < ProjectRatios.Count; i++)
                         title += "," + ProjectRatios[i].nameColumn;
@@ -451,7 +466,7 @@ namespace Trinity.UnitTest
                     foreach (double mz in DicOfFragmentMz[nbProductsUsed])
                         title += "," + mz;
                     writer.AddLine(title);
-                    foreach (Dictionary<int, string> dic in bestDicOfResults[sample])
+                    foreach (Dictionary<int, string> dic in bestDicOfResults[mixedSample])
                     {
                         List<int> scans = new List<int>(dic.Keys);
                         scans.Sort();
@@ -769,7 +784,7 @@ namespace Trinity.UnitTest
             foreach (double foundKey in FinalSpikedProducts.Keys)
             {
                 Peptide peptide = null;
-                List<List<ProductMatch>> SpikedProducts = new List<List<ProductMatch>>();
+                Dictionary<Sample, List<ProductMatch>> SpikedProducts = new Dictionary<Sample,List<ProductMatch>>();
                 //List<double> PeakAvgIntensities = new List<double>();
                 //Get list of PSMs per sample
                 double averagePrecursorArea = 0;
@@ -815,14 +830,13 @@ namespace Trinity.UnitTest
                         averagePrecursorArea += precursorArea;
                         nbAverageArea++;
 
-                        SpikedProducts.Add(productList);
+                        SpikedProducts.Add(sample, productList);
                         PrecursorAreas[foundKey].Add(sample, precursorArea);
                         //PeakAvgIntensities.Add(avgPeakIntensity);
                     }
                     else
                     {
                         listOfPSMs.Add(sample, psmList);
-                        SpikedProducts.Add(new List<ProductMatch>());
                         PrecursorAreas[foundKey].Add(sample, 0);
                         //PeakAvgIntensities.Add(0);
                     }
@@ -832,16 +846,18 @@ namespace Trinity.UnitTest
 
                 Dictionary<double, int> DicOfFragmentsToKeep = new Dictionary<double, int>();
                 //Get List of desired fragments, and keep masses
-                for (int i = 0; i < Project.Count; i++)
+                foreach(Sample sample in SpikedProducts.Keys)
                 {
-                    for (int j = SpikedProducts[i].Count - 1; j > 0 && j >= SpikedProducts[i].Count - nbProductsToKeep; j--)
-                        if (!DicOfFragmentsToKeep.ContainsKey(SpikedProducts[i][j].theoMz))
-                            DicOfFragmentsToKeep.Add(SpikedProducts[i][j].theoMz, 1);
-                        else
-                            DicOfFragmentsToKeep[SpikedProducts[i][j].theoMz]++;
+                    for (int j = SpikedProducts[sample].Count - 1; j > 0 && j >= SpikedProducts[sample].Count - nbProductsToKeep; j--)
+                    {
+                        if (!DicOfFragmentsToKeep.ContainsKey(SpikedProducts[sample][j].theoMz))
+                            DicOfFragmentsToKeep.Add(SpikedProducts[sample][j].theoMz, 0);
+
+                        DicOfFragmentsToKeep[SpikedProducts[sample][j].theoMz]++;
+                    }
                 }
 
-                foreach (Sample sample in Project)
+                foreach (Sample sample in SpikedProducts.Keys)
                 {
                     List<ProductMatch> list = listOfPSMs[sample].GetCombinedSpectrum(precomputedResults.dbOptions, peptide, charge, DicOfFragmentsToKeep);
 
@@ -881,7 +897,7 @@ namespace Trinity.UnitTest
                 Dictionary<Sample, double> listOfsumOfProducts = new Dictionary<Sample, double>();
                 double avgRatioSum = 0;
                 int nbInt = 0;
-                foreach (Sample sample in Project)
+                foreach (Sample sample in FinalSpikedProducts[foundKey].Keys)
                 {
                     double sumOfProducts = 0;
                     for (int j = 0; j < FinalSpikedProducts[foundKey][sample].Count; j++)
@@ -894,8 +910,8 @@ namespace Trinity.UnitTest
                         nbInt++;
                 }
                 avgRatioSum /= (double)nbInt;
-                
-                foreach (Sample sample in Project)
+
+                foreach (Sample sample in listOfsumOfProducts.Keys)
                 {
                     if (listOfsumOfProducts[sample] > 0)
                     {
