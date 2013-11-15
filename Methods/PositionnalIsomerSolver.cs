@@ -391,9 +391,9 @@ namespace Trinity.UnitTest
                                 else
                                     dbOptions.ConSole.WriteLine("Bad MaxFlow computation : " + percentError);
 
-                                foreach (double ratio in finalRatios.Values)
-                                    if (ratio == 0)
-                                        percentError += 1.0 / (double)finalRatios.Count;//*/
+                                //foreach (double ratio in finalRatios.Values)
+                                //    if (ratio == 0)
+                                //        percentError += 1.0 / (double)finalRatios.Count;//*/
                                 cumulPercentError += percentError;
                                 iterError++;
                             }
@@ -428,7 +428,7 @@ namespace Trinity.UnitTest
                     listOfSumOfRatio.Add(mixedSample, DicOfSumOfRatioPerPeptide);//Per Precursor
 
                 }//end of foreach mixed sample
-
+                /*
                 cumulPercentError /= (double)iterError;
                 if (aim4StableRatio > 0)
                 {
@@ -441,7 +441,7 @@ namespace Trinity.UnitTest
                         foreach (double val in dicOfSum.Values)
                             cumulPercentError += Math.Abs(aim4StableRatio - val / sum);
                     }
-                }
+                }//*/
                 
                 //cumulPercentError /= (double)nbProductsToKeep;//Average error, per peak/fragment
                 if (cumulPercentError < smallestError)
@@ -756,7 +756,7 @@ namespace Trinity.UnitTest
         private static void BuildSinglePeptideVirtualSpectrum(Result precomputedResults, bool smoothPrecursor, 
                     int nbProductsToKeep, Dictionary<Sample, double> RatioNormalizer, ref Dictionary<double, Dictionary<Sample, List<ProductMatch>>> FinalSpikedProducts, 
                     ref Dictionary<double, Dictionary<Sample, double>> PrecursorAreas, ref Dictionary<double, Dictionary<Sample, double>> Normalizor, ref List<double> FragmentMz, int charge)
-        {   
+        {
             DBOptions dbOptions = precomputedResults.dbOptions;
             Samples Project = precomputedResults.samples;
 
