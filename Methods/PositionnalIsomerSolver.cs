@@ -213,32 +213,34 @@ namespace Trinity.UnitTest
             Dictionary<int, Dictionary<double, Dictionary<Sample, List<ProductMatch>>>> DicOfRatios = new Dictionary<int, Dictionary<double, Dictionary<Sample, List<ProductMatch>>>>();
             //Dictionary<int, Dictionary<double, List<double>>>               DicOfPrecursorAreas = new Dictionary<int, Dictionary<double, List<double>>>();
             Dictionary<int, Dictionary<double, Dictionary<Sample, double>>> DicOfNormalizeFactor = new Dictionary<int, Dictionary<double, Dictionary<Sample, double>>>();
+            Dictionary<int, Dictionary<double, Dictionary<Sample, ElutionCurve>>> DicOfPrecursorCurves = new Dictionary<int, Dictionary<double, Dictionary<Sample, ElutionCurve>>>();
             Dictionary<int, double>                                         DicOfErrors = new Dictionary<int,double>();
             Dictionary<int, List<double>>                                   DicOfFragmentMz = new Dictionary<int, List<double>>();
 
             for (int nbProductsToKeep = nbProductMin; nbProductsToKeep <= nbProductMax; nbProductsToKeep++)
             {
                 Dictionary<double, Dictionary<Sample, List<ProductMatch>>> ratios = new Dictionary<double, Dictionary<Sample, List<ProductMatch>>>();
-                Dictionary<double, Dictionary<Sample, double>> PrecursorAreas = new Dictionary<double, Dictionary<Sample, double>>();
+                Dictionary<double, Dictionary<Sample, ElutionCurve>> PrecursorCurves = new Dictionary<double, Dictionary<Sample, ElutionCurve>>();
                 Dictionary<double, Dictionary<Sample, double>> NormalizeFactor = new Dictionary<double, Dictionary<Sample, double>>();
                 List<double> ListFragmentMz = new List<double>();
 
                 BuildSinglePeptideVirtualSpectrum(spikedResult, smoothedPrecursor, nbProductsToKeep, RatioNormalizer,
-                                                        ref ratios, ref PrecursorAreas, ref NormalizeFactor, ref ListFragmentMz, chargeToConsider);
+                                                        ref ratios, ref PrecursorCurves, ref NormalizeFactor, ref ListFragmentMz, chargeToConsider);
 
                 DicOfRatios.Add(nbProductsToKeep, ratios);
                 //DicOfPrecursorAreas.Add(nbProductsToKeep, PrecursorAreas);
                 DicOfNormalizeFactor.Add(nbProductsToKeep, NormalizeFactor);
+                DicOfPrecursorCurves.Add(nbProductsToKeep, PrecursorCurves);
                 DicOfFragmentMz.Add(nbProductsToKeep, ListFragmentMz);
                 DicOfErrors.Add(nbProductsToKeep, 0);
             }
 
             double smallestError = double.MaxValue;
-            Dictionary<Sample, Dictionary<Sample, double>> bestListOfSumOfRatio = null;
+            Dictionary<Sample, Dictionary<Sample, List<double>>> bestListOfSumOfRatio = new Dictionary<Sample, Dictionary<Sample, List<double>>>();
             Dictionary<Sample, List<Dictionary<int, string>>> bestDicOfResults = null;
             for (int nbProductsToKeep = nbProductMin; nbProductsToKeep <= nbProductMax; nbProductsToKeep++)
             {
-                long iterError = 0;
+                //long iterError = 0;
                 double cumulPercentError = 0;
                 Dictionary<Sample, Dictionary<Sample, double>> listOfSumOfRatio = new Dictionary<Sample, Dictionary<Sample, double>>();
                 Dictionary<Sample, List<Dictionary<int, string>>> dicOfResultsPerSample = new Dictionary<Sample, List<Dictionary<int, string>>>();
@@ -319,7 +321,7 @@ namespace Trinity.UnitTest
                         
                         Dictionary<int, string> dicOfResults = new Dictionary<int, string>();
                         
-                        double UsedPrecursorArea = 0.0;                        
+                        //double UsedPrecursorArea = 0.0;                        
                         double LastTimeStamp = 0;
 
                         Dictionary<Sample, List<ProductMatch>> matches = new Dictionary<Sample, List<ProductMatch>>();                        
@@ -337,6 +339,7 @@ namespace Trinity.UnitTest
                             double percentError = 0;
                             Dictionary<Sample, double> finalRatios = LaunchMaxFlowFromSpectrum(matches, precision, psm.Query.spectrum.Peaks, dbOptions.productMassTolerance,
                                                                     mflowReturnType, psm.Query.spectrum.PrecursorIntensityPerMilliSecond * psm.Query.spectrum.InjectionTime, ref overFlow, ref underFlow, ref percentError, dbOptions.ConSole);
+                            cumulPercentError += percentError;
 
                             //double normSumRatio = 0;
                             //for (int i = 0; i < finalRatios.Count; i++)
@@ -348,7 +351,7 @@ namespace Trinity.UnitTest
 
                             double ElapsedTime = (psm.Query.spectrum.RetentionTimeInMin - LastTimeStamp) * 60.0 * 1000.0;
 
-                            double localArea = psm.Query.spectrum.PrecursorIntensityPerMilliSecond * ElapsedTime;
+                            //double localArea = psm.Query.spectrum.PrecursorIntensityPerMilliSecond * ElapsedTime;
 
                             if (LastTimeStamp > 0)
                             {
@@ -357,14 +360,15 @@ namespace Trinity.UnitTest
                                 //precursorArea += localArea;
                                 if (percentError < 0.5)//25)// && !double.IsNaN(normSumRatio) && normSumRatio > 0)//0.95
                                 {
-                                    UsedPrecursorArea += localArea;
+                                    //UsedPrecursorArea += localArea;
                                     Dictionary<Sample, double> avgQuantifiedRatios = new Dictionary<Sample, double>();
 
                                     foreach (Sample sRatio in finalRatios.Keys)
                                     {
                                         //double avgRatio = (finalRatios[i] / sumRatio) * DicOfNormalizeFactor[nbProductsToKeep][key][i] * localArea;
-                                        double avgRatio = finalRatios[sRatio] * DicOfNormalizeFactor[nbProductsToKeep][key][sRatio] * localArea * RatioNormalizer[sRatio];
-                                        curves[sRatio].AddPoint(psm.Query.spectrum.RetentionTimeInMin * 60.0 * 1000.0, avgRatio / ElapsedTime);
+                                        double avgRatio = finalRatios[sRatio] * DicOfNormalizeFactor[nbProductsToKeep][key][sRatio] * psm.Query.spectrum.PrecursorIntensityPerMilliSecond * RatioNormalizer[sRatio];
+                                        if(avgRatio > 0)
+                                            curves[sRatio].AddPoint(psm.Query.spectrum.RetentionTimeInMin * 60.0 * 1000.0, avgRatio);
 
                                         if (double.IsNaN(avgRatio))
                                             dbOptions.ConSole.WriteLine("Oops, NaN in ratios");
@@ -402,9 +406,8 @@ namespace Trinity.UnitTest
 
                                 //foreach (double ratio in finalRatios.Values)
                                 //    if (ratio == 0)
-                                //        percentError += 1.0 / (double)finalRatios.Count;//*/
-                                cumulPercentError += percentError;
-                                iterError++;
+                                //        percentError += 1.0 / (double)finalRatios.Count;//*/                                
+                                //iterError++;
                             }
 
                             LastTimeStamp = psm.Query.spectrum.RetentionTimeInMin;    
@@ -416,12 +419,13 @@ namespace Trinity.UnitTest
                             if (curves.ContainsKey(sRatio))
                             {
                                 curves[sRatio].Compute();
+                                double sizeDiff = curves[sRatio].Area / DicOfPrecursorCurves[nbProductsToKeep][key][sRatio].Area;
                                 sumOfRatio[sRatio] += curves[sRatio].Area;
                             }
                         }
 
                         //Interpolate unused spectrum
-                        double factorOfUnusedLocalAreas = (mixedCurve.Area - UsedPrecursorArea) / UsedPrecursorArea;
+                        //double factorOfUnusedLocalAreas = (mixedCurve.Area - UsedPrecursorArea) / UsedPrecursorArea;
 
                         dicOfResultsPerSample[mixedSample].Add(dicOfResults);
 
@@ -439,7 +443,7 @@ namespace Trinity.UnitTest
                         {
                             if(!DicOfSumOfRatioPerPeptide.ContainsKey(ratioSample))
                                 DicOfSumOfRatioPerPeptide.Add(ratioSample, 0);
-                            DicOfSumOfRatioPerPeptide[ratioSample] += sumOfRatio[ratioSample] + sumOfRatio[ratioSample] * factorOfUnusedLocalAreas;
+                            DicOfSumOfRatioPerPeptide[ratioSample] += sumOfRatio[ratioSample];// +sumOfRatio[ratioSample] * factorOfUnusedLocalAreas;
                         }
                     }//end of foreach precursor mass
 
@@ -466,8 +470,22 @@ namespace Trinity.UnitTest
                 {
                     nbProductsUsed = nbProductsToKeep;
                     smallestError = cumulPercentError;
-                    bestListOfSumOfRatio = listOfSumOfRatio;
+                    //bestListOfSumOfRatio = listOfSumOfRatio;
                     bestDicOfResults = dicOfResultsPerSample;
+                }
+
+                //Take the average of allowed nbProduct
+                foreach(Sample mixedSample in listOfSumOfRatio.Keys)
+                {
+                    if(!bestListOfSumOfRatio.ContainsKey(mixedSample))
+                        bestListOfSumOfRatio.Add(mixedSample, new Dictionary<Sample,List<double>>());
+
+                    foreach(Sample ratioSample in listOfSumOfRatio[mixedSample].Keys)
+                    {
+                        if(!bestListOfSumOfRatio[mixedSample].ContainsKey(ratioSample))
+                            bestListOfSumOfRatio[mixedSample].Add(ratioSample, new List<double>());
+                        bestListOfSumOfRatio[mixedSample][ratioSample].Add(listOfSumOfRatio[mixedSample][ratioSample]);
+                    }
                 }
             }//end of foreach nbProductUsed
 
@@ -476,7 +494,7 @@ namespace Trinity.UnitTest
                 dbOptions.ConSole.WriteLine("Best Number of products : " + nbProductsUsed);
                 foreach (Sample mixedSample in bestDicOfResults.Keys)
                 {//Dictionary<Sample, List<Dictionary<int, string>>> 
-                    vsCSVWriter writer = new vsCSVWriter(dbOptions.OutputFolder + mixedSample.nameColumn + "_Ratios7_Charge" + chargeToConsider + ".csv");
+                    vsCSVWriter writer = new vsCSVWriter(dbOptions.OutputFolder + mixedSample.nameColumn + "_Ratios8_Charge" + chargeToConsider + ".csv");
                     string title = "Retention Time,Precursor Intensity";
                     for(int i = 0; i < ProjectRatios.Count; i++)
                         title += "," + ProjectRatios[i].nameColumn;
@@ -497,7 +515,24 @@ namespace Trinity.UnitTest
                 //    for (int i = 0; i < sampleRatio.Count; i++)
                 //        sampleRatio[i] *= RatioNormalizer[i];
             }
-            return bestListOfSumOfRatio;
+
+            Dictionary<Sample, Dictionary<Sample, double>> result = new Dictionary<Sample, Dictionary<Sample, double>>();
+
+            foreach (Sample mixedSample in bestListOfSumOfRatio.Keys)
+            {
+                if (!result.ContainsKey(mixedSample))
+                    result.Add(mixedSample, new Dictionary<Sample, double>());
+
+                foreach (Sample ratioSample in bestListOfSumOfRatio[mixedSample].Keys)
+                {
+                    if (!result[mixedSample].ContainsKey(ratioSample))
+                        result[mixedSample].Add(ratioSample, 0);
+                    foreach (double area in bestListOfSumOfRatio[mixedSample][ratioSample])
+                        result[mixedSample][ratioSample] += area;
+                    result[mixedSample][ratioSample] /= (double)bestListOfSumOfRatio[mixedSample][ratioSample].Count;
+                }
+            }
+            return result;
         }
 
         private static double ComputeMaxFlow(List<List<ProductMatch>> spikedMatches,
@@ -545,18 +580,17 @@ namespace Trinity.UnitTest
             Dictionary<float, double> virtualSpectrum = BuildVirtualSpectrum(spikedMatches, localFlows, mixedFragDic);
             double overError = MaxFlowHelper.ComputeOverflow(virtualSpectrum, mixedFragDic);
             double underError = MaxFlowHelper.ComputeUnderflow(virtualSpectrum, mixedFragDic);
-            int bestIndex = 0;
+            double[] bestIndexes = new double[spikedMatches.Count];
 
             int iterSize = 1;
             double bestOverallError = double.MaxValue;
             List<long> bestLocalFlows = new List<long>();
-
+            Random rnd = new Random();
             while (overError > 1 && iterSize < 10000)//anything less than 1 is an acceptable solution
             {
-                bestIndex = -1;
-                //double smallestUnderError = double.MaxValue;
-                //double smallestOverError = overError;
-                double worstFlowRate = 0.0;
+                for (int index = 0; index < bestIndexes.Length; index++)
+                    bestIndexes[index] = -1;
+                
                 for (int i = 0; i < spikedMatches.Count; i++)
                 {
                     if (localFlows[i] > 0)
@@ -570,8 +604,12 @@ namespace Trinity.UnitTest
                         double underDiff = Math.Abs(underError - tmpErrorMinus);
                         if (underDiff >= 1)
                             tmpFlowRate /= underDiff;
-                        if (double.IsNaN(tmpFlowRate) || double.IsInfinity(tmpFlowRate))
-                            ConSole.WriteLine("schnit");
+                        bestIndexes[i] = tmpFlowRate;
+                        //if (double.IsNaN(tmpFlowRate) || double.IsInfinity(tmpFlowRate))
+                        //    ConSole.WriteLine("schnit");
+                        /*
+                        if (tmpFlowRate == worstFlowRate)
+                            Console.WriteLine("testse");
                         if(tmpFlowRate > worstFlowRate)
                         //if (tmpErrorPlus < overError && (tmpErrorMinus < smallestUnderError
                         //    || (tmpErrorMinus == smallestUnderError && tmpErrorPlus < smallestOverError)))
@@ -579,14 +617,36 @@ namespace Trinity.UnitTest
                             worstFlowRate = tmpFlowRate;
                             //smallestOverError = tmpErrorPlus;
                             //smallestUnderError = tmpErrorMinus;
-                            bestIndex = i;
-                        }
+                            bestIndexes[i] = tmpFlowRate;
+                        }//*/
                         localFlows[i] += iterSize;
                     }
                 }
-                if (bestIndex != -1)
+
+                //Pick pseudo randomly best index
+                double worstFlowRate = 0.0;
+                for (int index = 0; index < bestIndexes.Length; index++)
+                    if (bestIndexes[index] > worstFlowRate)
+                    {
+                        worstFlowRate = bestIndexes[index];
+                    }
+
+                if (worstFlowRate > 0)
                 {
-                    localFlows[bestIndex] -= iterSize;
+                    int nbMatching = 0;
+                    for (int index = 0; index < bestIndexes.Length; index++)
+                        if(bestIndexes[index] >= worstFlowRate)
+                            nbMatching++;
+
+                    int iterChoice = rnd.Next(0, nbMatching - 1);
+                    int iterNb = 0;
+                    for (int index = 0; index < bestIndexes.Length; index++)
+                        if (bestIndexes[index] >= worstFlowRate)
+                        {
+                            if (iterChoice == iterNb)
+                                localFlows[index] -= iterSize;
+                            iterNb++;
+                        }
                     iterSize = 1;
                 }
                 else
@@ -773,7 +833,7 @@ namespace Trinity.UnitTest
 
         private static void BuildSinglePeptideVirtualSpectrum(Result precomputedResults, bool smoothPrecursor, 
                     int nbProductsToKeep, Dictionary<Sample, double> RatioNormalizer, ref Dictionary<double, Dictionary<Sample, List<ProductMatch>>> FinalSpikedProducts, 
-                    ref Dictionary<double, Dictionary<Sample, double>> PrecursorAreas, ref Dictionary<double, Dictionary<Sample, double>> Normalizor, ref List<double> FragmentMz, int charge)
+                    ref Dictionary<double, Dictionary<Sample, ElutionCurve>> PrecursorCurves, ref Dictionary<double, Dictionary<Sample, double>> Normalizor, ref List<double> FragmentMz, int charge)
         {
             DBOptions dbOptions = precomputedResults.dbOptions;
             Samples Project = precomputedResults.samples;
@@ -791,7 +851,7 @@ namespace Trinity.UnitTest
                 {
                     foundKey = peptideMass;
                     FinalSpikedProducts.Add(foundKey, new Dictionary<Sample,List<ProductMatch>>());
-                    PrecursorAreas.Add(foundKey, new Dictionary<Sample, double>());
+                    PrecursorCurves.Add(foundKey, new Dictionary<Sample, ElutionCurve>());
                     Normalizor.Add(foundKey, new Dictionary<Sample, double>());
                 }
             }
@@ -843,22 +903,22 @@ namespace Trinity.UnitTest
                         List<ProductMatch> productList = psmList.GetCombinedSpectrum(precomputedResults.dbOptions, peptide, charge);
 
                         productList.Sort(ProductMatch.AscendingWeightComparison);
-
-                        double precursorArea = psmList.ComputePrecursorArea(smoothPrecursor);
-                        averagePrecursorArea += precursorArea;
+                                                
                         nbAverageArea++;
 
                         SpikedProducts.Add(sample, productList);
-                        PrecursorAreas[foundKey].Add(sample, precursorArea);
+                        PrecursorCurves[foundKey].Add(sample, ElutionCurve.Create(psmList));
+                        averagePrecursorArea += PrecursorCurves[foundKey][sample].Area;
                         //PeakAvgIntensities.Add(avgPeakIntensity);
                     }
                     else
                     {
                         listOfPSMs.Add(sample, psmList);
-                        PrecursorAreas[foundKey].Add(sample, 0);
+                        PrecursorCurves[foundKey].Add(sample, ElutionCurve.Create(psmList));
                         //PeakAvgIntensities.Add(0);
                     }
-                }
+                }//end of for each sample
+
                 //avgMsMsProductIntensity /= nbAveragedSpectrum;
                 averagePrecursorArea /= (double)nbAverageArea;
 
@@ -933,8 +993,8 @@ namespace Trinity.UnitTest
                 {
                     if (listOfsumOfProducts[sample] > 0)
                     {
-                        double lossOfPrecIntensity = Math.Log(averagePrecursorArea, 2) / Math.Log(PrecursorAreas[foundKey][sample], 2);
-                        double lossofFragmentIntensity = Math.Pow(avgRatioSum, 2) / Math.Pow(listOfsumOfProducts[sample], 2);
+                        double lossOfPrecIntensity = 1;// Math.Log(averagePrecursorArea, 2) / Math.Log(PrecursorCurves[foundKey][sample].Area, 2);
+                        double lossofFragmentIntensity = 1;// Math.Pow(avgRatioSum, 2) / Math.Pow(listOfsumOfProducts[sample], 2);
 
                         //Normalizor[foundKey].Add((spectrumWeight / listOfsumOfProducts[i]) * (averagePrecursorArea / PrecursorAreas[foundKey][i]) * RatioNormalizer[i]);
                         //Normalizor[foundKey].Add(lossOfPrecIntensity * lossofFragmentIntensity);//(averagePrecursorArea / PrecursorAreas[foundKey][i]) * RatioNormalizer[i]);

@@ -29,7 +29,13 @@ namespace Trinity
 
         public void Compute()
         {
-            Area = Proteomics.Utilities.CurveFitter.FitToPolynomial(time.ToArray(), intensityCount.ToArray(), out Coefficients);
+            if (time != null && time.Count > 2)
+                Area = Proteomics.Utilities.CurveFitter.FitToPolynomial(time.ToArray(), intensityCount.ToArray(), out Coefficients);
+            else
+            {
+                Area = 0;
+                Coefficients = new double[0];
+            }
         }
 
         public void AddPoint(double newTimePoint, double newIntensityPerMilliSeconds)

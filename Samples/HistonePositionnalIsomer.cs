@@ -15,7 +15,7 @@ namespace Trinity.UnitTest
     {
         public static DBOptions GetDBOptions(bool loadFromRaw, bool onlyYions, IConSol console)
         {
-            string outputDir = @"C:\_IRIC\DATA\Test\testNB\";
+            string outputDir = @"C:\_IRIC\DATA\Test\testNB\Iso3\";
             string fastaFile = @"C:\_IRIC\Data\NB\peptide.fasta";
             DBOptions dbOptions = new DBOptions(fastaFile, console);
             dbOptions.precursorMassTolerance = new MassTolerance(8/*8*//*8withoutisotopes*/, MassToleranceUnits.ppm);
@@ -71,8 +71,8 @@ namespace Trinity.UnitTest
             Samples ProjectMixed = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_MonoAce_Varied_19Oct.csv", 0, dbOptions);
             Samples ProjectStable = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_StableMix_MonoAce_19Oct.csv", 0, dbOptions);            
             
-            int nbProductsMin = 5;// 4;
-            int nbProductsMax = 5;// 14;
+            int nbProductsMin = 4;// 4;
+            int nbProductsMax = 14;// 14;
             bool smoothedPrecursor = false;
             int precision = 1000;//10000
             int maxCharge = 2;
@@ -85,7 +85,7 @@ namespace Trinity.UnitTest
             DBOptions dbOptions = GetDBOptions(false, false, console);
             Samples ProjectRatios = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_DiAce_Spiked_19Oct.csv", 0, dbOptions);
             Samples ProjectMixed =  new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_DiAce_Varied_19Oct.csv", 0, dbOptions);
-            Samples ProjectStable = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_StableMix_DiAce_19Oct.csv", 0, dbOptions);
+            Samples ProjectStable = null;// new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_StableMix_DiAce_19Oct.csv", 0, dbOptions);
 
             int nbProductsMin = 4;
             int nbProductsMax = 14;
@@ -103,8 +103,8 @@ namespace Trinity.UnitTest
             Samples ProjectMixed = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_TriAce_Varied_19Oct.csv", 0, dbOptions);
             Samples ProjectStable = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_StableMix_TriAce_19Oct.csv", 0, dbOptions);
 
-            int nbProductsMin = 5;// 4;
-            int nbProductsMax = 5;// 14;
+            int nbProductsMin = 4;// 4;
+            int nbProductsMax = 14;// 14;
             bool smoothedPrecursor = false;
             int precision = 1000;
             int maxCharge = 2;
@@ -117,10 +117,10 @@ namespace Trinity.UnitTest
             DBOptions dbOptions = GetDBOptions(false, false, console);
             Samples ProjectRatios = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_AllAce_Spiked_19Oct.csv", 0, dbOptions);
             Samples ProjectMixed = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_AllAce_Varied_19Oct.csv", 0, dbOptions);
-            Samples ProjectStable = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_StableMix_AllAce_19Oct.csv", 0, dbOptions);
+            Samples ProjectStable = null;// new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_StableMix_AllAce_19Oct.csv", 0, dbOptions);
 
-            int nbProductsMin = 5;// 4;
-            int nbProductsMax = 5;// 14;
+            int nbProductsMin = 4;// 4;
+            int nbProductsMax = 14;// 14;
             bool smoothedPrecursor = false;
             int precision = 1000;
             int maxCharge = 2;
