@@ -15,8 +15,8 @@ namespace Trinity.UnitTest
     {
         public static DBOptions GetDBOptions(bool loadFromRaw, bool onlyYions, IConSol console)
         {
-            string outputDir = @"C:\_IRIC\DATA\Test\testNB\Iso3\";
-            string fastaFile = @"G:\Thibault\-=Proteomics_Raw_Data=-\ELITE\FEB13_2013\MSMS files\Peptide.fasta";
+            string outputDir = @"C:\_IRIC\DATA\Test\testNB\";
+            string fastaFile = @"C:\_IRIC\Data\NB\peptide.fasta";
             DBOptions dbOptions = new DBOptions(fastaFile, console);
             dbOptions.precursorMassTolerance = new MassTolerance(8/*8*//*8withoutisotopes*/, MassToleranceUnits.ppm);
             dbOptions.productMassTolerance = new MassTolerance(20/*8*//*8withoutisotopes*/, MassToleranceUnits.ppm);

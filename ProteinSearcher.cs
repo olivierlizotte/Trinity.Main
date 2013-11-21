@@ -176,7 +176,7 @@ namespace Trinity
             this.options = options;
         }
 
-        public ProteinGroupMatches SearchLatest(List<PeptideMatch> peptides, System.Collections.Concurrent.ConcurrentDictionary<string, List<Protein>> dicOfProteins)//, List<Protein> AllProteins)// Dictionary<string, List<Protein>> dicOfPeptides)
+        public ProteinGroupMatches SearchLatest(List<PeptideMatch> peptides, IDictionary<string, List<Protein>> dicOfProteins)//, List<Protein> AllProteins)// Dictionary<string, List<Protein>> dicOfPeptides)
         {
             Dictionary<string, PeptideMatch> dicOfPeptideMatches = new Dictionary<string,PeptideMatch>();
             foreach(PeptideMatch match in peptides)

@@ -171,7 +171,8 @@ namespace Trinity.UnitTest
                         double sum = 0;
                         foreach (double val in ratiosForCrossTalk[sample].Values)
                             sum += val;
-                        writerStats.AddLine("Coverage : " + (float)(100.0 * ratiosForCrossTalk[sample][sample] / sum));
+                        if(ratiosForCrossTalk[sample].ContainsKey(sample))
+                            writerStats.AddLine("Coverage : " + (float)(100.0 * ratiosForCrossTalk[sample][sample] / sum));
                         string line = "Spreading : ";
                         foreach (double val in ratiosForCrossTalk[sample].Values)
                             line += (val / sum).ToString() + ",";
@@ -305,29 +306,35 @@ namespace Trinity.UnitTest
                         foreach (PeptideSpectrumMatch psm in psmMatches)
                             if (bestPsm == null || psm.Query.spectrum.TotalIntensity > bestPsm.Query.spectrum.TotalIntensity)
                                 bestPsm = psm;
-                        mixedResult.ExportFragments(bestPsm);
+                        mixedResult.ExportFragments(bestPsm);                        
                         // -- ******************** -- //
 
+                        ElutionCurve mixedCurve = ElutionCurve.Create(psmMatches);
+                        Dictionary<Sample, ElutionCurve> curves = new Dictionary<Sample, ElutionCurve>();
 
+                        //double ComputedPrecursorArea = psmMatches.ComputePrecursorArea(smoothedPrecursor);
+
+                        
                         //Dictionary<PeptideSpectrumMatch, double> DicOfPsmFactor = psmMatches.ComputeMsMsNormalizationFactors();
                         
                         Dictionary<int, string> dicOfResults = new Dictionary<int, string>();
                         
                         double UsedPrecursorArea = 0.0;                        
                         double LastTimeStamp = 0;
-                        //double TotalElapsedTime = 0;
-                        //foreach(ProductSpectrum key in sortedSpectrum)
+
+                        Dictionary<Sample, List<ProductMatch>> matches = new Dictionary<Sample, List<ProductMatch>>();                        
+                        foreach (Sample sRatio in peptideMasses.Keys)
+                            if (Math.Abs(Proteomics.Utilities.Numerics.CalculateMassError(key, peptideMasses[sRatio], dbOptions.precursorMassTolerance.Units)) <= dbOptions.precursorMassTolerance.Value)
+                            {
+                                matches.Add(sRatio, DicOfRatios[nbProductsToKeep][key][sRatio]);
+                                curves.Add(sRatio, new ElutionCurve());
+                            }
+
                         foreach (PeptideSpectrumMatch psm in psmMatches)
                         {
                             double overFlow = 0;
                             double underFlow = 0;
                             double percentError = 0;
-                            Dictionary<Sample, List<ProductMatch>> matches = new Dictionary<Sample, List<ProductMatch>>();
-
-                            //for (int i = 0; i < peptideMasses.Count; i++)
-                            foreach(Sample sRatio in peptideMasses.Keys)
-                                if (Math.Abs(Proteomics.Utilities.Numerics.CalculateMassError(psm.Peptide.MonoisotopicMass, peptideMasses[sRatio], dbOptions.precursorMassTolerance.Units)) <= dbOptions.precursorMassTolerance.Value)
-                                    matches.Add(sRatio, DicOfRatios[nbProductsToKeep][key][sRatio]);
                             Dictionary<Sample, double> finalRatios = LaunchMaxFlowFromSpectrum(matches, precision, psm.Query.spectrum.Peaks, dbOptions.productMassTolerance,
                                                                     mflowReturnType, psm.Query.spectrum.PrecursorIntensityPerMilliSecond * psm.Query.spectrum.InjectionTime, ref overFlow, ref underFlow, ref percentError, dbOptions.ConSole);
 
@@ -341,7 +348,7 @@ namespace Trinity.UnitTest
 
                             double ElapsedTime = (psm.Query.spectrum.RetentionTimeInMin - LastTimeStamp) * 60.0 * 1000.0;
 
-                            double localArea = psm.Query.spectrum.PrecursorIntensityPerMilliSecond * ElapsedTime;                            
+                            double localArea = psm.Query.spectrum.PrecursorIntensityPerMilliSecond * ElapsedTime;
 
                             if (LastTimeStamp > 0)
                             {
@@ -357,6 +364,8 @@ namespace Trinity.UnitTest
                                     {
                                         //double avgRatio = (finalRatios[i] / sumRatio) * DicOfNormalizeFactor[nbProductsToKeep][key][i] * localArea;
                                         double avgRatio = finalRatios[sRatio] * DicOfNormalizeFactor[nbProductsToKeep][key][sRatio] * localArea * RatioNormalizer[sRatio];
+                                        curves[sRatio].AddPoint(psm.Query.spectrum.RetentionTimeInMin * 60.0 * 1000.0, avgRatio / ElapsedTime);
+
                                         if (double.IsNaN(avgRatio))
                                             dbOptions.ConSole.WriteLine("Oops, NaN in ratios");
                                         avgQuantifiedRatios.Add(sRatio, avgRatio);
@@ -370,7 +379,7 @@ namespace Trinity.UnitTest
                                         {
                                             if (!sumOfRatio.ContainsKey(sRatio))
                                                 sumOfRatio.Add(sRatio, 0.0);
-                                            sumOfRatio[sRatio] += avgQuantifiedRatios[sRatio];
+//!!!!                                            sumOfRatio[sRatio] += avgQuantifiedRatios[sRatio];
                                             strRatios += "," + finalRatios[sRatio] * DicOfNormalizeFactor[nbProductsToKeep][key][sRatio] * RatioNormalizer[sRatio] * psm.Query.spectrum.PrecursorIntensityPerMilliSecond;
                                         }
                                         else
@@ -400,10 +409,19 @@ namespace Trinity.UnitTest
 
                             LastTimeStamp = psm.Query.spectrum.RetentionTimeInMin;    
                         }//end of foreach psm
+                                                
+                        //!!!! TODO Find the best pipeline                        
+                        foreach (Sample sRatio in ProjectRatios)
+                        {
+                            if (curves.ContainsKey(sRatio))
+                            {
+                                curves[sRatio].Compute();
+                                sumOfRatio[sRatio] += curves[sRatio].Area;
+                            }
+                        }
 
                         //Interpolate unused spectrum
-                        double ComputedPrecursorArea = psmMatches.ComputePrecursorArea(smoothedPrecursor);
-                        double factorOfUnusedLocalAreas = (ComputedPrecursorArea - UsedPrecursorArea) / UsedPrecursorArea;
+                        double factorOfUnusedLocalAreas = (mixedCurve.Area - UsedPrecursorArea) / UsedPrecursorArea;
 
                         dicOfResultsPerSample[mixedSample].Add(dicOfResults);
 

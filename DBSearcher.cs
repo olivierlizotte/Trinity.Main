@@ -78,8 +78,8 @@ namespace Trinity
             queries.dbOptions.ConSole.WriteLine("Mapping " + queries.Count + " queries to the digested proteome ... ");
 
             long nbQueryConsidered = 0;
-            //Parallel.ForEach<Tuple<Peptide, int>>(fittingPeptides, (Tuple<Peptide, int> hit) =>
-            foreach (Tuple<Peptide, int> hit in fittingPeptides)
+            Parallel.ForEach<Tuple<Peptide, int>>(fittingPeptides, (Tuple<Peptide, int> hit) =>
+            //foreach (Tuple<Peptide, int> hit in fittingPeptides)
             {
                 int indexPrecursor = hit.Item2;
                 double maximumMass = MassTolerance.MzTop(hit.Item1.MonoisotopicMass, options.precursorMassTolerance);
@@ -113,7 +113,7 @@ namespace Trinity
                 }
                 else
                     options.ConSole.WriteLine("WTF####");
-            }//);
+            });
 
             //Push PSMs to Precursor
             foreach (Query query in queries)

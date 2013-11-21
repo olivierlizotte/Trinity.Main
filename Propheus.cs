@@ -88,17 +88,24 @@ namespace Trinity
         /// <returns></returns>
         public static List<Protein> ReadProteomeFromFasta(string fileName, bool addReverseProteins, DBOptions dbOptions)
         {
-            dbOptions.ConSole.WriteLine("Reading FASTA file " + fileName + " ... ");
-            //Extract Proteins from Fasta file
-            List<Protein>  AllProteins = new List<Protein>();
-            FileStream protein_fasta_database = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.Read);
-            foreach (Protein protein in ProteinFastaReader.ReadProteins(protein_fasta_database, addReverseProteins))
+            List<Protein> AllProteins = new List<Protein>();
+            try
             {
-                AllProteins.Add(protein);
+                dbOptions.ConSole.WriteLine("Reading FASTA file " + fileName + " ... ");
+                //Extract Proteins from Fasta file
+                FileStream protein_fasta_database = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.Read);
+                foreach (Protein protein in ProteinFastaReader.ReadProteins(protein_fasta_database, addReverseProteins))
+                {
+                    AllProteins.Add(protein);
+                }
+                //AllProteins.Sort(Protein.TargetDecoyComparison);
+                protein_fasta_database.Close();
+                dbOptions.ConSole.WriteLine("Proteins in fasta file : " + AllProteins.Count);
             }
-            //AllProteins.Sort(Protein.TargetDecoyComparison);
-            protein_fasta_database.Close();
-            dbOptions.ConSole.WriteLine("Proteins in fasta file : " + AllProteins.Count);
+            catch(Exception e)
+            {
+                dbOptions.ConSole.WriteLine("Error reading fasta file : " + fileName);
+            }
             return AllProteins;
         }        
         
@@ -303,7 +310,7 @@ namespace Trinity
             result.peptides = pepSearcher.Search(result.clusters, result.matchedPrecursors, true);
             result.peptideSequences = pepSearcher.Search(result.clusters, result.matchedPrecursors, false);
 
-            //Step 3 : Regroup based on protein sequences (Morpheus code)
+            //Step 3 : Regroup based on protein sequences (Morpheus code)            
             ProteinSearcher protSearcher = new ProteinSearcher(dbOptions);
             result.proteins = protSearcher.SearchLatest(result.peptideSequences, dbSearcher.DicOfProteins);
             

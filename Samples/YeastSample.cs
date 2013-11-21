@@ -13,7 +13,7 @@ namespace Trinity.UnitTest
 {
     public class YeastSample
     {
-        public static void Launch(bool restrain = false)
+        public static void Launch(IConSol console)
         {
             //@"G:\Thibault\Olivier\MnR\Databases\BD_RefGenome_WithReverse_2012-06-20.fasta";                        
             //Trypsin
@@ -28,7 +28,7 @@ namespace Trinity.UnitTest
             //@"G:\Thibault\-=Proteomics_Raw_Data=-\ELITE\JAN22_2013\_Project_FL_Single.csv";
             //G:\Thibault\-=Proteomics_Raw_Data=-\ELITE\JUN27_2012\MR 4Rep DS\MassSense\_Test_ProjectFile_MF3.csv";
             //G:\Thibault\-=Proteomics_Raw_Data=-\ELITE\MAR18_2013\ProjectFile_TestForProPheus.csv";
-            DBOptions dbOptions = new DBOptions(fastaFile);
+            DBOptions dbOptions = new DBOptions(fastaFile, console);
             Samples Project = new Samples(projectFile, 0, dbOptions);
             dbOptions.precursorMassTolerance = new MassTolerance(8/*8*//*8withoutisotopes*/, MassToleranceUnits.ppm);
             dbOptions.productMassTolerance = new MassTolerance(0.034/*0.034*//*without isotopes*/, MassToleranceUnits.Da);//0.034 is a 60 000 resolution over 2000 range in mz
@@ -51,18 +51,13 @@ namespace Trinity.UnitTest
             GraphML_List<Modification> varMods = new GraphML_List<Modification>();
             //Oxidation (M);Acetyl (Protein N-term);Phospho (STY)
             //Mods for Yeast
-            if (!restrain)
-            {
-                varMods.Add(ModificationDictionary.Instance["oxidation of M"]);
-                varMods.Add(ModificationDictionary.Instance["acetylation of protein N-terminus"]);
-                varMods.Add(ModificationDictionary.Instance["phosphorylation of S"]);
-                varMods.Add(ModificationDictionary.Instance["phosphorylation of T"]);
-                varMods.Add(ModificationDictionary.Instance["phosphorylation of Y"]);//*/
-
-                dbOptions.maximumVariableModificationIsoforms = 1024;// 2 * (varMods.Count + fixMods.Count);//TODO Evaluate the viability of this parameter
-            }
-            else
-                dbOptions.maximumVariableModificationIsoforms = 2;
+            varMods.Add(ModificationDictionary.Instance["oxidation of M"]);
+            varMods.Add(ModificationDictionary.Instance["acetylation of protein N-terminus"]);
+            varMods.Add(ModificationDictionary.Instance["phosphorylation of S"]);
+            varMods.Add(ModificationDictionary.Instance["phosphorylation of T"]);
+            varMods.Add(ModificationDictionary.Instance["phosphorylation of Y"]);//*/
+            dbOptions.maximumVariableModificationIsoforms = 1024;// 2 * (varMods.Count + fixMods.Count);//TODO Evaluate the viability of this parameter
+            
             dbOptions.variableModifications = varMods;
 
             dbOptions.addFragmentLoss = false;
@@ -79,10 +74,10 @@ namespace Trinity.UnitTest
             
             Propheus propheus = new Propheus(dbOptions, Project);
 
-            dbOptions.SaveMS1Peaks = false;
-            dbOptions.SaveMSMSPeaks = false;
+            dbOptions.SaveMS1Peaks = true;
+            dbOptions.SaveMSMSPeaks = true;
             dbOptions.LoadSpectraIfFound = true;
-            propheus.Preload(true);
+            propheus.Preload(false, false);
             propheus.PrepareQueries();
 
             //First pass (used to optimize parameters and score weights)

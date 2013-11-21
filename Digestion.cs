@@ -43,7 +43,7 @@ namespace Trinity
             precursorMasses.Sort();
 
             //for each protein, build matrix of mass
-            int nbProteins = 0;
+            int nbProteins = 0;            
             Trinity_Gpu.ProteinDigest pg = new Trinity_Gpu.ProteinDigest(precursorMasses.ToArray(), options.MaximumPeptideLength, options.MinimumPeptideLength);
             foreach (Protein protein in Proteins)
             {
