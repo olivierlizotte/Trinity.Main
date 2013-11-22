@@ -27,6 +27,51 @@ namespace Trinity
             return theCurve;
         }
 
+        public static ElutionCurve Create(List<Query> queries)
+        {
+            ElutionCurve theCurve = new ElutionCurve();
+            // -- Test curve fitting function -- //
+            theCurve.time = new List<double>();
+            theCurve.intensityCount = new List<double>();
+            foreach(Query query in queries)
+            {
+                theCurve.time.Add(query.spectrum.RetentionTimeInMin * 60 * 1000);
+                theCurve.intensityCount.Add(query.spectrum.PrecursorIntensityPerMilliSecond);
+            }
+            theCurve.Compute();
+            return theCurve;
+        }
+
+        public static ElutionCurve Create(List<double> intensitiesPerMilliSeconds, List<double> timesInMilliSeconds)
+        {
+            ElutionCurve theCurve = new ElutionCurve();
+            // -- Test curve fitting function -- //
+            theCurve.time = new List<double>();
+            theCurve.intensityCount = new List<double>();
+            for (int i = 0; i < intensitiesPerMilliSeconds.Count; i++)
+            {
+                theCurve.time.Add(timesInMilliSeconds[i]);
+                theCurve.intensityCount.Add(intensitiesPerMilliSeconds[i]);
+            }
+            theCurve.Compute();
+            return theCurve;
+        }
+
+        public static ElutionCurve Create(List<ProductSpectrum> spectras)
+        {
+            ElutionCurve theCurve = new ElutionCurve();
+            // -- Test curve fitting function -- //
+            theCurve.time = new List<double>();
+            theCurve.intensityCount = new List<double>();
+            foreach (ProductSpectrum spec in spectras)
+            {
+                theCurve.time.Add(spec.RetentionTimeInMin * 60 * 1000);
+                theCurve.intensityCount.Add(spec.PrecursorIntensityPerMilliSecond);
+            }
+            theCurve.Compute();
+            return theCurve;
+        }
+
         public void Compute()
         {
             if (time != null && time.Count > 2)

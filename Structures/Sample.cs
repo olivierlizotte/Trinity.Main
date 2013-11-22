@@ -19,6 +19,11 @@ namespace Trinity
         {
         }
 
+        public Samples(DBOptions options)
+        {
+            dbOptions = options;
+        }
+
         public Samples(string projectFileName, int maxFractionSpreading, DBOptions options)
         {
             loadProjectFile(projectFileName, maxFractionSpreading);

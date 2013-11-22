@@ -54,6 +54,11 @@ namespace Trinity
         {
             return precursor.ProbabilityScore(peptide);
         }
+
+        public static int AscendingRetentionTimeComparison(Query left, Query right)
+        {
+            return left.spectrum.RetentionTimeInMin.CompareTo(right.spectrum.RetentionTimeInMin);
+        }
         /*
         public double Intensity(Peptide peptide)
         {

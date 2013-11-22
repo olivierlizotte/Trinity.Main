@@ -250,7 +250,7 @@ namespace Trinity
             return fragRatio;
         }        
 
-        public List<ProductMatch> GetCombinedSpectrum(DBOptions dbOptions, Peptide peptide, int psmCharge, Dictionary<double, int> DicOfCommonPM = null)
+        public List<ProductMatch> GetCombinedSpectrum(DBOptions dbOptions, Dictionary<double, int> DicOfCommonPM = null)
         {
             Dictionary<PeptideSpectrumMatch, double> DicOfPsmFactor = new Dictionary<PeptideSpectrumMatch, double>();// this.ComputeMsMsNormalizationFactors();
             //Dictionary<ProductMatch, double> DicOfProductMsMsFactor = new Dictionary<ProductMatch, double>();
@@ -338,7 +338,7 @@ namespace Trinity
                             newMatch.weight = 0;
                             newMatch.obsIntensity = 0;
                             newMatch.normalizedIntensity = 0;
-                            foreach (PeptideSpectrumMatch psm in this)
+                            foreach (PeptideSpectrumMatch psm in DicOfPsmFactor.Keys)
                             {
                                 foreach (MsMsPeak peak in psm.Query.spectrum.Peaks)
                                 {

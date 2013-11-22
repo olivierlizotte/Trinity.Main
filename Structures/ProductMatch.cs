@@ -40,6 +40,13 @@ namespace Trinity
             return left.weight.CompareTo(right.weight);
         }
 
+        public static int DescendingWeightComparison(ProductMatch left, ProductMatch right)
+        {
+            if (left.weight == right.weight)
+                return -left.obsIntensity.CompareTo(right.obsIntensity);
+            return -left.weight.CompareTo(right.weight);
+        }
+
         public override string ToString()
         {
             return "[" + obsMz + ";" + obsIntensity + "]";

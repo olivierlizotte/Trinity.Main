@@ -88,6 +88,7 @@
     <Compile Include="Database\Neo4j\ResultExporter.cs" />
     <Compile Include="Digestion.cs" />
     <Compile Include="Methods\AddRtToMascotReport.cs" />
+    <Compile Include="Methods\Copie de PositionnalIsomerSolver.cs" />
     <Compile Include="Methods\Curve.cs" />
     <Compile Include="Methods\RawRtExtractor.cs" />
     <Compile Include="Morpheus\AminoAcidMasses.cs" />
