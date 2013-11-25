@@ -8,7 +8,7 @@ namespace Trinity
     public class ElutionCurve
     {
         public double Area = 0.0;
-        public double[] Coefficients = null;
+        public double[] Coefficients = null;        
 
         public List<double> time = null;
         public List<double> intensityCount = null;
