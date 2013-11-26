@@ -15,18 +15,22 @@ namespace Trinity.UnitTest
     {
         public Peptide Peptide;
         public PeptideSpectrumMatches Psms;
-        public double NormalizeFactor;
+        //public double NormalizeFactor;
         public List<ProductMatch> Fragments;
 
         private Dictionary<PeptideSpectrumMatch, double> DicOfPsmFactor;        
 
-        public CharacterizedPrecursor(Sample sample, DBOptions dbOptions, Peptide peptide, IEnumerable<Query> queries, double mz, int charge = -1):base(sample, queries, mz, charge)
+        public CharacterizedPrecursor(Sample sample, DBOptions dbOptions, Peptide peptide, IEnumerable<Query> queries, double mz):base(sample, queries, mz, -1)
         {
             this.Peptide = peptide;
             Psms = new PeptideSpectrumMatches();
+
             foreach(Query query in queries)
-                if(query.sample == sample)
+                if (query.sample == sample)
+                {
                     Psms.Add(new PeptideSpectrumMatch(query, peptide, dbOptions));
+                    Charge = query.precursor.Charge;
+                }
             Psms.Sort(PeptideSpectrumMatches.AscendingRetentionTime);
             Fragments = Psms.GetCombinedSpectrum(dbOptions);
             Fragments.Sort(ProductMatch.DescendingWeightComparison);
@@ -95,19 +99,71 @@ namespace Trinity.UnitTest
                     pm.normalizedIntensity = 0;
                     pm.obsIntensity = 0;
                 }
-                else
+                //else
+                //{
+                    //pm.normalizedIntensity /= NormalizeFactor;
+                    //pm.obsIntensity /= NormalizeFactor;
+                //}
+            return matches;
+        }
+
+        public void Normalize(List<CharacterizedPrecursor> allCorrespondingPrec, Dictionary<CharacterizedPrecursor, List<ProductMatch>> matches)
+        {
+            //average = area * Norm => Norm = average/area
+            if (eCurve.Area > 0)
+            {
+                //Normalize matches based on precursor intensity differences
+                double cumulArea = 0.0;
+                int nbNonZero = 0;
+                foreach (CharacterizedPrecursor precursor in allCorrespondingPrec)
+                {
+                    if (precursor.eCurve.Area > 0)
+                    {
+                        nbNonZero++;
+                        cumulArea += precursor.eCurve.Area;
+                    }
+                }
+                double average = cumulArea / (double)nbNonZero;
+                double precursorNormalizeFactor = average / this.eCurve.Area;
+                foreach (ProductMatch pm in matches[this])
+                {
+                    pm.normalizedIntensity /= precursorNormalizeFactor;
+                    pm.obsIntensity /= precursorNormalizeFactor;
+                }
+
+                //Normalize matches based on normalized fragment intensities
+                double cumulFragments = 0.0;
+                foreach (CharacterizedPrecursor precursor in allCorrespondingPrec)
+                {
+                    if (precursor.eCurve.Area > 0)
+                    {
+                        foreach (ProductMatch match in matches[precursor])
+                            cumulFragments += match.normalizedIntensity;
+                    }
+                }                
+                double averageFragment = cumulFragments / (double)nbNonZero;
+                //NormalizeFactor = average / eCurve.Area;
+                //NormalizeFactor = Math.Pow(average, 2) / Math.Pow(eCurve.Area, 2);
+                
+                double totalFrag = 0.0;
+                foreach (ProductMatch match in matches[this])
+                    totalFrag += match.normalizedIntensity;
+                double NormalizeFactor = averageFragment / totalFrag;
+                //NormalizeFactor *= Math.Log(averageFragmentTotal, 2) / Math.Log(totalFrag, 2);
+
+                //double lossOfPrecIntensity = 1;// Math.Log(averagePrecursorArea, 2) / Math.Log(PrecursorCurves[foundKey][sample].Area, 2);
+                //double lossofFragmentIntensity = 1;// Math.Pow(avgRatioSum, 2) / Math.Pow(listOfsumOfProducts[sample], 2);
+                //*/
+                if (NormalizeFactor > 4) NormalizeFactor = 4;
+                if (NormalizeFactor < 0.25) NormalizeFactor = 0.25;
+
+
+                foreach (ProductMatch pm in matches[this])
                 {
                     pm.normalizedIntensity /= NormalizeFactor;
                     pm.obsIntensity /= NormalizeFactor;
                 }
-            return matches;
-        }
-
-        public void Normalize(double average)
-        {
-            //average = area * Norm => Norm = average/area
-            if(eCurve.Area > 0)
-                NormalizeFactor = average / eCurve.Area;
+            }
         }
     }
 
@@ -118,53 +174,58 @@ namespace Trinity.UnitTest
         {
         }
 
-        public Dictionary<Sample, double> ComputePeptideRatios(Dictionary<Dictionary<Sample, ElutionCurve>, double> DicOfCurveErrors)
+        public Dictionary<CharacterizedPrecursor, double> ComputePeptideRatios(Dictionary<Dictionary<CharacterizedPrecursor, ElutionCurve>, double> dicOfCurveErrors)
         {
-            //!!!! Remove very bad Ratios before going forward
-            Remove Bad Ratios
+            Dictionary<Dictionary<CharacterizedPrecursor, ElutionCurve>, double> dicOfCurves = new Dictionary<Dictionary<CharacterizedPrecursor, ElutionCurve>, double>();
+            double median = MathNet.Numerics.Statistics.Statistics.Median(dicOfCurveErrors.Values);
+            foreach (Dictionary<CharacterizedPrecursor, ElutionCurve> dic in dicOfCurveErrors.Keys)
+                if(dicOfCurveErrors[dic] <= median)
+                    dicOfCurves.Add(dic, dicOfCurveErrors[dic]);
+            
+            //!!!! Remove very bad Ratios before going forward            
             int nbRun = 3;
-            Dictionary<Dictionary<Sample, ElutionCurve>, double> dicOfCorrelations = new Dictionary<Dictionary<Sample,ElutionCurve>,double>(); 
-            foreach (Dictionary<Sample, ElutionCurve> dicOfCurve in DicOfCurveErrors.Keys)
-                dicOfCorrelations.Add(dicOfCurve, 1.0 / (double) DicOfCurveErrors.Count);
+            Dictionary<Dictionary<CharacterizedPrecursor, ElutionCurve>, double> dicOfCorrelations = new Dictionary<Dictionary<CharacterizedPrecursor, ElutionCurve>, double>();
+            foreach (Dictionary<CharacterizedPrecursor, ElutionCurve> dicOfCurve in dicOfCurves.Keys)
+                dicOfCorrelations.Add(dicOfCurve, 1.0 / (double)dicOfCurves.Count);
 
-            Dictionary<Sample, double> bestAverage = null;
+            Dictionary<CharacterizedPrecursor, double> bestAverage = null;
             while (nbRun > 0)
             {
                 nbRun--;
 
-                Dictionary<Sample, double> average = new Dictionary<Sample, double>();
-                foreach (Dictionary<Sample, ElutionCurve> dicOfCurve in DicOfCurveErrors.Keys)
+                Dictionary<CharacterizedPrecursor, double> average = new Dictionary<CharacterizedPrecursor, double>();
+                foreach (Dictionary<CharacterizedPrecursor, ElutionCurve> dicOfCurve in dicOfCurves.Keys)
                 {
-                    Dictionary<Sample, double> areas = GetAreas(dicOfCurve);
-                    foreach (Sample sample in areas.Keys)
+                    Dictionary<CharacterizedPrecursor, double> areas = GetAreas(dicOfCurve);
+                    foreach (CharacterizedPrecursor cPep in areas.Keys)
                     {
-                        if (!average.ContainsKey(sample))
-                            average.Add(sample, 0);
-                        average[sample] += areas[sample] * dicOfCorrelations[dicOfCurve];
+                        if (!average.ContainsKey(cPep))
+                            average.Add(cPep, 0);
+                        average[cPep] += areas[cPep] * dicOfCorrelations[dicOfCurve];
                     }
                 }
 
-                foreach (Dictionary<Sample, ElutionCurve> dicOfCurve in DicOfCurveErrors.Keys)
+                foreach (Dictionary<CharacterizedPrecursor, ElutionCurve> dicOfCurve in dicOfCurves.Keys)
                 {
-                    Dictionary<Sample, double> elution = new Dictionary<Sample, double>();
-                    foreach (Sample sample in average.Keys)
-                        if (dicOfCurve.ContainsKey(sample))
-                            elution.Add(sample, dicOfCurve[sample].Area);
+                    Dictionary<CharacterizedPrecursor, double> elution = new Dictionary<CharacterizedPrecursor, double>();
+                    foreach (CharacterizedPrecursor cPep in average.Keys)
+                        if (dicOfCurve.ContainsKey(cPep))
+                            elution.Add(cPep, dicOfCurve[cPep].Area);
                         else
-                            elution.Add(sample, 0);
+                            elution.Add(cPep, 0);
                     dicOfCorrelations[dicOfCurve] = Math.Abs(MathNet.Numerics.Statistics.Correlation.Pearson(average.Values, elution.Values));
                 }
 
                 //Normalize correlation factors (sum must equal 1)
                 double sumOfCorr = 0.0;
-                foreach (Dictionary<Sample, ElutionCurve> dicOfCurve in DicOfCurveErrors.Keys)
+                foreach (Dictionary<CharacterizedPrecursor, ElutionCurve> dicOfCurve in dicOfCurves.Keys)
                     sumOfCorr += dicOfCorrelations[dicOfCurve];
 
-                foreach (Dictionary<Sample, ElutionCurve> dicOfCurve in DicOfCurveErrors.Keys)
+                foreach (Dictionary<CharacterizedPrecursor, ElutionCurve> dicOfCurve in dicOfCurves.Keys)
                     dicOfCorrelations[dicOfCurve] /= sumOfCorr;
 
                 bestAverage = average;
-            }
+            }//End of While nbRun not exhausted
             return bestAverage;
         }
 
@@ -187,11 +248,11 @@ namespace Trinity.UnitTest
             return normedCurves;
         }
 
-        public static Dictionary<Sample, double> GetAreas(Dictionary<Sample, ElutionCurve> curves)
+        public static Dictionary<CharacterizedPrecursor, double> GetAreas(Dictionary<CharacterizedPrecursor, ElutionCurve> curves)
         {
-            Dictionary<Sample, double> newCurves = new Dictionary<Trinity.Sample, double>();
-            foreach (Sample sample in curves.Keys)
-                newCurves.Add(sample, curves[sample].Area);
+            Dictionary<CharacterizedPrecursor, double> newCurves = new Dictionary<CharacterizedPrecursor, double>();
+            foreach (CharacterizedPrecursor cPep in curves.Keys)
+                newCurves.Add(cPep, curves[cPep].Area);
 
             return newCurves;
         }
@@ -297,36 +358,41 @@ namespace Trinity.UnitTest
             string curveStr = "Polynomial Curve";
             foreach (double precursor in characterizedPeptides.Keys)
                 foreach (CharacterizedPrecursor charPrec in characterizedPeptides[precursor].Values)
-                    if(charPrec.eCurve.Area > 0 && charPrec.eCurve.Coefficients.Length == 3)
+                    if (charPrec.eCurve.Coefficients != null && charPrec.eCurve.Coefficients.Length == 3)
                         curveStr += "," + charPrec.eCurve.Coefficients[0] + "x^2 + " + charPrec.eCurve.Coefficients[1] + "x" + charPrec.eCurve.Coefficients[2];
+                    else
+                        curveStr += ",NA";
             writerCumul.AddLine(curveStr);
 
-            //Get the list of precursors to characterize
-            foreach (Sample mixedSample in MixedSamples)
+            foreach(double keyMz in characterizedPeptides.Keys)
             {
-                Dictionary<double, MixedPrecursor> mixedPrecursors = GetMixedPrecursors(mixedSample, mixedResult, dbOptions, characterizedPeptides);
-
-                foreach (double keyMz in mixedPrecursors.Keys)
+                //Get the list of precursors to characterize            
+                foreach (Sample mixedSample in MixedSamples)
                 {
-                    // Compute Max Flow for this precursor
-                    Dictionary<Sample, double> ratios = GetRatiosFromMaxFlow(dbOptions, characterizedPeptides, mixedPrecursors[keyMz]);
-                    
-                    string resultStr = vsCSV.GetFileName(mixedSample.sSDF) + "," + keyMz;
-                    foreach (double precursor in characterizedPeptides.Keys)
-                        foreach (CharacterizedPrecursor charPrec in characterizedPeptides[precursor].Values)
-                            if (ratios.ContainsKey(charPrec.Sample))
-                                resultStr += "," + ratios[charPrec.Sample];
-                            else
-                                resultStr += ",0";
-                    writerCumul.AddLine(resultStr);
+                    Dictionary<double, MixedPrecursor> mixedPrecursors = GetMixedPrecursors(mixedSample, mixedResult, dbOptions, characterizedPeptides);
 
-                    // Export results in a file
-                    vsCSVWriter writerRatio = new vsCSVWriter(dbOptions.OutputFolder + vsCSV.GetFileName_NoExtension(mixedSample.sSDF) + "_" + keyMz + "MZ.csv");
-                    writerRatio.AddLine("Sequence,Area");
-                    writerRatio.AddLine("Total," + mixedPrecursors[keyMz].eCurve.Area);
-                    foreach (Sample spikedSample in ratios.Keys)
-                        writerRatio.AddLine(characterizedPeptides[keyMz][spikedSample].Peptide.Sequence + "," + ratios[spikedSample]);
-                    writerRatio.WriteToFile();
+                    if (mixedPrecursors.ContainsKey(keyMz))
+                    {
+                        // Compute Max Flow for this precursor
+                        Dictionary<CharacterizedPrecursor, double> ratios = GetRatiosFromMaxFlow(dbOptions, characterizedPeptides, mixedPrecursors[keyMz]);
+
+                        string resultStr = vsCSV.GetFileName(mixedSample.sSDF) + "," + keyMz;
+                        foreach (double precursor in characterizedPeptides.Keys)
+                            foreach (CharacterizedPrecursor charPrec in characterizedPeptides[precursor].Values)
+                                if (ratios.ContainsKey(charPrec))
+                                    resultStr += "," + ratios[charPrec];
+                                else
+                                    resultStr += ",0";
+                        writerCumul.AddLine(resultStr);
+
+                        // Export results in a file
+                        vsCSVWriter writerRatio = new vsCSVWriter(dbOptions.OutputFolder + vsCSV.GetFileName_NoExtension(mixedSample.sSDF) + "_" + keyMz + "MZ.csv");
+                        writerRatio.AddLine("Sequence,Area");
+                        writerRatio.AddLine("Total," + mixedPrecursors[keyMz].eCurve.Area);
+                        foreach (CharacterizedPrecursor charPep in ratios.Keys)
+                            writerRatio.AddLine(charPep.Peptide.Sequence + "," + ratios[charPep]);
+                        writerRatio.WriteToFile();
+                    }
                 }
             }
             writerCumul.WriteToFile();
@@ -367,7 +433,10 @@ namespace Trinity.UnitTest
                 if (charPeptides.ContainsKey(key))
                 {
                     MixedPrecursor mixedPrecursor = new MixedPrecursor(mixedSample, DicOfSpectrumMasses[key], key);
-                    DicOfMixedPrecursor.Add(key, mixedPrecursor);
+
+                    //Don't try to characterize mixed precursors if there is less than three scans
+                    if(mixedPrecursor.Queries.Count >= 3)
+                        DicOfMixedPrecursor.Add(key, mixedPrecursor);
                 }
             }
             return DicOfMixedPrecursor;            
@@ -430,33 +499,27 @@ namespace Trinity.UnitTest
                         if (bestPeptide != null)
                         {
                             CharacterizedPrecursor cPrec = new CharacterizedPrecursor(spikedSample, dbOptions, bestPeptide, mzKeys[mzKey].Keys, mzKey);
-                            if (!spikes.ContainsKey(mzKey))
-                                spikes.Add(mzKey, new Dictionary<Sample, CharacterizedPrecursor>());
-                            if (!spikes[mzKey].ContainsKey(spikedSample))
-                                spikes[mzKey].Add(spikedSample, cPrec);
-                            else
-                                Console.WriteLine("Twice??");
+                            //Don't keep precursors if they are not well characterized (unfragmented or misasigned)
+                            if (cPrec.Fragments.Count >= cPrec.Peptide.Length - 2)
+                            {
+                                if (!spikes.ContainsKey(mzKey))
+                                    spikes.Add(mzKey, new Dictionary<Sample, CharacterizedPrecursor>());
+                                if (!spikes[mzKey].ContainsKey(spikedSample))
+                                    spikes[mzKey].Add(spikedSample, cPrec);
+                                else
+                                    Console.WriteLine("Twice??");
+                            }
                         }
                     }
                 }//End of foreach mzKey
             }//End of foreach spiked sample
 
             //Normalize intensities based on average area of each precursor
-            foreach (double mzKey in spikes.Keys)
+            /*foreach (double mzKey in spikes.Keys)
             {
-                double cumulArea = 0.0;
-                int nbNonZero = 0;
                 foreach (CharacterizedPrecursor precursor in spikes[mzKey].Values)
-                {
-                    if(precursor.eCurve.Area > 0)
-                        nbNonZero ++;
-                    cumulArea += precursor.eCurve.Area;
-                }
-
-                double average = cumulArea / (double)nbNonZero;
-                foreach (CharacterizedPrecursor precursor in spikes[mzKey].Values)
-                    precursor.Normalize(average);
-            }
+                    precursor.Normalize(spikes[mzKey]);
+            }//*/
             return spikes;
         }
 
@@ -474,68 +537,88 @@ namespace Trinity.UnitTest
             return DicOfFragments;
         }
         
-        public static Dictionary<Sample, double> GetRatiosFromMaxFlow(DBOptions dbOptions, Dictionary<double, Dictionary<Sample, CharacterizedPrecursor>> spikes, MixedPrecursor mixedPrecursor)        
+        public static Dictionary<CharacterizedPrecursor, double> GetRatiosFromMaxFlow(DBOptions dbOptions, Dictionary<double, Dictionary<Sample, CharacterizedPrecursor>> spikes, MixedPrecursor mixedPrecursor)        
         {
             int minProducts = 4;
             int maxProducts = 14;
-            Dictionary<Dictionary<Sample, ElutionCurve>, double> DicOfCurveErrors = new Dictionary<Dictionary<Sample, ElutionCurve>, double>();
+            Dictionary<Dictionary<CharacterizedPrecursor, ElutionCurve>, double> DicOfCurveErrors = new Dictionary<Dictionary<CharacterizedPrecursor, ElutionCurve>, double>();
             
             for (int nbProductsToKeep = minProducts; nbProductsToKeep <= maxProducts; nbProductsToKeep++)
             {
-                Dictionary<Sample, CharacterizedPrecursor> Isomers = new Dictionary<Sample, CharacterizedPrecursor>();
+                int nbIgnoredSpectrum = 0;
+                List<CharacterizedPrecursor> Isomers = new List<CharacterizedPrecursor>();
                 foreach (double mz in spikes.Keys)
                     if (Math.Abs(Proteomics.Utilities.Numerics.CalculateMassError(mz, mixedPrecursor.MZ, dbOptions.precursorMassTolerance.Units)) <= dbOptions.precursorMassTolerance.Value)
                         foreach (Sample sample in spikes[mz].Keys)
-                            Isomers.Add(sample, spikes[mz][sample]);
+                            Isomers.Add(spikes[mz][sample]);
 
-                Dictionary<double, int> dicOfCommonFragments = GetCommonFragmentMz(Isomers.Values, nbProductsToKeep);
-                Dictionary<Sample, List<ProductMatch>> matches = new Dictionary<Sample, List<ProductMatch>>();
-                foreach (CharacterizedPrecursor cPrec in Isomers.Values)
-                    matches.Add(cPrec.Sample, cPrec.GetCombinedMatches(dicOfCommonFragments, dbOptions));
+                Dictionary<double, int> dicOfCommonFragments = GetCommonFragmentMz(Isomers, nbProductsToKeep);
+                Dictionary<CharacterizedPrecursor, List<ProductMatch>> matches = new Dictionary<CharacterizedPrecursor, List<ProductMatch>>();
+                foreach (CharacterizedPrecursor cPrec in Isomers)
+                    matches.Add(cPrec, cPrec.GetCombinedMatches(dicOfCommonFragments, dbOptions));
 
-                double cumulUnderflow = 0;
-                Dictionary<Sample, ElutionCurve> curves = new Dictionary<Sample,ElutionCurve>();
+                foreach(CharacterizedPrecursor precursor in Isomers)
+                    precursor.Normalize(Isomers, matches);                
+
+                double cumulError = 0;
+                Dictionary<CharacterizedPrecursor, ElutionCurve> curves = new Dictionary<CharacterizedPrecursor, ElutionCurve>();
                 foreach (Query query in mixedPrecursor.Queries)
                 {
                     double timeInMilliSeconds = query.spectrum.RetentionTimeInMin * 60.0 * 1000.0;
                     double overFlow = 0;
                     double underFlow = 0;
                     double percentError = 0;
-                    Dictionary<Sample, double> finalRatios = LaunchMaxFlowFromSpectrum(matches, 1000, query.spectrum.Peaks, dbOptions.productMassTolerance,
+                    Dictionary<CharacterizedPrecursor, double> finalRatios = LaunchMaxFlowFromSpectrum(matches, 1000, query.spectrum.Peaks, dbOptions.productMassTolerance,
                                                             0, query.spectrum.PrecursorIntensityPerMilliSecond * query.spectrum.InjectionTime, ref overFlow, ref underFlow, ref percentError, dbOptions.ConSole);
 
-                    cumulUnderflow += underFlow;
+                    cumulError += percentError;
                     if (percentError < 0.5)
                     {
                         //UsedPrecursorArea += localArea;
                         //Dictionary<Sample, double> avgQuantifiedRatios = new Dictionary<Sample, double>();
 
-                        foreach (Sample sRatio in finalRatios.Keys)
+                        foreach (CharacterizedPrecursor cPep in finalRatios.Keys)
                         {
-                            if (!curves.ContainsKey(sRatio))
-                                curves.Add(sRatio, new ElutionCurve());
+                            if (!curves.ContainsKey(cPep))
+                                curves.Add(cPep, new ElutionCurve());
 
-                            curves[sRatio].AddPoint(timeInMilliSeconds, finalRatios[sRatio] * query.spectrum.PrecursorIntensityPerMilliSecond);
+                            curves[cPep].AddPoint(timeInMilliSeconds, finalRatios[cPep] * query.spectrum.PrecursorIntensityPerMilliSecond);
                         }
                     }
                     else
-                        Console.WriteLine("Ignored Spectrum : " + percentError);
+                        nbIgnoredSpectrum++;
+
+                    if (nbIgnoredSpectrum * 2 > mixedPrecursor.Queries.Count)
+                        break;
                 }//End of foreach query
 
-                mixedPrecursor.PeptideRatios = curves;
+                if(nbIgnoredSpectrum > 0)
+                    Console.WriteLine("Ignored Spectrum : " + nbIgnoredSpectrum + " / " + mixedPrecursor.Queries.Count);
 
-                DicOfCurveErrors.Add(curves, cumulUnderflow);
-                foreach(Sample sRatio in curves.Keys)
-                    curves[sRatio].Compute();
-                /*
-                    if (!values.ContainsKey(sRatio))
-                        values.Add(sRatio, curves[sRatio].Area);
-                    else
-                        values[sRatio] += curves[sRatio].Area;
-                }//*/
+                //mixedPrecursor.PeptideRatios = curves;
+
+                if (nbIgnoredSpectrum * 2 < mixedPrecursor.Queries.Count)
+                {
+                    foreach (CharacterizedPrecursor cPep in curves.Keys)
+                        curves[cPep].Compute();
+
+                    Dictionary<CharacterizedPrecursor, ElutionCurve> curvesToKeep = new Dictionary<CharacterizedPrecursor, ElutionCurve>();
+                    foreach (CharacterizedPrecursor cPep in curves.Keys)
+                        if (curves[cPep].Area > 0)
+                            curvesToKeep.Add(cPep, curves[cPep]);
+
+                    if (curvesToKeep.Count > 0)
+                        DicOfCurveErrors.Add(curvesToKeep, cumulError);
+                    /*
+                        if (!values.ContainsKey(sRatio))
+                            values.Add(sRatio, curves[sRatio].Area);
+                        else
+                            values[sRatio] += curves[sRatio].Area;
+                    }//*/
+                }
             }//End of for each nbProduct            
 
-            Dictionary<Sample, double> averagedValues = mixedPrecursor.ComputePeptideRatios(DicOfCurveErrors);
+            Dictionary<CharacterizedPrecursor, double> averagedValues = mixedPrecursor.ComputePeptideRatios(DicOfCurveErrors);
             /*
             foreach (Dictionary<Sample, ElutionCurve> curves in DicOfCurveErrors.Keys)
             {
@@ -780,7 +863,7 @@ namespace Trinity.UnitTest
             return nbCumul;
         }
 
-        private static Dictionary<Sample, double> LaunchMaxFlowFromSpectrum(Dictionary<Sample, List<ProductMatch>> ratiosToFit,  
+        private static Dictionary<CharacterizedPrecursor, double> LaunchMaxFlowFromSpectrum(Dictionary<CharacterizedPrecursor, List<ProductMatch>> ratiosToFit,  
                                             int precision, GraphML_List<MsMsPeak> capacity, MassTolerance tolerance, 
                                             int returnType,//0 for max flow, 1 for best flow, 2 for average
                                             double PrecursorIntensityInCTrap,
@@ -834,9 +917,9 @@ namespace Trinity.UnitTest
                     result = GetResultList(tmpAverage, precision, underFlow, sumOfIntensities);
                     break;
             }
-            Dictionary<Sample, double> resultPerSample = new Dictionary<Sample, double>();
+            Dictionary<CharacterizedPrecursor, double> resultPerSample = new Dictionary<CharacterizedPrecursor, double>();
             int i = 0;
-            foreach (Sample key in ratiosToFit.Keys)
+            foreach (CharacterizedPrecursor key in ratiosToFit.Keys)
             {
                 resultPerSample.Add(key, result[i]);
                 i++;

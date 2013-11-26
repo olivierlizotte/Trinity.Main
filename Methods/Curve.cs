@@ -75,7 +75,16 @@ namespace Trinity
         public void Compute()
         {
             if (time != null && time.Count > 2)
-                Area = Proteomics.Utilities.CurveFitter.FitToPolynomial(time.ToArray(), intensityCount.ToArray(), out Coefficients);
+            {
+                double area1 = Proteomics.Utilities.CurveFitter.FitToPolynomial(time.ToArray(), intensityCount.ToArray(), out Coefficients);
+                //double areaInterpol = Proteomics.Utilities.CurveFitter.AreaUnderTheCurve(time, intensityCount);
+                double area2 = Proteomics.Utilities.CurveFitter.AreaUnderTheCurve(time, intensityCount);
+                if(area1 / area2 > 2 || area1 / area2 < 0.5)
+                    Console.WriteLine("Too much diff");
+                Area = area1;// (area1 + area2) * 0.5;
+                //if (Area > areaInterpol * 1.2 || Area < areaInterpol * 0.8)
+                //    Console.WriteLine("Too much diff");
+            }
             else
             {
                 Area = 0;

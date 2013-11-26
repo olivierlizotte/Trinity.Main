@@ -71,11 +71,6 @@ namespace Trinity.UnitTest
             Samples ProjectMixed = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_MonoAce_Varied_19Oct.csv", 0, dbOptions);
             Samples ProjectStable = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_StableMix_MonoAce_19Oct.csv", 0, dbOptions);            
             
-            int nbProductsMin = 4;// 4;
-            int nbProductsMax = 14;// 14;
-            bool smoothedPrecursor = false;
-            int precision = 1000;//10000
-            int maxCharge = 2;
             string[] SpikedRaws = new string[ProjectRatios.Count];
             for(int i = 0; i < ProjectRatios.Count; i++)
                 SpikedRaws[i] = ProjectRatios[i].sSDF;
@@ -86,7 +81,7 @@ namespace Trinity.UnitTest
             
             PositionnalIsomerSolver.Solve(SpikedRaws, MixedRaws, dbOptions.FastaDatabaseFilepath, dbOptions.OutputFolder, console);
         }
-        /*
+        
         public static void DiAce(IConSol console)
         {
             DBOptions dbOptions = GetDBOptions(false, false, console);
@@ -94,13 +89,16 @@ namespace Trinity.UnitTest
             Samples ProjectMixed =  new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_DiAce_Varied_19Oct.csv", 0, dbOptions);
             Samples ProjectStable = null;// new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_StableMix_DiAce_19Oct.csv", 0, dbOptions);
 
-            int nbProductsMin = 4;
-            int nbProductsMax = 14;
-            bool smoothedPrecursor = false;
-            int precision = 1000;
-            int maxCharge = 2;
 
-            PositionnalIsomerSolver.Solve(ProjectRatios, ProjectStable, ProjectMixed, dbOptions, nbProductsMin, nbProductsMax, smoothedPrecursor, precision, maxCharge);
+            string[] SpikedRaws = new string[ProjectRatios.Count];
+            for (int i = 0; i < ProjectRatios.Count; i++)
+                SpikedRaws[i] = ProjectRatios[i].sSDF;
+
+            string[] MixedRaws = new string[ProjectMixed.Count];
+            for (int i = 0; i < ProjectMixed.Count; i++)
+                MixedRaws[i] = ProjectMixed[i].sSDF;
+
+            PositionnalIsomerSolver.Solve(SpikedRaws, MixedRaws, dbOptions.FastaDatabaseFilepath, dbOptions.OutputFolder, console);
         }
 
         public static void TriAce(IConSol console)
@@ -110,13 +108,16 @@ namespace Trinity.UnitTest
             Samples ProjectMixed = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_TriAce_Varied_19Oct.csv", 0, dbOptions);
             Samples ProjectStable = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_StableMix_TriAce_19Oct.csv", 0, dbOptions);
 
-            int nbProductsMin = 4;// 4;
-            int nbProductsMax = 14;// 14;
-            bool smoothedPrecursor = false;
-            int precision = 1000;
-            int maxCharge = 2;
 
-            PositionnalIsomerSolver.Solve(ProjectRatios, ProjectStable, ProjectMixed, dbOptions, nbProductsMin, nbProductsMax, smoothedPrecursor, precision, maxCharge);
+            string[] SpikedRaws = new string[ProjectRatios.Count];
+            for (int i = 0; i < ProjectRatios.Count; i++)
+                SpikedRaws[i] = ProjectRatios[i].sSDF;
+
+            string[] MixedRaws = new string[ProjectMixed.Count];
+            for (int i = 0; i < ProjectMixed.Count; i++)
+                MixedRaws[i] = ProjectMixed[i].sSDF;
+
+            PositionnalIsomerSolver.Solve(SpikedRaws, MixedRaws, dbOptions.FastaDatabaseFilepath, dbOptions.OutputFolder, console);
         }
 
         public static void Mixed(IConSol console)
@@ -126,13 +127,16 @@ namespace Trinity.UnitTest
             Samples ProjectMixed = new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_AllAce_Varied_19Oct.csv", 0, dbOptions);
             Samples ProjectStable = null;// new Samples(@"C:\_IRIC\DATA\NB\ProjectTest_StableMix_AllAce_19Oct.csv", 0, dbOptions);
 
-            int nbProductsMin = 4;// 4;
-            int nbProductsMax = 14;// 14;
-            bool smoothedPrecursor = false;
-            int precision = 1000;
-            int maxCharge = 2;
 
-            PositionnalIsomerSolver.Solve(ProjectRatios, ProjectStable, ProjectMixed, dbOptions, nbProductsMin, nbProductsMax, smoothedPrecursor, precision, maxCharge);
+            string[] SpikedRaws = new string[ProjectRatios.Count];
+            for (int i = 0; i < ProjectRatios.Count; i++)
+                SpikedRaws[i] = ProjectRatios[i].sSDF;
+
+            string[] MixedRaws = new string[ProjectMixed.Count];
+            for (int i = 0; i < ProjectMixed.Count; i++)
+                MixedRaws[i] = ProjectMixed[i].sSDF;
+
+            PositionnalIsomerSolver.Solve(SpikedRaws, MixedRaws, dbOptions.FastaDatabaseFilepath, dbOptions.OutputFolder, console);
         }
         //*/
         public static AnnotatedSpectrum AnnotatedSpectrumSample(IConSol console)

@@ -81,7 +81,7 @@ namespace Trinity
             Query = query;
             highestFragmentIntensity = query.spectrum.MostIntensePeak;
             Peptide = peptide;
-
+            
             UpdatePrecursor(options);
 
             Initialize(options, GetProductMZs(options, query.spectrum.Peaks));
