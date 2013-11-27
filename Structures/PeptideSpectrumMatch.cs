@@ -175,7 +175,7 @@ namespace Trinity
                                 massDiff = diff;
                                 bestMz = peaks[index].MZ;
                             }
-                            if (peaks[index].Intensity > bestInt)
+                            //if (peaks[index].Intensity > bestInt)
                                 bestInt += peaks[index].Intensity;
                         }
                     }

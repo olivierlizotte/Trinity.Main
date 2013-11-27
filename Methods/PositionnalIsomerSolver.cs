@@ -157,6 +157,8 @@ namespace Trinity.UnitTest
                 foreach (CharacterizedPrecursor cPrec in Isomers)
                     matches.Add(cPrec, cPrec.GetCombinedMatches(dicOfCommonFragments, dbOptions));
 
+                double tmpAverageTimes = 0;
+                int tmpNbRatios = 0;
                 ElutionCurve curve = new ElutionCurve();
                 foreach (Query query in this.Queries)
                 {
@@ -166,14 +168,22 @@ namespace Trinity.UnitTest
                     Dictionary<CharacterizedPrecursor, PositionnalIsomerSolver.MaxFlowResult> finalRatios = PositionnalIsomerSolver.LaunchMaxFlowFromSpectrum(matches, 1000, query.spectrum.Peaks, dbOptions.productMassTolerance,
                                                             0, query.spectrum.PrecursorIntensityPerMilliSecond * query.spectrum.InjectionTime, ref overFlow, ref underFlow, ref percentError, dbOptions.ConSole);
                     curve.AddPoint(query.spectrum.RetentionTimeInMin * 1000.0 * 60.0, finalRatios[this].Ratio * query.spectrum.PrecursorIntensityPerMilliSecond);
-                    averageTimes += finalRatios[this].NbFitTimes;                    
-                    nbRatios++;
+                    if (percentError < 0.5)
+                    {
+                        tmpAverageTimes += finalRatios[this].NbFitTimes;
+                        tmpNbRatios++;
+                    }
                 }
-                curve.Compute();
-                if(curve.Area > 0)
+                if (curve.intensityCount.Count > this.Queries.Count * 0.5)
                 {
-                    area += curve.Area;
-                    nbAreas++;
+                    curve.Compute();
+                    if (curve.Area > 0)
+                    {
+                        averageTimes += tmpAverageTimes;
+                        nbRatios += tmpNbRatios;
+                        area += curve.Area;
+                        nbAreas++;
+                    }
                 }
             }
             area /= (double)nbAreas;
@@ -186,7 +196,7 @@ namespace Trinity.UnitTest
             if(eCurve.Area > 0)
             {              
                 double area = 0.0;
-                int nbIter = 1;
+                int nbIter = 3;
                 while (nbIter > 0)
                 {
                     nbIter--;
@@ -271,25 +281,36 @@ namespace Trinity.UnitTest
         {
         }
 
-        public Dictionary<CharacterizedPrecursor, double> ComputePeptideRatios(Dictionary<Dictionary<CharacterizedPrecursor, ElutionCurve>, double> dicOfCurveErrors)
+        public Dictionary<CharacterizedPrecursor, double> ComputePeptideRatios(Dictionary<Dictionary<CharacterizedPrecursor, ElutionCurve>, double> dicOfCurveErrorsP)
         {
-            Dictionary<Dictionary<CharacterizedPrecursor, ElutionCurve>, double> dicOfCurves = new Dictionary<Dictionary<CharacterizedPrecursor, ElutionCurve>, double>();
-            double median = MathNet.Numerics.Statistics.Statistics.Median(dicOfCurveErrors.Values);
-            foreach (Dictionary<CharacterizedPrecursor, ElutionCurve> dic in dicOfCurveErrors.Keys)
-                if(dicOfCurveErrors[dic] <= median)
-                    dicOfCurves.Add(dic, dicOfCurveErrors[dic]);
-            
-            //!!!! Remove very bad Ratios before going forward            
-            int nbRun = 3;
             Dictionary<Dictionary<CharacterizedPrecursor, ElutionCurve>, double> dicOfCorrelations = new Dictionary<Dictionary<CharacterizedPrecursor, ElutionCurve>, double>();
-            foreach (Dictionary<CharacterizedPrecursor, ElutionCurve> dicOfCurve in dicOfCurves.Keys)
-                dicOfCorrelations.Add(dicOfCurve, 1.0 / (double)dicOfCurves.Count);
+            foreach (Dictionary<CharacterizedPrecursor, ElutionCurve> dicOfCurve in dicOfCurveErrorsP.Keys)
+                dicOfCorrelations.Add(dicOfCurve, 1.0 / (double)dicOfCurveErrorsP.Count);
 
-            Dictionary<CharacterizedPrecursor, double> bestAverage = null;
+            int nbRun = 1;
+
+            Dictionary<Dictionary<CharacterizedPrecursor, ElutionCurve>, double> lastDicOfCurves = dicOfCurveErrorsP;
             while (nbRun > 0)
             {
                 nbRun--;
 
+                //Purge worst curves
+                Dictionary<Dictionary<CharacterizedPrecursor, ElutionCurve>, double> dicOfCurves = new Dictionary<Dictionary<CharacterizedPrecursor, ElutionCurve>, double>();
+                double median = MathNet.Numerics.Statistics.Statistics.Median(lastDicOfCurves.Values);
+                double maxMed = median + 0.5 * MathNet.Numerics.Statistics.Statistics.Variance(lastDicOfCurves.Values);
+                foreach (Dictionary<CharacterizedPrecursor, ElutionCurve> dic in lastDicOfCurves.Keys)
+                    if (lastDicOfCurves[dic] < maxMed)
+                        dicOfCurves.Add(dic, lastDicOfCurves[dic]);
+                
+                //Normalize already computed correlation factors for the remaning curves (sum must equal 1)
+                double sumOfCorr = 0.0;
+                foreach (Dictionary<CharacterizedPrecursor, ElutionCurve> dicOfCurve in dicOfCurves.Keys)
+                    sumOfCorr += dicOfCorrelations[dicOfCurve];
+
+                foreach (Dictionary<CharacterizedPrecursor, ElutionCurve> dicOfCurve in dicOfCurves.Keys)
+                    dicOfCorrelations[dicOfCurve] /= sumOfCorr;
+
+                //Compute average from weighted curves
                 Dictionary<CharacterizedPrecursor, double> average = new Dictionary<CharacterizedPrecursor, double>();
                 foreach (Dictionary<CharacterizedPrecursor, ElutionCurve> dicOfCurve in dicOfCurves.Keys)
                 {
@@ -302,6 +323,8 @@ namespace Trinity.UnitTest
                     }
                 }
 
+                //Compute correlation between average and curves
+                List<double> corrs = new List<double>();
                 foreach (Dictionary<CharacterizedPrecursor, ElutionCurve> dicOfCurve in dicOfCurves.Keys)
                 {
                     Dictionary<CharacterizedPrecursor, double> elution = new Dictionary<CharacterizedPrecursor, double>();
@@ -310,22 +333,36 @@ namespace Trinity.UnitTest
                             elution.Add(cPep, dicOfCurve[cPep].Area);
                         else
                             elution.Add(cPep, 0);
+                    double tmp =  1.0;
                     if(elution.Count > 1)
-                        dicOfCorrelations[dicOfCurve] = Math.Abs(MathNet.Numerics.Statistics.Correlation.Pearson(average.Values, elution.Values));
-                    else
-                        dicOfCorrelations[dicOfCurve] = 1.0;
+                        tmp = Math.Abs(MathNet.Numerics.Statistics.Correlation.Pearson(average.Values, elution.Values));
+
+                    dicOfCorrelations[dicOfCurve] = tmp;
+                    corrs.Add(tmp);
                 }
 
-                //Normalize correlation factors (sum must equal 1)
-                double sumOfCorr = 0.0;
-                foreach (Dictionary<CharacterizedPrecursor, ElutionCurve> dicOfCurve in dicOfCurves.Keys)
-                    sumOfCorr += dicOfCorrelations[dicOfCurve];
+                //Remove worst curves
+                double medianCorr = MathNet.Numerics.Statistics.Statistics.Median(corrs);
+                double maxCorr  = medianCorr + 0.5 * MathNet.Numerics.Statistics.Statistics.Variance(corrs);
+                Dictionary<Dictionary<CharacterizedPrecursor, ElutionCurve>, double> dicOfCurves2 = new Dictionary<Dictionary<CharacterizedPrecursor, ElutionCurve>, double>();
+                foreach (Dictionary<CharacterizedPrecursor, ElutionCurve> dic in dicOfCurves.Keys)
+                    if (dicOfCorrelations[dic] < maxCorr)
+                        dicOfCurves2.Add(dic, dicOfCurves[dic]);
 
-                foreach (Dictionary<CharacterizedPrecursor, ElutionCurve> dicOfCurve in dicOfCurves.Keys)
-                    dicOfCorrelations[dicOfCurve] /= sumOfCorr;
-
-                bestAverage = average;
+                lastDicOfCurves = dicOfCurves2;
             }//End of While nbRun not exhausted
+
+            Dictionary<CharacterizedPrecursor, double> bestAverage = new Dictionary<CharacterizedPrecursor, double>();
+            foreach (Dictionary<CharacterizedPrecursor, ElutionCurve> dicOfCurve in lastDicOfCurves.Keys)
+            {
+                Dictionary<CharacterizedPrecursor, double> areas = GetAreas(dicOfCurve);
+                foreach (CharacterizedPrecursor cPep in areas.Keys)
+                {
+                    if (!bestAverage.ContainsKey(cPep))
+                        bestAverage.Add(cPep, 0);
+                    bestAverage[cPep] += areas[cPep] * dicOfCorrelations[dicOfCurve];
+                }
+            }
             return bestAverage;
         }
         /*
