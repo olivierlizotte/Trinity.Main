@@ -15,7 +15,8 @@ namespace Trinity.UnitTest
     {
         public Peptide Peptide;
         public PeptideSpectrumMatches Psms;
-        //public double NormalizeFactor;
+        public double PrecursorLossNormalizeFactor = 1.0;
+        public double FragmentLossNormalizeFactor = 1.0;
         public List<ProductMatch> Fragments;
 
         private Dictionary<PeptideSpectrumMatch, double> DicOfPsmFactor;        
@@ -107,8 +108,10 @@ namespace Trinity.UnitTest
             return matches;
         }
 
-        public void Normalize(List<CharacterizedPrecursor> allCorrespondingPrec, Dictionary<CharacterizedPrecursor, List<ProductMatch>> matches)
-        {
+        public double NormalizePrecursor(IEnumerable<CharacterizedPrecursor> allCorrespondingPrec)
+        {       
+            double average = eCurve.Area;
+
             //average = area * Norm => Norm = average/area
             if (eCurve.Area > 0)
             {
@@ -123,48 +126,142 @@ namespace Trinity.UnitTest
                         cumulArea += precursor.eCurve.Area;
                     }
                 }
-                double average = cumulArea / (double)nbNonZero;
-                double precursorNormalizeFactor = average / this.eCurve.Area;
-                foreach (ProductMatch pm in matches[this])
+                average = cumulArea / (double)nbNonZero;
+                PrecursorLossNormalizeFactor = Math.Log(average, 2) / Math.Log(this.eCurve.Area, 2);
+                //PrecursorLossNormalizeFactor = average / this.eCurve.Area;
+            }
+            else
+                PrecursorLossNormalizeFactor = 1;
+
+            if (PrecursorLossNormalizeFactor > 4) PrecursorLossNormalizeFactor = 4;
+            if (PrecursorLossNormalizeFactor < 0.25) PrecursorLossNormalizeFactor = 0.25;
+            
+            return average;
+        }
+
+        public double GetAverageNbTimesFit(DBOptions dbOptions, out double area)
+        {        
+            long nbRatios = 0;
+            double averageTimes = 0;
+
+            int nbAreas = 0;
+            area = 0.0;
+            for (int nbProductsToKeep = 4; nbProductsToKeep <= 14; nbProductsToKeep++)
+            {
+                int nbIgnoredSpectrum = 0;
+                List<CharacterizedPrecursor> Isomers = new List<CharacterizedPrecursor>();
+                Isomers.Add(this);
+
+                Dictionary<double, int> dicOfCommonFragments = PositionnalIsomerSolver.GetCommonFragmentMz(Isomers, nbProductsToKeep);
+                Dictionary<CharacterizedPrecursor, List<ProductMatch>> matches = new Dictionary<CharacterizedPrecursor, List<ProductMatch>>();
+                foreach (CharacterizedPrecursor cPrec in Isomers)
+                    matches.Add(cPrec, cPrec.GetCombinedMatches(dicOfCommonFragments, dbOptions));
+
+                ElutionCurve curve = new ElutionCurve();
+                foreach (Query query in this.Queries)
                 {
-                    pm.normalizedIntensity /= precursorNormalizeFactor;
-                    pm.obsIntensity /= precursorNormalizeFactor;
+                    double overFlow = 0;
+                    double underFlow = 0;
+                    double percentError = 0;
+                    Dictionary<CharacterizedPrecursor, PositionnalIsomerSolver.MaxFlowResult> finalRatios = PositionnalIsomerSolver.LaunchMaxFlowFromSpectrum(matches, 1000, query.spectrum.Peaks, dbOptions.productMassTolerance,
+                                                            0, query.spectrum.PrecursorIntensityPerMilliSecond * query.spectrum.InjectionTime, ref overFlow, ref underFlow, ref percentError, dbOptions.ConSole);
+                    curve.AddPoint(query.spectrum.RetentionTimeInMin * 1000.0 * 60.0, finalRatios[this].Ratio * query.spectrum.PrecursorIntensityPerMilliSecond);
+                    averageTimes += finalRatios[this].NbFitTimes;                    
+                    nbRatios++;
+                }
+                curve.Compute();
+                if(curve.Area > 0)
+                {
+                    area += curve.Area;
+                    nbAreas++;
+                }
+            }
+            area /= (double)nbAreas;
+            return averageTimes / (double)nbRatios;
+        }
+
+        public void NormalizeFragments(IEnumerable<CharacterizedPrecursor> allCorrespondingPrec, DBOptions dbOptions)
+        {
+            FragmentLossNormalizeFactor = 1.0;
+            if(eCurve.Area > 0)
+            {              
+                double area = 0.0;
+                int nbIter = 1;
+                while (nbIter > 0)
+                {
+                    nbIter--;
+                    
+                    double averageNbTimes = GetAverageNbTimesFit(dbOptions, out area);
+                    FragmentLossNormalizeFactor = 1000.0 / averageNbTimes;
+                    foreach (ProductMatch pm in this.Fragments)
+                    {
+                        pm.normalizedIntensity /= FragmentLossNormalizeFactor;
+                        pm.obsIntensity /= FragmentLossNormalizeFactor;
+                    }
                 }
 
+                double average = NormalizePrecursor(allCorrespondingPrec);
+                //PrecursorLossNormalizeFactor = Math.Log(average, 2) / Math.Log(area, 2);
+
+
+                //PrecursorLossNormalizeFactor = average / area;
+
+                PrecursorLossNormalizeFactor = 1.0;
+
+                    /*
+                        //PrecursorLossNormalizeFactor = average / rez[this];
+                        //FragmentLossNormalizeFactor = average / rez[this];
+                        FragmentLossNormalizeFactor = Math.Log(average, 2) / Math.Log(rez[this], 2);
+                        foreach (ProductMatch pm in this.Fragments)
+                        {
+                            pm.normalizedIntensity *= FragmentLossNormalizeFactor;
+                            pm.obsIntensity *= FragmentLossNormalizeFactor;
+                        }
+                    }//*/
+            }
+        }//*/
+        /*
+        public void NormalizeFragments(List<CharacterizedPrecursor> allCorrespondingPrec, Dictionary<CharacterizedPrecursor, List<ProductMatch>> matches)
+        {
+            //average = area * Norm => Norm = average/area
+            if (eCurve.Area > 0)
+            {
                 //Normalize matches based on normalized fragment intensities
                 double cumulFragments = 0.0;
+                int nbNonZero = 0;
                 foreach (CharacterizedPrecursor precursor in allCorrespondingPrec)
                 {
                     if (precursor.eCurve.Area > 0)
                     {
                         foreach (ProductMatch match in matches[precursor])
                             cumulFragments += match.normalizedIntensity;
+                        nbNonZero++;
                     }
-                }                
+                }
+
                 double averageFragment = cumulFragments / (double)nbNonZero;
                 //NormalizeFactor = average / eCurve.Area;
                 //NormalizeFactor = Math.Pow(average, 2) / Math.Pow(eCurve.Area, 2);
-                
+
                 double totalFrag = 0.0;
                 foreach (ProductMatch match in matches[this])
                     totalFrag += match.normalizedIntensity;
-                double NormalizeFactor = averageFragment / totalFrag;
+                FragmentLossNormalizeFactor = averageFragment / totalFrag;
                 //NormalizeFactor *= Math.Log(averageFragmentTotal, 2) / Math.Log(totalFrag, 2);
 
                 //double lossOfPrecIntensity = 1;// Math.Log(averagePrecursorArea, 2) / Math.Log(PrecursorCurves[foundKey][sample].Area, 2);
                 //double lossofFragmentIntensity = 1;// Math.Pow(avgRatioSum, 2) / Math.Pow(listOfsumOfProducts[sample], 2);
-                //*/
-                if (NormalizeFactor > 4) NormalizeFactor = 4;
-                if (NormalizeFactor < 0.25) NormalizeFactor = 0.25;
 
+                if (FragmentLossNormalizeFactor > 4) FragmentLossNormalizeFactor = 4;
+                if (FragmentLossNormalizeFactor < 0.25) FragmentLossNormalizeFactor = 0.25;
 
-                foreach (ProductMatch pm in matches[this])
-                {
-                    pm.normalizedIntensity /= NormalizeFactor;
-                    pm.obsIntensity /= NormalizeFactor;
-                }
+                //foreach (ProductMatch pm in matches[this])
+                //{
+                //    pm.normalizedIntensity /= NormalizeFactor;
+                //    pm.obsIntensity /= NormalizeFactor;
+                //}
             }
-        }
+        }//*/
     }
 
     public class MixedPrecursor : PrecursorIon
@@ -213,7 +310,10 @@ namespace Trinity.UnitTest
                             elution.Add(cPep, dicOfCurve[cPep].Area);
                         else
                             elution.Add(cPep, 0);
-                    dicOfCorrelations[dicOfCurve] = Math.Abs(MathNet.Numerics.Statistics.Correlation.Pearson(average.Values, elution.Values));
+                    if(elution.Count > 1)
+                        dicOfCorrelations[dicOfCurve] = Math.Abs(MathNet.Numerics.Statistics.Correlation.Pearson(average.Values, elution.Values));
+                    else
+                        dicOfCorrelations[dicOfCurve] = 1.0;
                 }
 
                 //Normalize correlation factors (sum must equal 1)
@@ -228,7 +328,7 @@ namespace Trinity.UnitTest
             }//End of While nbRun not exhausted
             return bestAverage;
         }
-
+        /*
         public static Dictionary<Sample, double> GetNormalizedAreas(Dictionary<Sample, ElutionCurve> curves)
         {
             Dictionary<Sample, double> normedCurves = new Dictionary<Trinity.Sample, double>();
@@ -246,13 +346,13 @@ namespace Trinity.UnitTest
                 normedCurves.Add(sample, (curves[sample].Area - min) / (max - min));
 
             return normedCurves;
-        }
+        }//*/
 
         public static Dictionary<CharacterizedPrecursor, double> GetAreas(Dictionary<CharacterizedPrecursor, ElutionCurve> curves)
         {
             Dictionary<CharacterizedPrecursor, double> newCurves = new Dictionary<CharacterizedPrecursor, double>();
             foreach (CharacterizedPrecursor cPep in curves.Keys)
-                newCurves.Add(cPep, curves[cPep].Area);
+                newCurves.Add(cPep, curves[cPep].Area * cPep.PrecursorLossNormalizeFactor);// * cPep.FragmentLossNormalizeFactor);
 
             return newCurves;
         }
@@ -515,10 +615,13 @@ namespace Trinity.UnitTest
             }//End of foreach spiked sample
 
             //Normalize intensities based on average area of each precursor
-            /*foreach (double mzKey in spikes.Keys)
+            foreach (double mzKey in spikes.Keys)
             {
-                foreach (CharacterizedPrecursor precursor in spikes[mzKey].Values)
-                    precursor.Normalize(spikes[mzKey]);
+                //foreach (CharacterizedPrecursor precursor in spikes[mzKey].Values)
+                //    precursor.NormalizePrecursor(spikes[mzKey].Values);
+
+                foreach(CharacterizedPrecursor precursor in spikes[mzKey].Values)
+                    precursor.NormalizeFragments(spikes[mzKey].Values, dbOptions);
             }//*/
             return spikes;
         }
@@ -557,8 +660,8 @@ namespace Trinity.UnitTest
                 foreach (CharacterizedPrecursor cPrec in Isomers)
                     matches.Add(cPrec, cPrec.GetCombinedMatches(dicOfCommonFragments, dbOptions));
 
-                foreach(CharacterizedPrecursor precursor in Isomers)
-                    precursor.Normalize(Isomers, matches);                
+                //foreach(CharacterizedPrecursor precursor in Isomers)
+                //    precursor.NormalizeFragments(Isomers, matches);                
 
                 double cumulError = 0;
                 Dictionary<CharacterizedPrecursor, ElutionCurve> curves = new Dictionary<CharacterizedPrecursor, ElutionCurve>();
@@ -568,7 +671,7 @@ namespace Trinity.UnitTest
                     double overFlow = 0;
                     double underFlow = 0;
                     double percentError = 0;
-                    Dictionary<CharacterizedPrecursor, double> finalRatios = LaunchMaxFlowFromSpectrum(matches, 1000, query.spectrum.Peaks, dbOptions.productMassTolerance,
+                    Dictionary<CharacterizedPrecursor, MaxFlowResult> finalRatios = LaunchMaxFlowFromSpectrum(matches, 1000, query.spectrum.Peaks, dbOptions.productMassTolerance,
                                                             0, query.spectrum.PrecursorIntensityPerMilliSecond * query.spectrum.InjectionTime, ref overFlow, ref underFlow, ref percentError, dbOptions.ConSole);
 
                     cumulError += percentError;
@@ -582,7 +685,7 @@ namespace Trinity.UnitTest
                             if (!curves.ContainsKey(cPep))
                                 curves.Add(cPep, new ElutionCurve());
 
-                            curves[cPep].AddPoint(timeInMilliSeconds, finalRatios[cPep] * query.spectrum.PrecursorIntensityPerMilliSecond);
+                            curves[cPep].AddPoint(timeInMilliSeconds, finalRatios[cPep].Ratio * query.spectrum.PrecursorIntensityPerMilliSecond);
                         }
                     }
                     else
@@ -591,14 +694,14 @@ namespace Trinity.UnitTest
                     if (nbIgnoredSpectrum * 2 > mixedPrecursor.Queries.Count)
                         break;
                 }//End of foreach query
-
-                if(nbIgnoredSpectrum > 0)
-                    Console.WriteLine("Ignored Spectrum : " + nbIgnoredSpectrum + " / " + mixedPrecursor.Queries.Count);
-
+                
                 //mixedPrecursor.PeptideRatios = curves;
 
                 if (nbIgnoredSpectrum * 2 < mixedPrecursor.Queries.Count)
                 {
+                    if (nbIgnoredSpectrum > 0)
+                        Console.WriteLine("Ignored Spectrum : " + nbIgnoredSpectrum + " / " + mixedPrecursor.Queries.Count);
+
                     foreach (CharacterizedPrecursor cPep in curves.Keys)
                         curves[cPep].Compute();
 
@@ -658,7 +761,7 @@ namespace Trinity.UnitTest
 
             return averagedValues;
         }
-
+        
         private static double ComputeMaxFlow(List<List<ProductMatch>> spikedMatches,
                                     List<MsMsPeak> mixedSpectrum, MassTolerance tolerance,
                                 ref List<List<double>> optimalSolutions,
@@ -863,7 +966,18 @@ namespace Trinity.UnitTest
             return nbCumul;
         }
 
-        private static Dictionary<CharacterizedPrecursor, double> LaunchMaxFlowFromSpectrum(Dictionary<CharacterizedPrecursor, List<ProductMatch>> ratiosToFit,  
+        public class MaxFlowResult
+        {
+            public double Ratio;
+            public double NbFitTimes;
+            public MaxFlowResult(double ratio, double nbTimes)
+            {
+                this.Ratio = ratio;
+                this.NbFitTimes = nbTimes;
+            }
+        }
+
+        public static Dictionary<CharacterizedPrecursor, MaxFlowResult> LaunchMaxFlowFromSpectrum(Dictionary<CharacterizedPrecursor, List<ProductMatch>> ratiosToFit,  
                                             int precision, GraphML_List<MsMsPeak> capacity, MassTolerance tolerance, 
                                             int returnType,//0 for max flow, 1 for best flow, 2 for average
                                             double PrecursorIntensityInCTrap,
@@ -901,7 +1015,7 @@ namespace Trinity.UnitTest
             overFlow = 0;
             underFlow = error;
 
-            List<double> result = null;
+            List<MaxFlowResult> result = null;
             switch (returnType)
             {
                 case 0:
@@ -917,7 +1031,7 @@ namespace Trinity.UnitTest
                     result = GetResultList(tmpAverage, precision, underFlow, sumOfIntensities);
                     break;
             }
-            Dictionary<CharacterizedPrecursor, double> resultPerSample = new Dictionary<CharacterizedPrecursor, double>();
+            Dictionary<CharacterizedPrecursor, MaxFlowResult> resultPerSample = new Dictionary<CharacterizedPrecursor, MaxFlowResult>();
             int i = 0;
             foreach (CharacterizedPrecursor key in ratiosToFit.Keys)
             {
@@ -927,9 +1041,9 @@ namespace Trinity.UnitTest
             return resultPerSample;
         }
 
-        private static List<double> GetResultList(List<double> solution, int precision, double underFlow, double sumOfIntensities)
+        private static List<MaxFlowResult> GetResultList(List<double> solution, int precision, double underFlow, double sumOfIntensities)
         {
-            List<double> rez = new List<double>();
+            List<MaxFlowResult> rez = new List<MaxFlowResult>();
             double sumVal = 0.0;
             foreach(double val in solution)
                 sumVal += val;
@@ -937,7 +1051,7 @@ namespace Trinity.UnitTest
             sumVal += (underFlow / sumOfIntensities) * precision;
 
             foreach (double val in solution)
-                rez.Add(val / sumVal);
+                rez.Add(new MaxFlowResult( val / sumVal, val));
 
             return rez;
         }

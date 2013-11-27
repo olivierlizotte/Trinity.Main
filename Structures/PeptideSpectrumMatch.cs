@@ -159,7 +159,7 @@ namespace Trinity
                 //{
                 double massDiff = options.productMassTolerance.Value;
                 double bestMz = -1;
-                double bestInt = -1;
+                double bestInt = 0;
 
                 foreach (int index in Query.spectrum.GetIndexOfMZInRange(matchTheo.theoMz, options.productMassTolerance))
                 {
@@ -176,7 +176,7 @@ namespace Trinity
                                 bestMz = peaks[index].MZ;
                             }
                             if (peaks[index].Intensity > bestInt)
-                                bestInt = peaks[index].Intensity;
+                                bestInt += peaks[index].Intensity;
                         }
                     }
                 }

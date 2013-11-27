@@ -78,6 +78,10 @@ namespace Trinity.UnitTest
             string[] MixedRaws = new string[ProjectMixed.Count];
             for(int i = 0; i < ProjectMixed.Count; i++)
                 MixedRaws[i] = ProjectMixed[i].sSDF;
+
+            //string[] StableRaws = new string[ProjectStable.Count];
+            //for (int i = 0; i < ProjectStable.Count; i++)
+            //    StableRaws[i] = ProjectStable[i].sSDF;
             
             PositionnalIsomerSolver.Solve(SpikedRaws, MixedRaws, dbOptions.FastaDatabaseFilepath, dbOptions.OutputFolder, console);
         }
