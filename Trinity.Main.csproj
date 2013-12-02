@@ -88,7 +88,6 @@
     <Compile Include="Database\Neo4j\ResultExporter.cs" />
     <Compile Include="Digestion.cs" />
     <Compile Include="Methods\AddRtToMascotReport.cs" />
-    <Compile Include="Methods\Copie de PositionnalIsomerSolver.cs" />
     <Compile Include="Methods\Curve.cs" />
     <Compile Include="Methods\RawRtExtractor.cs" />
     <Compile Include="Morpheus\AminoAcidMasses.cs" />
@@ -123,6 +122,9 @@
     <Compile Include="PeptideSearcher.cs" />
     <Compile Include="Structures\PeptideSpectrumMatch.cs" />
     <Compile Include="Structures\PeptideSpectrumMatches.cs" />
+    <Compile Include="Structures\PositionnalIsomer\CharacterizedPrecursor.cs" />
+    <Compile Include="Structures\PositionnalIsomer\MixedPrecursor.cs" />
+    <Compile Include="Structures\PositionnalIsomer\PrecursorIon.cs" />
     <Compile Include="Structures\Precursor.cs" />
     <Compile Include="Morpheus\Product.cs" />
     <Compile Include="Morpheus\ProductCaps.cs" />

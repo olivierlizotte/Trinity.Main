@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Proteomics.Utilities;
+using Trinity.Methods;
 
 namespace Trinity.UnitTest
 {
@@ -83,7 +84,7 @@ namespace Trinity.UnitTest
             //for (int i = 0; i < ProjectStable.Count; i++)
             //    StableRaws[i] = ProjectStable[i].sSDF;
             
-            PositionnalIsomerSolver.Solve(SpikedRaws, MixedRaws, dbOptions.FastaDatabaseFilepath, dbOptions.OutputFolder, console);
+            (new PositionnalIsomerSolver()).Solve(SpikedRaws, MixedRaws, dbOptions.FastaDatabaseFilepath, dbOptions.OutputFolder, console);
         }
         
         public static void DiAce(IConSol console)
@@ -102,7 +103,7 @@ namespace Trinity.UnitTest
             for (int i = 0; i < ProjectMixed.Count; i++)
                 MixedRaws[i] = ProjectMixed[i].sSDF;
 
-            PositionnalIsomerSolver.Solve(SpikedRaws, MixedRaws, dbOptions.FastaDatabaseFilepath, dbOptions.OutputFolder, console);
+            (new PositionnalIsomerSolver()).Solve(SpikedRaws, MixedRaws, dbOptions.FastaDatabaseFilepath, dbOptions.OutputFolder, console);
         }
 
         public static void TriAce(IConSol console)
@@ -121,7 +122,7 @@ namespace Trinity.UnitTest
             for (int i = 0; i < ProjectMixed.Count; i++)
                 MixedRaws[i] = ProjectMixed[i].sSDF;
 
-            PositionnalIsomerSolver.Solve(SpikedRaws, MixedRaws, dbOptions.FastaDatabaseFilepath, dbOptions.OutputFolder, console);
+            (new PositionnalIsomerSolver()).Solve(SpikedRaws, MixedRaws, dbOptions.FastaDatabaseFilepath, dbOptions.OutputFolder, console);
         }
 
         public static void Mixed(IConSol console)
@@ -140,7 +141,7 @@ namespace Trinity.UnitTest
             for (int i = 0; i < ProjectMixed.Count; i++)
                 MixedRaws[i] = ProjectMixed[i].sSDF;
 
-            PositionnalIsomerSolver.Solve(SpikedRaws, MixedRaws, dbOptions.FastaDatabaseFilepath, dbOptions.OutputFolder, console);
+            (new PositionnalIsomerSolver()).Solve(SpikedRaws, MixedRaws, dbOptions.FastaDatabaseFilepath, dbOptions.OutputFolder, console);
         }
         //*/
         public static AnnotatedSpectrum AnnotatedSpectrumSample(IConSol console)
