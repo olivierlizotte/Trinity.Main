@@ -97,127 +97,131 @@ namespace Trinity
             get { return baseSequence.Replace('I', 'L'); }
         }
 
+        private string _preCompSeq = null;
         public string Sequence
         {
             get
             {
-                StringBuilder sequence = new StringBuilder();
+                if(_preCompSeq == null)
+                {
+                    StringBuilder sequence = new StringBuilder();
 
-                // fixed modifications on protein N-terminus
-                if(fixedModifications != null)
-                {
-                    List<Modification> prot_n_term_fixed_mods;
-                    if(fixedModifications.TryGetValue(0, out prot_n_term_fixed_mods))
-                    {
-                        foreach(Modification fixed_modification in prot_n_term_fixed_mods)
-                        {
-                            sequence.Append('[' + fixed_modification.Description.ToString() + ']');
-                        }
-                    }
-                }
-                // variable modification on protein N-terminus
-                if(variableModifications != null)
-                {
-                    Modification prot_n_term_variable_mod;
-                    if(variableModifications.TryGetValue(0, out prot_n_term_variable_mod))
-                    {
-                        sequence.Append('(' + prot_n_term_variable_mod.Description.ToString() + ')');
-                    }
-                }
-
-                // fixed modifications on peptide N-terminus
-                if(fixedModifications != null)
-                {
-                    List<Modification> pep_n_term_fixed_mods;
-                    if(fixedModifications.TryGetValue(1, out pep_n_term_fixed_mods))
-                    {
-                        foreach(Modification fixed_modification in pep_n_term_fixed_mods)
-                        {
-                            sequence.Append('[' + fixed_modification.Description.ToString() + ']');
-                        }
-                    }
-                }
-                // variable modification on peptide N-terminus
-                if(variableModifications != null)
-                {
-                    Modification pep_n_term_variable_mod;
-                    if(variableModifications.TryGetValue(1, out pep_n_term_variable_mod))
-                    {
-                        sequence.Append('(' + pep_n_term_variable_mod.Description.ToString() + ')');
-                    }
-                }
-
-                for(int r = 0; r < Length; r++)
-                {
-                    sequence.Append(this[r]);
-                    // fixed modifications on this residue
+                    // fixed modifications on protein N-terminus
                     if(fixedModifications != null)
                     {
-                        List<Modification> residue_fixed_mods;
-                        if(fixedModifications.TryGetValue(r + 2, out residue_fixed_mods))
+                        List<Modification> prot_n_term_fixed_mods;
+                        if(fixedModifications.TryGetValue(0, out prot_n_term_fixed_mods))
                         {
-                            foreach(Modification fixed_modification in residue_fixed_mods)
+                            foreach(Modification fixed_modification in prot_n_term_fixed_mods)
                             {
                                 sequence.Append('[' + fixed_modification.Description.ToString() + ']');
                             }
                         }
                     }
-                    // variable modification on this residue
+                    // variable modification on protein N-terminus
                     if(variableModifications != null)
                     {
-                        Modification residue_variable_mod;
-                        if(variableModifications.TryGetValue(r + 2, out residue_variable_mod))
+                        Modification prot_n_term_variable_mod;
+                        if(variableModifications.TryGetValue(0, out prot_n_term_variable_mod))
                         {
-                            sequence.Append('(' + residue_variable_mod.Description.ToString() + ')');
+                            sequence.Append('(' + prot_n_term_variable_mod.Description.ToString() + ')');
                         }
                     }
-                }
 
-                // fixed modifications on peptide C-terminus
-                if(fixedModifications != null)
-                {
-                    List<Modification> pep_c_term_fixed_mods;
-                    if(fixedModifications.TryGetValue(Length + 2, out pep_c_term_fixed_mods))
+                    // fixed modifications on peptide N-terminus
+                    if(fixedModifications != null)
                     {
-                        foreach(Modification fixed_modification in pep_c_term_fixed_mods)
+                        List<Modification> pep_n_term_fixed_mods;
+                        if(fixedModifications.TryGetValue(1, out pep_n_term_fixed_mods))
                         {
-                            sequence.Append('[' + fixed_modification.Description.ToString() + ']');
+                            foreach(Modification fixed_modification in pep_n_term_fixed_mods)
+                            {
+                                sequence.Append('[' + fixed_modification.Description.ToString() + ']');
+                            }
                         }
                     }
-                }
-                // variable modification on peptide C-terminus
-                if(variableModifications != null)
-                {
-                    Modification pep_c_term_variable_mod;
-                    if(variableModifications.TryGetValue(Length + 2, out pep_c_term_variable_mod))
+                    // variable modification on peptide N-terminus
+                    if(variableModifications != null)
                     {
-                        sequence.Append('(' + pep_c_term_variable_mod.Description.ToString() + ')');
-                    }
-                }
-
-                // fixed modifications on protein C-terminus
-                if(fixedModifications != null)
-                {
-                    List<Modification> prot_c_term_fixed_mods;
-                    if(fixedModifications.TryGetValue(Length + 3, out prot_c_term_fixed_mods))
-                    {
-                        foreach(Modification fixed_modification in prot_c_term_fixed_mods)
+                        Modification pep_n_term_variable_mod;
+                        if(variableModifications.TryGetValue(1, out pep_n_term_variable_mod))
                         {
-                            sequence.Append('[' + fixed_modification.Description.ToString() + ']');
+                            sequence.Append('(' + pep_n_term_variable_mod.Description.ToString() + ')');
                         }
                     }
-                }
-                // variable modification on protein C-terminus
-                if(variableModifications != null)
-                {
-                    Modification prot_c_term_variable_mod;
-                    if(variableModifications.TryGetValue(Length + 3, out prot_c_term_variable_mod))
-                    {
-                        sequence.Append('(' + prot_c_term_variable_mod.Description.ToString() + ')');
-                    }
-                }
 
-                return sequence.ToString();
+                    for(int r = 0; r < Length; r++)
+                    {
+                        sequence.Append(this[r]);
+                        // fixed modifications on this residue
+                        if(fixedModifications != null)
+                        {
+                            List<Modification> residue_fixed_mods;
+                            if(fixedModifications.TryGetValue(r + 2, out residue_fixed_mods))
+                            {
+                                foreach(Modification fixed_modification in residue_fixed_mods)
+                                {
+                                    sequence.Append('[' + fixed_modification.Description.ToString() + ']');
+                                }
+                            }
+                        }
+                        // variable modification on this residue
+                        if(variableModifications != null)
+                        {
+                            Modification residue_variable_mod;
+                            if(variableModifications.TryGetValue(r + 2, out residue_variable_mod))
+                            {
+                                sequence.Append('(' + residue_variable_mod.Description.ToString() + ')');
+                            }
+                        }
+                    }
+
+                    // fixed modifications on peptide C-terminus
+                    if(fixedModifications != null)
+                    {
+                        List<Modification> pep_c_term_fixed_mods;
+                        if(fixedModifications.TryGetValue(Length + 2, out pep_c_term_fixed_mods))
+                        {
+                            foreach(Modification fixed_modification in pep_c_term_fixed_mods)
+                            {
+                                sequence.Append('[' + fixed_modification.Description.ToString() + ']');
+                            }
+                        }
+                    }
+                    // variable modification on peptide C-terminus
+                    if(variableModifications != null)
+                    {
+                        Modification pep_c_term_variable_mod;
+                        if(variableModifications.TryGetValue(Length + 2, out pep_c_term_variable_mod))
+                        {
+                            sequence.Append('(' + pep_c_term_variable_mod.Description.ToString() + ')');
+                        }
+                    }
+
+                    // fixed modifications on protein C-terminus
+                    if(fixedModifications != null)
+                    {
+                        List<Modification> prot_c_term_fixed_mods;
+                        if(fixedModifications.TryGetValue(Length + 3, out prot_c_term_fixed_mods))
+                        {
+                            foreach(Modification fixed_modification in prot_c_term_fixed_mods)
+                            {
+                                sequence.Append('[' + fixed_modification.Description.ToString() + ']');
+                            }
+                        }
+                    }
+                    // variable modification on protein C-terminus
+                    if(variableModifications != null)
+                    {
+                        Modification prot_c_term_variable_mod;
+                        if(variableModifications.TryGetValue(Length + 3, out prot_c_term_variable_mod))
+                        {
+                            sequence.Append('(' + prot_c_term_variable_mod.Description.ToString() + ')');
+                        }
+                    }
+                    _preCompSeq = sequence.ToString();                    
+                }
+                return _preCompSeq;
             }
         }
 

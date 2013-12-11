@@ -13,7 +13,7 @@ namespace Trinity
         public double obsIntensity;
         public double normalizedIntensity;
         public double mass_diff;
-        public string fragment;
+        public FragmentClass Fragment;
         public int fragmentPos;
         public double weight;
         public ProductMatch()
@@ -28,7 +28,7 @@ namespace Trinity
             this.normalizedIntensity = match.normalizedIntensity;
             this.mass_diff = match.mass_diff;
             this.charge = match.charge;
-            this.fragment = match.fragment;
+            this.Fragment = match.Fragment;
             this.fragmentPos = match.fragmentPos;
             this.weight = match.weight;
         }

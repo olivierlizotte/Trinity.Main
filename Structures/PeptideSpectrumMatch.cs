@@ -43,6 +43,26 @@ namespace Trinity
         public double ProductScore { get;  set; }
         public double IntensityScore { get;  set; }
 
+        public double FragmentScore()
+        {
+            double[] aaScoreArray = new double[Peptide.Length];
+            foreach (ProductMatch match in AllProductMatches)
+                if (match.Fragment.IsReverse)
+                    for (int i = match.fragmentPos -1; i < Peptide.Length; i++)
+                        aaScoreArray[i] += match.normalizedIntensity;
+                else
+                    for (int i = 0; i < match.fragmentPos; i++)
+                        aaScoreArray[i] += match.normalizedIntensity;
+            double score = 0.0;
+            for (int i = 0; i < aaScoreArray.Length; i++)
+                if (aaScoreArray[i] <= 1)
+                    score += aaScoreArray[i];
+                else
+                    if (aaScoreArray[i] < 2)
+                        score += aaScoreArray[i] - 1;
+            return score;
+        }
+
         //TODO Check if those var are common with Precursor and remove zeroed out var  
         public double ProbabilityScore()
         {
@@ -55,7 +75,8 @@ namespace Trinity
                                 options.dMatchingProductFraction * MatchingProductsFraction +
                                 options.dMatchingProduct * MatchingWeightedProducts +
                                 options.dProtein * ProteinScore +
-                                options.dPeptideScore * PeptideScore;//*/
+                                options.dPeptideScore * PeptideScore +
+                                options.dFragmentScore * FragmentScore();//*/
             return score;
         }
 
@@ -189,7 +210,7 @@ namespace Trinity
                     pMatch.mass_diff = massDiff;
                     pMatch.obsIntensity = bestInt;// Intensities[bestIndex];
                     pMatch.charge = matchTheo.charge;// peaks[bestIndex].Charge;
-                    pMatch.fragment = matchTheo.fragment;
+                    pMatch.Fragment = matchTheo.Fragment;
                     pMatch.fragmentPos = matchTheo.fragmentPos;
                     pMatch.normalizedIntensity = pMatch.obsIntensity / (Query.spectrum.InjectionTime * Query.spectrum.PrecursorIntensityPerMilliSecond);
                     yield return pMatch;
@@ -231,7 +252,8 @@ namespace Trinity
                 
                 cumulMatch.Add( match );
                 if (match.obsIntensity > highestFragmentIntensity)
-                    options.ConSole.WriteLine("fragment intensity higher than most intense fragment ... should not happen!");
+                    highestFragmentIntensity = match.obsIntensity;
+                    //options.ConSole.WriteLine("fragment intensity higher than most intense fragment ... should not happen!");
             }
             AllProductMatches = cumulMatch;
             MatchingProductsFraction    = (double)MatchingWeightedProducts / (double) TotalWeightedProducts;

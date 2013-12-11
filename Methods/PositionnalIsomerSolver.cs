@@ -16,6 +16,8 @@ namespace Trinity.Methods
     {
         public int nbMinFragments = 5;
         public int nbMaxFragments = 5;
+        public double precTolPpm = 8;
+        public double prodTolPpm = 20;
         public long precision     = 1000;
         private DBOptions dbOptions;
         
@@ -28,8 +30,8 @@ namespace Trinity.Methods
         private DBOptions CreateOptions(string fastaFile, string outputFolder, IConSol consol)
         {
             DBOptions dbOptions = new DBOptions(fastaFile, consol);
-            dbOptions.precursorMassTolerance = new MassTolerance(8, MassToleranceUnits.ppm);
-            dbOptions.productMassTolerance = new MassTolerance(20, MassToleranceUnits.ppm);
+            dbOptions.precursorMassTolerance = new MassTolerance(precTolPpm, MassToleranceUnits.ppm);
+            dbOptions.productMassTolerance = new MassTolerance(prodTolPpm, MassToleranceUnits.ppm);
             dbOptions.MaximumPeptideMass = 200000;
             dbOptions.OutputFolder = outputFolder;
 
@@ -171,7 +173,7 @@ namespace Trinity.Methods
                     vsCSVWriter writerRatio = new vsCSVWriter(dbOptions.OutputFolder + @"Individual\" + vsCSV.GetFileName_NoExtension(sample.sSDF) + "_" + keyMz + "MZ.csv");
                     string titleIndividual = "Scan time,Precursor Intensity,Intensity Per Millisecond";
                     foreach (ProductMatch pm in characterizedPeptides[keyMz][sample].AllFragments)
-                        titleIndividual += "," + pm.fragment + pm.fragmentPos + "^" + pm.charge;
+                        titleIndividual += "," + pm.Fragment + pm.fragmentPos + "^" + pm.charge;
                     writerRatio.AddLine(titleIndividual);
 
                     foreach (Query query in characterizedPeptides[keyMz][sample].Queries)
@@ -181,7 +183,7 @@ namespace Trinity.Methods
                         {
                             double intensity = 0.0;
                             foreach (ProductMatch pmSpec in query.psms[0].AllProductMatches)
-                                if (pmSpec.charge == pm.charge && pmSpec.fragment == pm.fragment && pmSpec.fragmentPos == pm.fragmentPos)
+                                if (pmSpec.charge == pm.charge && pmSpec.Fragment == pm.Fragment && pmSpec.fragmentPos == pm.fragmentPos)
                                     intensity = pmSpec.obsIntensity;
                             line += "," + intensity;
                         }

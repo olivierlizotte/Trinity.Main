@@ -14,7 +14,7 @@ namespace Trinity
     /// <summary>
     /// Abstract class for typicall fragment behavior
     /// </summary>
-    public abstract class FragmentClass : Modification
+    public abstract class FragmentClass : GraphML_Node// : Modification
     {
         public abstract string Name { get; }
         public abstract IEnumerable<double> ComputeFragment(double cTermCumul, double nTermCumul);
@@ -164,7 +164,8 @@ namespace Trinity
                             match.fragmentPos = 1 + sequence.Length - r;
                         else
                             match.fragmentPos = r;
-                        match.fragment = fragment.Name;
+                        match.Fragment = fragment;
+
                         foreach (double product_mass in fragment.ComputeFragment(cumulativeCTerminalMass, cumulativeNTerminalMass))
                         {
                             match.weight = fragment.Distribution;//TODO Adjust this value by computing overall impact (times 10?)
@@ -179,7 +180,7 @@ namespace Trinity
                                 {
                                     if ((fragment.IsReverse ? cumulRevSeq : cumulSeq).Contains(mod.AminoAcid))
                                     {
-                                        match.fragment = mod.Description;
+                                        //!!!!match.Fragment = mod;
                                         match.weight = fragment.Distribution * mod.Probability;
                                         match.theoMz = Numerics.MZFromMass(product_mass + mod.MonoisotopicMassShift, c);
                                         yield return match;
@@ -198,7 +199,7 @@ namespace Trinity
                 {
                     if (peptide.BaseSequence.Contains(mod.AminoAcid))
                     {
-                        match.fragment = mod.Description;
+                        //!!!!match.Fragment = mod;
                         match.theoMz = mod.MonoisotopicMassShift;
                         match.weight = mod.Probability;
                         yield return match;

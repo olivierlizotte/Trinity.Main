@@ -18,7 +18,7 @@ namespace Trinity.UnitTest
             //@"G:\Thibault\Olivier\MnR\Databases\BD_RefGenome_WithReverse_2012-06-20.fasta";                        
             //Trypsin
 
-            string outputDir = @"C:\_IRIC\DATA\Test\testYeast\";
+            string outputDir = @"C:\_IRIC\DATA\Yeast\Results\";
             string fastaFile = @"C:\_IRIC\DATA\Yeast\Yeast_SwissProt.fasta";//Yeast
             //@"G:\Thibault\Olivier\MQ_vs_Morpheus\Yeast_SwissProt.fasta";//Yeast
             //@"G:\Thibault\Olivier\Databases\SProHNoIso_20130430\current\sequences_2013-05-30.fa";

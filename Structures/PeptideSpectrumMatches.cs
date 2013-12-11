@@ -16,7 +16,7 @@ namespace Trinity
         FDRizer<PeptideSpectrumMatch> uptimizer;
         public PeptideSpectrumMatches() { }
         public PeptideSpectrumMatches(IEnumerable<PeptideSpectrumMatch> list) : base(list) { }
-
+        
         public void OptimizePSMScoreRatios(DBOptions options, double desired_fdr, Result results)
         {
             long bestNbTargets = 0;
@@ -264,7 +264,7 @@ namespace Trinity
                 {
                     if (DicOfCommonPM == null || DicOfCommonPM.ContainsKey(match.theoMz))
                     {
-                        string key = match.fragment + "|" + match.fragmentPos + "|" + match.charge;
+                        string key = match.Fragment.Name + "|" + match.fragmentPos + "|" + match.charge;
                         if (!DicOfProducts.ContainsKey(key))
                             DicOfProducts.Add(key, new Dictionary<PeptideSpectrumMatch, ProductMatch>());
                         DicOfProducts[key].Add(psm, match);

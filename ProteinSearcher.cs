@@ -176,20 +176,23 @@ namespace Trinity
             this.options = options;
         }
 
-        public ProteinGroupMatches SearchLatest(List<PeptideMatch> peptides, IDictionary<string, List<Protein>> dicOfProteins)//, List<Protein> AllProteins)// Dictionary<string, List<Protein>> dicOfPeptides)
+        public ProteinGroupMatches SearchLatest(List<PeptideMatch> peptides)//, IDictionary<string, List<Protein>> dicOfProteins)//, List<Protein> AllProteins)// Dictionary<string, List<Protein>> dicOfPeptides)
         {
             Dictionary<string, PeptideMatch> dicOfPeptideMatches = new Dictionary<string,PeptideMatch>();
             foreach(PeptideMatch match in peptides)
                 dicOfPeptideMatches.Add(match.peptide.BaseSequence, match);
 
             Dictionary<Protein, List<string>> allPossibleProteins = new Dictionary<Protein, List<string>>();
-            foreach (string peptideSequence in dicOfProteins.Keys)
+            foreach (PeptideMatch match in peptides)
+            //foreach (string peptideSequence in dicOfProteins.Keys)
             {
-                foreach (Protein protein in dicOfProteins[peptideSequence])
+                Protein protein = match.peptide.Parent;
+
+                //foreach (Protein protein in dicOfProteins[peptideSequence])
                 {
                     if (!allPossibleProteins.ContainsKey(protein))
                         allPossibleProteins.Add(protein, new List<string>());
-                    allPossibleProteins[protein].Add(peptideSequence);
+                    allPossibleProteins[protein].Add(match.peptide.Sequence);
                 }
             }
 

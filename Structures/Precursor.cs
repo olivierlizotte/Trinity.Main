@@ -230,7 +230,7 @@ namespace Trinity
                 double score = 0;
                 foreach (PeptideSpectrumMatch psm in psms)
                     if (peptide.IsSamePeptide(psm.Peptide, checkMods))
-                        score += 1.0;
+                        score += psm.ProbabilityScore();
                 return score;
             }
             else

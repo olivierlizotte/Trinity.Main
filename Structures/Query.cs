@@ -17,6 +17,7 @@ namespace Trinity
     {
         public DBOptions                    options;
         public Sample                       sample;
+        //public Dictionary<string, PeptideSpectrumMatch>       psms;
         public PeptideSpectrumMatches       psms;
         public ProductSpectrum              spectrum;
         public Precursor                    precursor;

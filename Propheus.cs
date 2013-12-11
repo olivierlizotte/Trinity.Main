@@ -312,7 +312,7 @@ namespace Trinity
 
             //Step 3 : Regroup based on protein sequences (Morpheus code)            
             ProteinSearcher protSearcher = new ProteinSearcher(dbOptions);
-            result.proteins = protSearcher.SearchLatest(result.peptideSequences, dbSearcher.DicOfProteins);
+            result.proteins = protSearcher.SearchLatest(result.peptideSequences);//, dbSearcher.DicOfProteins);
             
             //long lastNbTarget = nbTargets;
             //do

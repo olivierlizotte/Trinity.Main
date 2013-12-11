@@ -8,6 +8,12 @@ using System;
 
 namespace Trinity
 {
+    public class stPeptide
+    {
+        public string Sequence;
+        public List<string> Proteins;
+    }
+
     /// <summary>
     /// Peptide class, mostly as its defined in Morpheus, with a few twists
     /// </summary>

@@ -166,7 +166,7 @@ namespace Trinity
                     if (psm.Target == target)
                     {
                         foreach (ProductMatch match in psm.AllProductMatches)
-                            if (fragment.Name == match.fragment)
+                            if (fragment == match.Fragment)
                             {
                                 nbFrag++;
                                 if (!positions.ContainsKey(match.fragmentPos))
@@ -185,7 +185,8 @@ namespace Trinity
                     strPos += ",";
                 writer.AddLine("    " + fragment.Name + ", Number of fragments = , " + nbFrag + ",   Intensity = ," + cumulIntensity + ", fragment matched [" + strPos.Substring(1) + "]");
             }
-            foreach (string fragment in FragmentDictionary.Fragments.Keys)
+            foreach (FragmentClass fragment in dbOptions.fragments)
+            //foreach (string fragment in FragmentDictionary.Fragments.Keys)
             {
                 double cumulIntensity = 0;
                 int nbFrag = 0;
@@ -195,7 +196,7 @@ namespace Trinity
                     if (psm.Target == target)
                     {
                         foreach (ProductMatch match in psm.AllProductMatches)
-                            if (fragment == match.fragment)
+                            if (fragment == match.Fragment)
                             {
                                 nbFrag++;
                                 cumulIntensity += match.obsIntensity;
@@ -204,7 +205,8 @@ namespace Trinity
                 }
                 writer.AddLine("    " + fragment + ", Number of fragments = ," + nbFrag + ",   Intensity = ," + cumulIntensity);
             }
-            foreach (string fragment in FragmentDictionary.AAFragments.Keys)
+            foreach (FragmentClass fragment in dbOptions.fragments)
+            //foreach (string fragment in FragmentDictionary.AAFragments.Keys)
             {
                 double cumulIntensity = 0;
                 int nbFrag = 0;
@@ -214,7 +216,7 @@ namespace Trinity
                     if (psm.Target == target)
                     {
                         foreach (ProductMatch match in psm.AllProductMatches)
-                            if (fragment == match.fragment)
+                            if (fragment == match.Fragment)
                             {
                                 nbFrag++;
                                 cumulIntensity += match.obsIntensity;
@@ -235,13 +237,14 @@ namespace Trinity
         public void ExportFragments(PeptideSpectrumMatch psm)
         {
             vsCSVWriter writer = new vsCSVWriter(dbOptions.OutputFolder + psm.Peptide.Sequence + "_" + vsCSV.GetFileName_NoExtension(psm.Query.sample.sSDF) + "_" + psm.Query.precursor.Track.RT + ".csv");
-            List<string> fragments = new List<string>();
-            foreach (string fragment in FragmentDictionary.Fragments.Keys)
+            List<FragmentClass> fragments = new List<FragmentClass>();
+            foreach (FragmentClass fragment in dbOptions.fragments)
+            //foreach (string fragment in FragmentDictionary.Fragments.Keys)
             {
                 bool found = false;
                 foreach (ProductMatch match in dbOptions.fragments.ComputeFragments(psm.Peptide, psm.Query.precursor.Charge, dbOptions))
                 {
-                    if (fragment == match.fragment)
+                    if (fragment == match.Fragment)
                     {
                         found = true;
                         break;
@@ -256,8 +259,8 @@ namespace Trinity
                 foreach (FragmentClass fragment in dbOptions.fragments)
                     title += "," + fragment.Name + " ^" + charge;
             for (int charge = 1; charge <= psm.Query.precursor.Charge; charge++)
-                foreach (string fragment in fragments)
-                    title += "," + fragment + " ^" + charge;
+                foreach (FragmentClass fragment in fragments)
+                    title += "," + fragment.Name + " ^" + charge;
             writer.AddLine(title);
 
             for (int i = 1; i <= psm.Peptide.Length; i++)
@@ -270,7 +273,7 @@ namespace Trinity
                         bool found = false;
                         foreach (ProductMatch match in dbOptions.fragments.ComputeFragments(psm.Peptide, psm.Query.precursor.Charge, dbOptions))
                         {
-                            if (fragment.Name == match.fragment && match.fragmentPos == i && match.charge == charge)
+                            if (fragment == match.Fragment && match.fragmentPos == i && match.charge == charge)
                             {
                                 line += "," + match.theoMz;
                                 found = true;
@@ -283,12 +286,12 @@ namespace Trinity
                 }
                 for (int charge = 1; charge <= psm.Query.precursor.Charge; charge++)
                 {
-                    foreach (string fragment in fragments)
+                    foreach (FragmentClass fragment in fragments)
                     {
                         bool found = false;
                         foreach (ProductMatch match in dbOptions.fragments.ComputeFragments(psm.Peptide, psm.Query.precursor.Charge, dbOptions))
                         {
-                            if (fragment == match.fragment && match.fragmentPos == i && match.charge == charge)
+                            if (fragment == match.Fragment && match.fragmentPos == i && match.charge == charge)
                             {
                                 line += "," + match.theoMz;
                                 found = true;
@@ -307,8 +310,8 @@ namespace Trinity
                 foreach (FragmentClass fragment in dbOptions.fragments)
                     title += "," + fragment.Name + " ^" + charge;
             for (int charge = 1; charge <= psm.Query.precursor.Charge; charge++)
-                foreach (string fragment in fragments)
-                    title += "," + fragment + " ^" + charge; 
+                foreach (FragmentClass fragment in fragments)
+                    title += "," + fragment.Name + " ^" + charge; 
             writer.AddLine(title);
 
             for(int i = 1; i <= psm.Peptide.Length; i++)
@@ -320,7 +323,7 @@ namespace Trinity
                     {
                         bool found = false;
                         foreach (ProductMatch match in psm.AllProductMatches)
-                            if (fragment.Name == match.fragment && match.fragmentPos == i && match.charge == charge)
+                            if (fragment == match.Fragment && match.fragmentPos == i && match.charge == charge)
                             {
                                 line += "," + match.obsIntensity;
                                 found = true;
@@ -332,11 +335,11 @@ namespace Trinity
                 }
                 for (int charge = 1; charge <= psm.Query.precursor.Charge; charge++)
                 {
-                    foreach (string fragment in fragments)
+                    foreach (FragmentClass fragment in fragments)
                     {
                         bool found = false;
                         foreach (ProductMatch match in psm.AllProductMatches)
-                            if (fragment == match.fragment && match.fragmentPos == i && match.charge == charge)
+                            if (fragment == match.Fragment && match.fragmentPos == i && match.charge == charge)
                             {
                                 line += "," + match.obsIntensity;
                                 found = true;
@@ -354,8 +357,8 @@ namespace Trinity
                 foreach (FragmentClass fragment in dbOptions.fragments)
                     title += "," + fragment.Name + " ^" + charge;
             for (int charge = 1; charge <= psm.Query.precursor.Charge; charge++)
-                foreach (string fragment in fragments)
-                    title += "," + fragment + " ^" + charge;
+                foreach (FragmentClass fragment in fragments)
+                    title += "," + fragment.Name + " ^" + charge;
             writer.AddLine(title);
 
             for (int i = 1; i <= psm.Peptide.Length; i++)
@@ -367,7 +370,7 @@ namespace Trinity
                     {
                         bool found = false;
                         foreach (ProductMatch match in psm.AllProductMatches)
-                            if (fragment.Name == match.fragment && match.fragmentPos == i && match.charge == charge)
+                            if (fragment == match.Fragment && match.fragmentPos == i && match.charge == charge)
                             {
                                 line += "," + match.obsMz;
                                 found = true;
@@ -379,11 +382,11 @@ namespace Trinity
                 }
                 for (int charge = 1; charge <= psm.Query.precursor.Charge; charge++)
                 {
-                    foreach (string fragment in fragments)
+                    foreach (FragmentClass fragment in fragments)
                     {
                         bool found = false;
                         foreach (ProductMatch match in psm.AllProductMatches)
-                            if (fragment == match.fragment && match.fragmentPos == i && match.charge == charge)
+                            if (fragment == match.Fragment && match.fragmentPos == i && match.charge == charge)
                             {
                                 line += "," + match.obsMz;
                                 found = true;
@@ -401,8 +404,8 @@ namespace Trinity
                 foreach (FragmentClass fragment in dbOptions.fragments)
                     title += "," + fragment.Name + " ^" + charge;
             for (int charge = 1; charge <= psm.Query.precursor.Charge; charge++)
-                foreach (string fragment in fragments)
-                    title += "," + fragment + " ^" + charge;
+                foreach (FragmentClass fragment in fragments)
+                    title += "," + fragment.Name + " ^" + charge;
             writer.AddLine(title);
 
             for (int i = 1; i <= psm.Peptide.Length; i++)
@@ -414,7 +417,7 @@ namespace Trinity
                     {
                         bool found = false;
                         foreach (ProductMatch match in psm.AllProductMatches)
-                            if (fragment.Name == match.fragment && match.fragmentPos == i && match.charge == charge)
+                            if (fragment == match.Fragment && match.fragmentPos == i && match.charge == charge)
                             {
                                 line += "," + match.mass_diff;
                                 found = true;
@@ -426,11 +429,11 @@ namespace Trinity
                 }
                 for (int charge = 1; charge <= psm.Query.precursor.Charge; charge++)
                 {
-                    foreach (string fragment in fragments)
+                    foreach (FragmentClass fragment in fragments)
                     {
                         bool found = false;
                         foreach (ProductMatch match in psm.AllProductMatches)
-                            if (fragment == match.fragment && match.fragmentPos == i && match.charge == charge)
+                            if (fragment == match.Fragment && match.fragmentPos == i && match.charge == charge)
                             {
                                 line += "," + match.mass_diff;
                                 found = true;
@@ -448,13 +451,14 @@ namespace Trinity
         public void ExportFragmentIntensities(List<PeptideSpectrumMatch> psms, Peptide peptide, int psmCharge, string fileName)
         {
             vsCSVWriter writer = new vsCSVWriter(fileName);
-            List<string> fragments = new List<string>();
-            foreach (string fragment in FragmentDictionary.Fragments.Keys)
+            List<FragmentClass> fragments = new List<FragmentClass>();
+            foreach (FragmentClass fragment in dbOptions.fragments)
+            //foreach (string fragment in FragmentDictionary.Fragments.Keys)
             {
                 bool found = false;
                 foreach (ProductMatch match in dbOptions.fragments.ComputeFragments(peptide, psmCharge, dbOptions))
                 {
-                    if (fragment == match.fragment)
+                    if (fragment == match.Fragment)
                     {
                         found = true;
                         break;
@@ -469,8 +473,8 @@ namespace Trinity
                 foreach (FragmentClass fragment in dbOptions.fragments)
                     title += "," + fragment.Name + " ^" + charge;
             for (int charge = 1; charge <= psmCharge; charge++)
-                foreach (string fragment in fragments)
-                    title += "," + fragment + " ^" + charge;
+                foreach (FragmentClass fragment in fragments)
+                    title += "," + fragment.Name + " ^" + charge;
             writer.AddLine(title);
 
             for (int i = 1; i <= peptide.Length; i++)
@@ -483,19 +487,19 @@ namespace Trinity
                         double cumul = 0.0;
                         foreach(PeptideSpectrumMatch psm in psms)
                             foreach (ProductMatch match in psm.AllProductMatches)
-                                if (fragment.Name == match.fragment && match.fragmentPos == i && match.charge == charge)
+                                if (fragment == match.Fragment && match.fragmentPos == i && match.charge == charge)
                                     cumul += match.obsIntensity;
                         line += "," + cumul;
                     }
                 }
                 for (int charge = 1; charge <= psmCharge; charge++)
                 {
-                    foreach (string fragment in fragments)
+                    foreach (FragmentClass fragment in fragments)
                     {
                         double cumul = 0.0;
                         foreach (PeptideSpectrumMatch psm in psms)
                             foreach (ProductMatch match in psm.AllProductMatches)
-                                if (fragment == match.fragment && match.fragmentPos == i && match.charge == charge)
+                                if (fragment == match.Fragment && match.fragmentPos == i && match.charge == charge)
                                     cumul += match.obsIntensity;
                         line += "," + cumul;
                     }
@@ -526,7 +530,7 @@ namespace Trinity
                         {
                             double cumul = 0.0;
                             foreach (ProductMatch match in psm.AllProductMatches)
-                                if (fragment.Name == match.fragment && match.fragmentPos == i && match.charge == charge)
+                                if (fragment == match.Fragment && match.fragmentPos == i && match.charge == charge)
                                     cumul += match.obsIntensity;
                             line += "," + cumul;
                         }
