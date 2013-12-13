@@ -43,8 +43,11 @@ namespace Trinity
         public double ProductScore { get;  set; }
         public double IntensityScore { get;  set; }
 
+        private double _fragScore = -1;
         public double FragmentScore()
         {
+            if(_fragScore == -1)
+            {
             double[] aaScoreArray = new double[Peptide.Length];
             foreach (ProductMatch match in AllProductMatches)
                 if (match.Fragment.IsReverse)
@@ -59,14 +62,17 @@ namespace Trinity
                     score += aaScoreArray[i];
                 else
                     if (aaScoreArray[i] < 2)
-                        score += aaScoreArray[i] - 1;
-            return score;
+                        score += 2 - aaScoreArray[i];
+                _fragScore = score / (double) aaScoreArray.Length;
+            }
+            return _fragScore;
         }
 
         //TODO Check if those var are common with Precursor and remove zeroed out var  
         public double ProbabilityScore()
         {
             DBOptions options = Query.options;
+            //double score = FragmentScore() * PrecursorScore;// +ProductScore;
             //return MaxQuantScore();//TODO Reactivate Optimized PeptideSpectrumMatch Score
             double score = options.dIntensity * MatchingIntensity +
                                 options.dIntensityFraction * MatchingIntensityFraction +
@@ -159,18 +165,15 @@ namespace Trinity
 
         public IEnumerable<ProductMatch> GetProductMZs(DBOptions options, GraphML_List<MsMsPeak> peaks)//, List<double> theoretical_product_mzs = null)
         {
-            //if (theoretical_product_mzs == null)
-                //theoretical_product_mzs = Peptide.CalculateAllProductMz(PRODUCT_TYPES[Query.spectrum.FragmentationMethod], Query.precursor);
-
             // speed optimizations
             //double[] experimental_masses = Query.spectrum.Masses;
             //GraphML_List<MSPeak> peaks = Query.spectrum.Peaks;
             int num_experimental_peaks = peaks.Count;
             TotalTheoreticalProducts = 0;
             TotalWeightedProducts = 0;
-            //New version that should include charged ions            
-            foreach (ProductMatch matchTheo in options.fragments.ComputeFragments(Peptide, Query.precursor.Charge, options))//Peptide.EnumerateAllProductMz(PRODUCT_TYPES[Query.spectrum.FragmentationMethod], Query.precursor))
-            //foreach (ProductMatch matchTheo in Peptide.EnumerateAllProductMz(PRODUCT_TYPES[Query.spectrum.FragmentationMethod], Query.precursor))
+            //New version that should include charged ions
+            foreach (ProductMatch matchTheo in options.fragments.ComputeFragmentsFast(Peptide.GetMasses(), Query.precursor.Charge, options))         
+            //foreach (ProductMatch matchTheo in options.fragments.ComputeFragments(Peptide, Query.precursor.Charge, options))         
             {
                 TotalTheoreticalProducts++;
                 TotalWeightedProducts += matchTheo.weight;//++;

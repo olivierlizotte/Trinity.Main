@@ -206,6 +206,7 @@ namespace Trinity
 
             if (optimize)
             {
+
                 //result.peptides = UpdatePsmScores(pepSearcher.SearchAll(result.clusters, result.matchedPrecursors, true), result);
                 dbOptions.ConSole.WriteLine("Found peptides from UpdatePSMScore routine : " + result.peptides);
                 nbTargets = result.SetPrecursors(result.precursors);

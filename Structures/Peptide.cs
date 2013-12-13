@@ -134,6 +134,25 @@ namespace Trinity
                     NextAminoAcid = '-';
             }
         }
+     
+        public double[] GetMasses()
+        {
+            double cumul = Proteomics.Utilities.Constants.WATER_MONOISOTOPIC_MASS;
+            double[] array = new double[BaseSequence.Length];
+            for (int r = 1; r <= BaseSequence.Length; r++)
+            {
+                double tmp = 0;
+                if (FixedModifications != null && FixedModifications.ContainsKey(r + 1))
+                    foreach (Modification mod in FixedModifications[r + 1])
+                        tmp += mod.MonoisotopicMassShift;
+                if (VariableModifications != null && VariableModifications.ContainsKey(r + 1))
+                    tmp += VariableModifications[r + 1].MonoisotopicMassShift;
+
+                array[r - 1] = AminoAcidMasses.GetMonoisotopicMass(BaseSequence[r - 1]) + tmp;
+                cumul += array[r - 1];
+            }
+            return array;
+        }
 
         private Peptide(Peptide peptide) : this(peptide.Parent, peptide.StartResidueNumber-1, peptide.EndResidueNumber-1, peptide.MissedCleavages) { }
 
@@ -230,7 +249,7 @@ namespace Trinity
                 peptide.SetVariableModifications(kvp);
                 yield return peptide;
                 variable_modification_isoforms++;
-                if(variable_modification_isoforms == maximumVariableModificationIsoforms)
+                if(variable_modification_isoforms >= maximumVariableModificationIsoforms)
                 {
                     yield break;
                 }

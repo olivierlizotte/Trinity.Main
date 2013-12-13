@@ -101,8 +101,59 @@ namespace Trinity
         /// </summary>
         /// <param name="result"></param>
         /// <param name="allPSMs"></param>
-        /// <returns>Returns the newly computed Fragment/Product tolerance</returns>
-        public static double CropProducts(Result result, PeptideSpectrumMatches allPSMs)
+        /// <returns>Returns the newly computed Fragment/Product tolerance</returns>public static double CropProducts(Result result, PeptideSpectrumMatches allPSMs)
+        public static double CropProducts(Result result, PeptideSpectrumMatches allPSMs, DBOptions dbOptions)
+        {
+            List<double> errorProduct = new List<double>(result.precursors.Count);
+            foreach (Precursor precursor in result.matchedPrecursors)
+            {
+                PeptideSpectrumMatch psm = precursor.OptimizedBestPsm();
+                if (psm.Target)
+                    foreach (ProductMatch match in psm.AllProductMatches)
+                        errorProduct.Add(match.mass_diff);
+            }
+            double variance = Numerics.Variance(errorProduct);
+            double stdev = Numerics.StandardDeviation(errorProduct);
+            result.dbOptions.ConSole.WriteLine("Computed Product Variance = " + variance + "          STDev = " + stdev);
+            if (variance < stdev)
+                variance = stdev;
+            //variance = result.dbOptions.productMassTolerance.Value * ((2 * variance) / result.dbOptions.productMassTolerance.Value);            
+
+            int nbRemovedProduct = 0;
+            foreach (PeptideSpectrumMatch psm in allPSMs)
+            {
+                for (int i = 0; i < psm.AllProductMatches.Count; )
+                {
+                    if (Math.Abs(psm.AllProductMatches[i].mass_diff) > variance)
+                    {
+                        psm.AllProductMatches.RemoveAt(i);
+                        nbRemovedProduct++;
+                    }
+                    else
+                        i++;
+                }
+                psm.MatchingProducts = psm.AllProductMatches.Count;
+            }
+
+            int nbRemovedPSM = 0;
+            foreach (Precursor precursor in result.precursors)
+            {
+                for (int i = 0; i < precursor.psms.Count; )
+                {
+                    if (precursor.psms[i].MatchingProducts < 2)
+                        precursor.psms.RemoveAt(i);
+                    else
+                    {
+                        precursor.psms[i].Initialize(result.dbOptions, precursor.psms[i].AllProductMatches);
+                        i++;
+                    }
+                }
+            }
+            result.dbOptions.ConSole.WriteLine("Removed " + nbRemovedProduct + " [" + nbRemovedPSM + " removed PSMs] Fragment matches outside the variance [" + variance + "]");
+            return variance;
+        }
+
+        public static double CropProductsBKP(Result result, PeptideSpectrumMatches allPSMs)
         {
             List<double> errorProduct = new List<double>(result.precursors.Count);
             foreach (Precursor precursor in result.matchedPrecursors)

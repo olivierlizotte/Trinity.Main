@@ -23,7 +23,7 @@ namespace Trinity
             this.options = dbOptions;
         }
 
-        private static double[] GetMasses(string sequence)
+        public static double[] GetMasses(string sequence)
         {
             double[] proteinMasses = new double[sequence.Length];
             for (int i = 0; i < sequence.Length; i++)
@@ -99,6 +99,31 @@ namespace Trinity
             //dicOfPeptideSequences = new Dictionary<string, List<Protein>>();
             //double minimumMonoisotopicPeakOffset = dbOptions.precursorMonoisotopicPeakCorrection ? dbOptions.minimumPrecursorMonoisotopicPeakOffset : 0;
             //double maximumMonoisotopicPeakOffset = dbOptions.precursorMonoisotopicPeakCorrection ? dbOptions.maximumPrecursorMonoisotopicPeakOffset : 0;
+            foreach (Peptide peptide in ProteinSearcher.ProteinDigest(options, proteins, allowSNP))
+            {
+                //int firstIndex = AllQueries.BinarySearch(MassTolerance.MzFloor(peptide.MonoisotopicMass, options.precursorMassTolerance));
+                //if (firstIndex >= 0 && firstIndex < AllQueries.Count)
+                //    yield return new Tuple<Peptide, int>(peptide, firstIndex);
+
+                //foreach (Peptide peptide in ProteinSearcher.ProteinDigestNoEnzyme(dbOptions, proteins, AllQueries))
+                //if (!TargetPeptides.Contains(peptide.BaseSequence))
+                //{
+                foreach (Peptide modPeptide in peptide.GetVariablyModifiedPeptides(options.variableModifications, options.maximumVariableModificationIsoforms))
+                {
+                    modPeptide.SetFixedModifications(options.fixedModifications);
+                    int firstIndex = AllQueries.BinarySearch(MassTolerance.MzFloor(modPeptide.MonoisotopicMass, options.precursorMassTolerance));
+                    if (firstIndex >= 0 && firstIndex < AllQueries.Count)
+                        yield return new Tuple<Peptide, int>(modPeptide, firstIndex);
+                }
+
+                //TODO check if this favors targets over decoys since proteins are sorted target->deco
+                //    TargetPeptides.Add(peptide.BaseSequence);
+                //}            
+            }
+        }
+
+        public IEnumerable<Tuple<Peptide, int>> DigestProteomeOnTheFlyFast(List<Protein> proteins, bool allowSNP, Queries AllQueries)
+        {
             foreach (Peptide peptide in ProteinSearcher.ProteinDigest(options, proteins, allowSNP))
             {
                 //int firstIndex = AllQueries.BinarySearch(MassTolerance.MzFloor(peptide.MonoisotopicMass, options.precursorMassTolerance));

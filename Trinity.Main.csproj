@@ -58,21 +58,6 @@
     <RunCodeAnalysis>true</RunCodeAnalysis>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="agtsampleinforw">
-      <HintPath>..\..\..\..\Program Files\ProteoWizard\ProteoWizard 3.0.5215\agtsampleinforw.dll</HintPath>
-    </Reference>
-    <Reference Include="BaseCommon">
-      <HintPath>..\..\..\..\Program Files\ProteoWizard\ProteoWizard 3.0.5215\BaseCommon.dll</HintPath>
-    </Reference>
-    <Reference Include="BaseDataAccess">
-      <HintPath>..\..\..\..\Program Files\ProteoWizard\ProteoWizard 3.0.5215\BaseDataAccess.dll</HintPath>
-    </Reference>
-    <Reference Include="BaseError">
-      <HintPath>..\..\..\..\Program Files\ProteoWizard\ProteoWizard 3.0.5215\BaseError.dll</HintPath>
-    </Reference>
-    <Reference Include="BaseTof">
-      <HintPath>..\..\..\..\Program Files\ProteoWizard\ProteoWizard 3.0.5215\BaseTof.dll</HintPath>
-    </Reference>
     <Reference Include="MathNet.Numerics, Version=2.6.1.30, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\MathNet.Numerics.2.6.2\lib\net40\MathNet.Numerics.dll</HintPath>
     </Reference>
@@ -81,11 +66,11 @@
     </Reference>
     <Reference Include="pwiz.CommonUtil">
       <HintPath>..\..\..\..\Program Files\ProteoWizard\ProteoWizard 3.0.5215\pwiz.CommonUtil.dll</HintPath>
-      <Private>True</Private>
+      <Private>False</Private>
     </Reference>
     <Reference Include="pwiz_bindings_cli">
       <HintPath>..\..\..\..\Program Files\ProteoWizard\ProteoWizard 3.0.5215\pwiz_bindings_cli.dll</HintPath>
-      <Private>True</Private>
+      <Private>False</Private>
     </Reference>
     <Reference Include="RestSharp, Version=104.3.3.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -219,17 +204,6 @@
   </ItemGroup>
   <ItemGroup>
     <WCFMetadata Include="Service References\" />
-  </ItemGroup>
-  <ItemGroup>
-    <COMReference Include="MSFileReaderLib">
-      <Guid>{F0C5F3E3-4F2A-443E-A74D-0AABE3237494}</Guid>
-      <VersionMajor>1</VersionMajor>
-      <VersionMinor>0</VersionMinor>
-      <Lcid>0</Lcid>
-      <WrapperTool>tlbimp</WrapperTool>
-      <Isolated>False</Isolated>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </COMReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />

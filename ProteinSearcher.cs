@@ -292,6 +292,6 @@ namespace Trinity
                 Console.Write("\r{0}%   ", ((100 * nbProteins) / Proteins.Count));
             }
             Console.Write("\r{0}%   ", 100);
-        }      
+        }
     }
 }

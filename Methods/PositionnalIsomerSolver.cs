@@ -379,7 +379,7 @@ namespace Trinity.Methods
                                 closest = key;
                         if (closest > 0)
                         {
-                            ConSole.WriteLine("Potential problem with selected fragment masses ");
+                            //ConSole.WriteLine("Potential problem with selected fragment masses ");
                             match.theoMz = closest;
                         }
                         else

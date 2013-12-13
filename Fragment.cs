@@ -117,6 +117,45 @@ namespace Trinity
     /// </summary>
     public class Fragments : GraphML_List<FragmentClass>
     {
+        public IEnumerable<ProductMatch> ComputeFragmentsFast(double[] masses, int precursorKnownCharge, DBOptions dbOptions)
+        {
+            int maxCharge;
+            if (precursorKnownCharge > 1)
+                maxCharge = precursorKnownCharge - 1;
+            else
+                maxCharge = 1;
+
+            ProductMatch match = new ProductMatch();
+            double cumulN = 0.0;// Constants.WATER_MONOISOTOPIC_MASS;
+            double cumulC = 0.0;// Constants.WATER_MONOISOTOPIC_MASS;
+            for (int r = 0; r < masses.Length; r++)
+            {
+                cumulN += masses[r];
+                cumulC += masses[masses.Length - r - 1];
+
+                foreach (FragmentClass fragment in this)
+                {
+                    if (fragment.IsReverse)
+                        match.fragmentPos = masses.Length - r;
+                    else
+                        match.fragmentPos = r + 1;
+                    match.Fragment = fragment;
+
+                    foreach (double product_mass in fragment.ComputeFragment(cumulC, cumulN))
+                    {
+                        match.weight = fragment.Distribution;//TODO Adjust this value by computing overall impact (times 10?)                            
+                        
+                        for (int c = maxCharge; c > 0; c--)
+                        {
+                            match.theoMz = Numerics.MZFromMass(product_mass, c);
+                            match.charge = c;
+                            yield return match;
+                        }
+                    }
+                }
+            }
+        }
+
         public IEnumerable<ProductMatch> ComputeFragments(Peptide peptide, int precursorKnownCharge, DBOptions dbOptions)
         {
             int maxCharge;

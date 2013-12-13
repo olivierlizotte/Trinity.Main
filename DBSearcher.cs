@@ -40,10 +40,10 @@ namespace Trinity
 
                 if (query.psms.Count < options.NbPSMToKeep)
                     query.psms.Add(psm);
-                else if (query.psms[options.NbPSMToKeep-1].MatchingProducts < psm.MatchingProducts)
+                else if (query.psms[options.NbPSMToKeep-1].ProbabilityScore() < psm.ProbabilityScore())
                 {
                     for (int i = 0; i < query.psms.Count; i++)
-                        if (query.psms[i].MatchingProducts <= psm.MatchingProducts)
+                        if (query.psms[i].ProbabilityScore() <= psm.ProbabilityScore())
                         {
                             query.psms.Insert(i, psm);
                             break;

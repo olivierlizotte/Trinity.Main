@@ -32,6 +32,7 @@ namespace Trinity.UnitTest
             Samples Project = new Samples(projectFile, 0, dbOptions);
             dbOptions.precursorMassTolerance = new MassTolerance(8/*8*//*8withoutisotopes*/, MassToleranceUnits.ppm);
             dbOptions.productMassTolerance = new MassTolerance(0.034/*0.034*//*without isotopes*/, MassToleranceUnits.Da);//0.034 is a 60 000 resolution over 2000 range in mz
+            //dbOptions.productMassTolerance = new MassTolerance(20, MassToleranceUnits.ppm);
             dbOptions.MaximumPeptideMass = 200000;
             dbOptions.OutputFolder = outputDir;
             ProteaseDictionary proteases = ProteaseDictionary.Instance;
@@ -56,19 +57,21 @@ namespace Trinity.UnitTest
             varMods.Add(ModificationDictionary.Instance["phosphorylation of S"]);
             varMods.Add(ModificationDictionary.Instance["phosphorylation of T"]);
             varMods.Add(ModificationDictionary.Instance["phosphorylation of Y"]);//*/
-            dbOptions.maximumVariableModificationIsoforms = 1024;// 2 * (varMods.Count + fixMods.Count);//TODO Evaluate the viability of this parameter
+            dbOptions.maximumVariableModificationIsoforms = 2 * (varMods.Count + fixMods.Count);//TODO Evaluate the viability of this parameter
             
             dbOptions.variableModifications = varMods;
+
+            dbOptions.NbPSMToKeep = 8;
 
             dbOptions.addFragmentLoss = false;
             dbOptions.addFragmentMods = false;
             dbOptions.fragments = new Fragments();
-            //dbOptions.fragments.Add(new FragmentA());
+            dbOptions.fragments.Add(new FragmentA());
             dbOptions.fragments.Add(new FragmentB());
-            //dbOptions.fragments.Add(new FragmentC());
-            //dbOptions.fragments.Add(new FragmentX());
+            dbOptions.fragments.Add(new FragmentC());
+            dbOptions.fragments.Add(new FragmentX());
             dbOptions.fragments.Add(new FragmentY());
-            //dbOptions.fragments.Add(new FragmentZ());
+            dbOptions.fragments.Add(new FragmentZ());
 
             //ClusterOptions clusterOptions = new ClusterOptions(Project, outputDir, 5, true, 90, true);//TODO validate its in seconds for all file types
             
