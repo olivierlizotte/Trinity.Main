@@ -22,10 +22,11 @@ namespace Trinity.Methods
         private DBOptions dbOptions;
         
         private Samples SpikedSamples;
-        private Result SpikedResult;
+        private Result  SpikedResult;
         private Samples MixedSamples;
-        private Result mixedResult;
-        private Dictionary<double, Dictionary<Sample, CharacterizedPrecursor>> characterizedPeptides;
+        private Result  mixedResult;
+        public Dictionary<double, Dictionary<Sample, CharacterizedPrecursor>> characterizedPeptides;
+        public Dictionary<Sample, Dictionary<double, MixedPrecursor>>         mixedPrecursors;
 
         private DBOptions CreateOptions(string fastaFile, string outputFolder, IConSol consol)
         {
@@ -110,7 +111,7 @@ namespace Trinity.Methods
                         curveStr += ",NA";
             writerCumul.AddLine(curveStr);
 
-            Dictionary<Sample, Dictionary<double, MixedPrecursor>> mixedPrecursors = new Dictionary<Sample, Dictionary<double, MixedPrecursor>>();
+            mixedPrecursors = new Dictionary<Sample, Dictionary<double, MixedPrecursor>>();
 
             foreach (Sample mixedSample in MixedSamples) 
                 mixedPrecursors.Add(mixedSample, MixedPrecursor.GetMixedPrecursors(mixedSample, mixedResult, dbOptions, characterizedPeptides));
@@ -228,9 +229,6 @@ namespace Trinity.Methods
                         {
                             foreach (CharacterizedPrecursor cPep in finalRatios.Keys)
                             {
-                                if (finalRatios[cPep].Ratio > 1)
-                                    Console.WriteLine("NOt possible");
-
                                 if (!curves.ContainsKey(cPep))
                                     curves.Add(cPep, new MaxFlowElutionCurve(nbProductsToKeep));
 

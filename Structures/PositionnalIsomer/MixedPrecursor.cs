@@ -7,7 +7,7 @@ namespace Trinity.Structures.PositionnalIsomer
 {
     public class MixedPrecursor : PrecursorIon
     {
-        public Dictionary<Sample, ElutionCurve> PeptideRatios;
+        public Dictionary<CharacterizedPrecursor, ElutionCurve> PeptideRatios;
         public MixedPrecursor(Sample sample, IEnumerable<Query> queries, double mz)
             : base(sample, queries, mz, -1)
         {
@@ -128,11 +128,11 @@ namespace Trinity.Structures.PositionnalIsomer
                     cumulDic[cPep].AddCurve(dicOfCurve[cPep], dicOfCorrelations[dicOfCurve]);
                 }
             }
-            Dictionary<CharacterizedPrecursor, ElutionCurve> bestAverage = new Dictionary<CharacterizedPrecursor, ElutionCurve>();
+            PeptideRatios = new Dictionary<CharacterizedPrecursor, ElutionCurve>();
             foreach (CharacterizedPrecursor cPep in cumulDic.Keys)
-                bestAverage.Add(cPep, cumulDic[cPep].Merge());
+                PeptideRatios.Add(cPep, cumulDic[cPep].Merge());
 
-            return bestAverage;
+            return PeptideRatios;
         }
 
         public static Dictionary<CharacterizedPrecursor, double> GetAreas(Dictionary<CharacterizedPrecursor, MaxFlowElutionCurve> curves)

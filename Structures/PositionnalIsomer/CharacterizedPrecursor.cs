@@ -258,7 +258,7 @@ namespace Trinity.Structures.PositionnalIsomer
                         if (bestPeptide != null)
                         {
                             CharacterizedPrecursor cPrec = new CharacterizedPrecursor(spikedSample, dbOptions, bestPeptide, mzKeys[mzKey].Keys, mzKey);
-                            //Don't keep precursors if they are not well characterized (unfragmented or misasigned)
+                            //Don't keep precursors if they are not well characterized (unfragmented or missasigned)
                             if (cPrec.AllFragments.Count >= cPrec.Peptide.Length - 2)
                             {
                                 if (!spikes.ContainsKey(mzKey))
@@ -274,9 +274,13 @@ namespace Trinity.Structures.PositionnalIsomer
             }//End of foreach spiked sample
 
             //Normalize intensities based on average area of each precursor
-            foreach (double mzKey in spikes.Keys)
+            List<double> tmpKeys = new List<double>(spikes.Keys);
+            foreach (double mzKey in tmpKeys)
             {
-                CharacterizedPrecursor.Update(spikes[mzKey].Values, nbMinFragments, nbMaxFragments, dbOptions, precision);
+                if(spikes[mzKey].Count > 1)
+                    CharacterizedPrecursor.Update(spikes[mzKey].Values, nbMinFragments, nbMaxFragments, dbOptions, precision);
+                else
+                    spikes.Remove(mzKey);
             }//*/
             return spikes;
         }
