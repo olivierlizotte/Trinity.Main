@@ -124,7 +124,7 @@ namespace Trinity.Methods
                     if (mixedPrecursors[mixedSample].ContainsKey(keyMz))
                     {
                         // Compute Max Flow for this precursor
-                        Dictionary<CharacterizedPrecursor, ElutionCurve> ratios = GetRatiosFromMaxFlow(characterizedPeptides, mixedPrecursors[mixedSample][keyMz]);
+                        Dictionary<CharacterizedPrecursor, ElutionCurve> ratios = GetRatios(characterizedPeptides, mixedPrecursors[mixedSample][keyMz]);
 
                         string resultStr = vsCSV.GetFileName(mixedSample.sSDF) + "," + keyMz;
                         foreach (double precursor in characterizedPeptides.Keys)
@@ -195,7 +195,7 @@ namespace Trinity.Methods
             }
         }
 
-        private Dictionary<CharacterizedPrecursor, ElutionCurve> GetRatiosFromMaxFlow(Dictionary<double, Dictionary<Sample, CharacterizedPrecursor>> spikes, MixedPrecursor mixedPrecursor)        
+        private Dictionary<CharacterizedPrecursor, ElutionCurve> GetRatios(Dictionary<double, Dictionary<Sample, CharacterizedPrecursor>> spikes, MixedPrecursor mixedPrecursor)        
         {
             Dictionary<Dictionary<CharacterizedPrecursor, MaxFlowElutionCurve>, double> DicOfCurveErrors = new Dictionary<Dictionary<CharacterizedPrecursor, MaxFlowElutionCurve>, double>();
             
@@ -218,13 +218,13 @@ namespace Trinity.Methods
                     foreach (Query query in mixedPrecursor.Queries)
                     {
                         double timeInMilliSeconds = query.spectrum.RetentionTimeInMin * 60.0 * 1000.0;
-                        double overFlow = 0;
+  //                      double overFlow = 0;
                         double underFlow = 0;
                         double percentError = 0;
-                        Dictionary<CharacterizedPrecursor, MaxFlowResult> finalRatios = LaunchMaxFlowFromSpectrum(Isomers, nbProductsToKeep, 1000, query.spectrum.Peaks, dbOptions.productMassTolerance,
-                                                                0, query.spectrum.PrecursorIntensityPerMilliSecond * query.spectrum.InjectionTime, ref overFlow, ref underFlow, ref percentError, dbOptions.ConSole);
+                        Dictionary<CharacterizedPrecursor, SolvedResult> finalRatios = SolveFromSpectrum(Isomers, nbProductsToKeep, 1000, query.spectrum.Peaks, dbOptions.productMassTolerance,
+                                                                query.spectrum.PrecursorIntensityPerMilliSecond * query.spectrum.InjectionTime, out underFlow, out percentError, dbOptions.ConSole);
 
-                        cumulError += percentError;
+                        cumulError += underFlow;// percentError;
                         if (percentError < 0.5)
                         {
                             foreach (CharacterizedPrecursor cPep in finalRatios.Keys)
@@ -266,19 +266,77 @@ namespace Trinity.Methods
             return averagedValues;
         }
         
-        public class MaxFlowResult
+        public class SolvedResult
         {
             public double Ratio;
             public double NbFitTimes;
-            public MaxFlowResult(double ratio, double nbTimes)
+            public SolvedResult(double ratio, double nbTimes)
             {
                 this.Ratio = ratio;
                 this.NbFitTimes = nbTimes;
             }
         }
 
-        public static Dictionary<CharacterizedPrecursor, MaxFlowResult> LaunchMaxFlowFromSpectrum(IEnumerable<CharacterizedPrecursor> ratiosToFit, int nbProductsToKeep, 
+        public static Dictionary<CharacterizedPrecursor, SolvedResult> SolveFromSpectrum(IEnumerable<CharacterizedPrecursor> ratiosToFit, int nbProductsToKeep, 
                                             long precision, IEnumerable<MsMsPeak> capacity, MassTolerance tolerance, 
+                                            double PrecursorIntensityInCTrap,
+                                            out double underFlow, out double percentError, IConSol ConSole)
+        {
+            bool keepGoing = true;
+            Dictionary<double, double> mixedSpectrum = new Dictionary<double, double>();
+            List<Dictionary<double, double>> unitSpectrum = new List<Dictionary<double, double>>();
+            foreach (CharacterizedPrecursor isomer in ratiosToFit)
+            {
+                foreach (double key in isomer.NormalizedFragments[nbProductsToKeep].Keys)
+                    if (!mixedSpectrum.ContainsKey(key))
+                    {
+                        double cumulIntensity = 0.0;
+                        foreach (MsMsPeak peak in capacity)
+                            if (Math.Abs(Proteomics.Utilities.Numerics.CalculateMassError(peak.MZ, key, tolerance.Units)) <= tolerance.Value)
+                                cumulIntensity += peak.Intensity;
+
+                        mixedSpectrum.Add(key, cumulIntensity * precision / PrecursorIntensityInCTrap);
+                    }
+                if (isomer.NormalizedFragments.ContainsKey(nbProductsToKeep))
+                    unitSpectrum.Add(isomer.NormalizedFragments[nbProductsToKeep]);
+                else
+                    keepGoing = false;
+            }
+
+            if (keepGoing)
+            {
+                List<double> solution = new List<double>();
+                double tmpUnderflow = 0;
+                Proteomics.Utilities.Methods.GradientDescent.SolveMaxFlowStyle(unitSpectrum, mixedSpectrum, out solution, out tmpUnderflow, ConSole);
+
+                double sumOfIntensities = 0;
+                foreach (double val in mixedSpectrum.Values)
+                    sumOfIntensities += val;
+
+                underFlow = tmpUnderflow;
+                List<SolvedResult> result = GetResultList(solution, precision, underFlow, sumOfIntensities);
+
+                Dictionary<CharacterizedPrecursor, SolvedResult> resultPerSample = new Dictionary<CharacterizedPrecursor, SolvedResult>();
+                int i = 0;
+                foreach (CharacterizedPrecursor key in ratiosToFit)
+                {
+                    resultPerSample.Add(key, result[i]);
+                    i++;
+                }
+
+                percentError = underFlow / sumOfIntensities;
+                return resultPerSample;
+            }
+            else
+            {
+                percentError = 1.0;
+                underFlow = 0;
+                return new Dictionary<CharacterizedPrecursor, SolvedResult>();
+            }
+        }
+
+        public static Dictionary<CharacterizedPrecursor, SolvedResult> SolveFromSpectrumBKP(IEnumerable<CharacterizedPrecursor> ratiosToFit, int nbProductsToKeep,
+                                            long precision, IEnumerable<MsMsPeak> capacity, MassTolerance tolerance,
                                             int returnType,//0 for max flow, 1 for best flow, 2 for average
                                             double PrecursorIntensityInCTrap,
                                             ref double overFlow, ref double underFlow, ref double errorInPercent, IConSol ConSole)
@@ -295,7 +353,7 @@ namespace Trinity.Methods
             }
             List<List<ProductMatch>> tmpRatiosToFit = new List<List<ProductMatch>>();
             //foreach (List<ProductMatch> list in ratiosToFit.Values)
-            foreach(CharacterizedPrecursor prec in ratiosToFit)
+            foreach (CharacterizedPrecursor prec in ratiosToFit)
             {
                 List<ProductMatch> pms = new List<ProductMatch>();
                 foreach (ProductMatch pm in prec.Fragments[nbProductsToKeep])
@@ -316,7 +374,7 @@ namespace Trinity.Methods
             overFlow = 0;
             underFlow = error;
 
-            List<MaxFlowResult> result = null;
+            List<SolvedResult> result = null;
             switch (returnType)
             {
                 case 0:
@@ -326,13 +384,13 @@ namespace Trinity.Methods
                     result = GetResultList(solutions[1], precision, underFlow, sumOfIntensities);
                     break;
                 case 2:
-                    List<double> tmpAverage = new List<double>();                    
+                    List<double> tmpAverage = new List<double>();
                     foreach (double val in average)
                         tmpAverage.Add(val);
                     result = GetResultList(tmpAverage, precision, underFlow, sumOfIntensities);
                     break;
             }
-            Dictionary<CharacterizedPrecursor, MaxFlowResult> resultPerSample = new Dictionary<CharacterizedPrecursor, MaxFlowResult>();
+            Dictionary<CharacterizedPrecursor, SolvedResult> resultPerSample = new Dictionary<CharacterizedPrecursor, SolvedResult>();
             int i = 0;
             foreach (CharacterizedPrecursor key in ratiosToFit)
             {
@@ -342,9 +400,9 @@ namespace Trinity.Methods
             return resultPerSample;
         }
 
-        private static List<MaxFlowResult> GetResultList(List<double> solution, long precision, double underFlow, double sumOfIntensities)
+        private static List<SolvedResult> GetResultList(List<double> solution, long precision, double underFlow, double sumOfIntensities)
         {
-            List<MaxFlowResult> rez = new List<MaxFlowResult>();
+            List<SolvedResult> rez = new List<SolvedResult>();
             double sumVal = 0.0;
             foreach(double val in solution)
                 sumVal += val;
@@ -352,7 +410,7 @@ namespace Trinity.Methods
             sumVal += (underFlow / sumOfIntensities) * precision;
 
             foreach (double val in solution)
-                rez.Add(new MaxFlowResult( val / sumVal, val));
+                rez.Add(new SolvedResult( val / sumVal, val));
 
             return rez;
         }

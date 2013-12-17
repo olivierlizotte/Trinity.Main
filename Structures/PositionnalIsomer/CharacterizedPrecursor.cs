@@ -16,6 +16,8 @@ namespace Trinity.Structures.PositionnalIsomer
 
         private Dictionary<PeptideSpectrumMatch, double> DicOfPsmFactor;
 
+        public Dictionary<int, Dictionary<double, double>> NormalizedFragments;
+
         public CharacterizedPrecursor(Sample sample, DBOptions dbOptions, Peptide peptide, IEnumerable<Query> queries, double mz)
             : base(sample, queries, mz, -1)
         {
@@ -165,11 +167,11 @@ namespace Trinity.Structures.PositionnalIsomer
             ElutionCurve curve = new ElutionCurve();
             foreach (Query query in this.Queries)
             {
-                double overFlow = 0;
+                //double overFlow = 0;
                 double underFlow = 0;
                 double percentError = 0;
-                Dictionary<CharacterizedPrecursor, PositionnalIsomerSolver.MaxFlowResult> finalRatios = PositionnalIsomerSolver.LaunchMaxFlowFromSpectrum(Isomers, nbProductsToKeep, precision, query.spectrum.Peaks, dbOptions.productMassTolerance,
-                                                        0, query.spectrum.PrecursorIntensityPerMilliSecond * query.spectrum.InjectionTime, ref overFlow, ref underFlow, ref percentError, dbOptions.ConSole);
+                Dictionary<CharacterizedPrecursor, PositionnalIsomerSolver.SolvedResult> finalRatios = PositionnalIsomerSolver.SolveFromSpectrum(Isomers, nbProductsToKeep, precision, query.spectrum.Peaks, dbOptions.productMassTolerance,
+                                                        query.spectrum.PrecursorIntensityPerMilliSecond * query.spectrum.InjectionTime, out underFlow, out percentError, dbOptions.ConSole);
 
                 if (percentError < 0.5)
                 {
@@ -189,6 +191,9 @@ namespace Trinity.Structures.PositionnalIsomer
 
         public static void Update(IEnumerable<CharacterizedPrecursor> isomers, int minNbProducts, int maxNbProducts, DBOptions dbOptions, long precision)
         {
+            foreach (CharacterizedPrecursor prec in isomers)
+                prec.NormalizedFragments = new Dictionary<int,Dictionary<double,double>>();
+
             for (int nbProduct = minNbProducts; nbProduct <= maxNbProducts; nbProduct++)
             {
                 Dictionary<double, int> dicOfFrags = GetCommonFragmentMz(isomers, nbProduct);
@@ -196,8 +201,26 @@ namespace Trinity.Structures.PositionnalIsomer
                     prec.Fragments.Add(nbProduct, prec.GetCombinedMatches(dicOfFrags, dbOptions));
 
                 foreach (CharacterizedPrecursor prec in isomers)
+                {
                     if (!prec.NormalizeFragments(isomers, nbProduct, dbOptions, true, false, precision))//If normalization fails, ignore this product
                         prec.Fragments.Remove(nbProduct);
+                }
+                
+                foreach (CharacterizedPrecursor prec in isomers)
+                {
+                    if (prec.Fragments.ContainsKey(nbProduct))
+                    {
+                        Dictionary<double, double> dic = new Dictionary<double, double>();
+                        foreach (double key in dicOfFrags.Keys)
+                        {
+                            dic.Add(key, 0.0);
+                            foreach (ProductMatch match in prec.Fragments[nbProduct])
+                                if (Math.Abs(Proteomics.Utilities.Numerics.CalculateMassError(match.theoMz, key, dbOptions.productMassTolerance.Units)) <= dbOptions.productMassTolerance.Value)
+                                    dic[key] += match.normalizedIntensity;
+                        }
+                        prec.NormalizedFragments.Add(nbProduct, dic);
+                    }
+                }
             }
         }
 
