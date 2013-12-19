@@ -2,9 +2,21 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Proteomics.Utilities.Methods;
 
 namespace Trinity.Structures.PositionnalIsomer
 {
+    public class Ion
+    {
+        public double MZ;
+        public double RetentionTime;
+        public Ion(double mz, double retention)
+        {
+            MZ = mz;
+            RetentionTime = retention;
+        }
+    }
+
     public class PrecursorIon
     {
         public ElutionCurve eCurve;
@@ -20,14 +32,18 @@ namespace Trinity.Structures.PositionnalIsomer
             foreach (Query query in queries)
                 if (query.sample == sample)
                     this.Queries.Add(query);
+
             this.Queries.Sort(Query.AscendingRetentionTimeComparison);
-            this.eCurve = ElutionCurve.Create(this.Queries);
+            Dictionary<double, double> dicOfTimeInMsVsIntensityPerMs = new Dictionary<double, double>();
+            foreach (Query query in this.Queries)
+                dicOfTimeInMsVsIntensityPerMs.Add(query.spectrum.RetentionTimeInMin * 60.0 * 1000.0, query.spectrum.PrecursorIntensityPerMilliSecond);
+            this.eCurve = ElutionCurve.Create(dicOfTimeInMsVsIntensityPerMs);
             this.Sample = sample;
         }
-
+        
         public static Dictionary<double, PrecursorIon> GetPrecursors(Result result, Sample sample, DBOptions dbOptions, IEnumerable<double> keys)
         {
-            Dictionary<double, PrecursorIon> DicOfSpectrumMasses = new Dictionary<double, PrecursorIon>();
+            Dictionary<double, PrecursorIon> DicOfSpectrumMasses = new Dictionary<double, PrecursorIon>();            
             foreach (Query query in result.queries)
             {
                 if (query.sample == sample)
@@ -60,7 +76,36 @@ namespace Trinity.Structures.PositionnalIsomer
                         DicOfSpectrumMasses[foundKey].Queries.Add(query);
                 }
             }
+
+            //Split similar precursor mass not eluting at the same time
+
+            //aussi://retirer le processus de clustering de propheus
             return DicOfSpectrumMasses;
+        }
+
+        public IEnumerable<PrecursorIon> SplitBasedOnTime(DBOptions dbOptions)
+        {
+            if(Queries.Count > 0)
+            {
+                this.Queries.Sort(Query.AscendingRetentionTimeComparison);
+                List<double> timePoints = new List<double>();
+                for (int i = 1; i < Queries.Count; i++)
+                    timePoints.Add(Queries[i].spectrum.RetentionTimeInMin - Queries[i-1].spectrum.RetentionTimeInMin);
+
+                double variance = MathNet.Numerics.Statistics.Statistics.UpperQuartile(timePoints);
+                Queries newQ = new Queries(dbOptions);
+                newQ.Add(Queries[0]);
+                for(int i = 1; i < Queries.Count; i++)
+                {
+                    if(timePoints[i-1] > 10 * variance)
+                    {
+                        yield return new PrecursorIon(Sample, newQ, MZ, Charge);
+                        newQ.Clear();
+                    }
+                    newQ.Add(Queries[i]);
+                }
+                yield return new PrecursorIon(Sample, newQ, MZ, Charge);
+            }
         }
     }
 }

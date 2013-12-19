@@ -386,7 +386,7 @@ namespace Trinity
             return -left.ProteinScore.CompareTo(right.ProteinScore);
         }
 
-        public GraphML_List<Cluster> Search(Precursors precursors)
+        public GraphML_List<Cluster> Search(Precursors precursors, bool runCluster)
         {
             options.ConSole.WriteLine("Grouping precursors based on common features...");
             precursors.Sort(Precursor.CompareProbabilityScore);
@@ -403,16 +403,19 @@ namespace Trinity
                 {
                     Cluster group = new Cluster(samples);
                     group.Add(precursors[i]);
-                    for (int j = i + 1; j < precursors.Count; j++)
+                    if (runCluster)
                     {
-                        if (!done[j] && precursors[i].sample != precursors[j].sample)
+                        for (int j = i + 1; j < precursors.Count; j++)
                         {
-                            double score = Score(precursors[i], precursors[j]);
-                            //TODO Implement ProteoProfile Clustering algorithm, or anything on the litterature, as long as its backed by the scoring function
-                            if (score > 0.75)//TODO Should we put a threshold here? Can it be computed dynamically?
+                            if (!done[j] && precursors[i].sample != precursors[j].sample)
                             {
-                                group.Add(precursors[j]);
-                                done[j] = true;
+                                double score = Score(precursors[i], precursors[j]);
+                                //TODO Implement ProteoProfile Clustering algorithm, or anything on the litterature, as long as its backed by the scoring function
+                                if (score > 0.75)//TODO Should we put a threshold here? Can it be computed dynamically?
+                                {
+                                    group.Add(precursors[j]);
+                                    done[j] = true;
+                                }
                             }
                         }
                     }

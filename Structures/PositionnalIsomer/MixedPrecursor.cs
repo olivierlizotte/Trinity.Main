@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Proteomics.Utilities.Methods;
 
 namespace Trinity.Structures.PositionnalIsomer
 {
@@ -18,22 +19,27 @@ namespace Trinity.Structures.PositionnalIsomer
         {
         }
 
-        public static Dictionary<double, MixedPrecursor> GetMixedPrecursors(Sample mixedSample, Result mixedResult, DBOptions dbOptions, Dictionary<double, Dictionary<Sample, CharacterizedPrecursor>> charPeptides)
+        public static List<MixedPrecursor> GetMixedPrecursors(Sample mixedSample, Result mixedResult, DBOptions dbOptions, Dictionary<double, Dictionary<Sample, CharacterizedPrecursor>> charPeptides)
         {
             Dictionary<double, PrecursorIon> DicOfSpectrumMasses = PrecursorIon.GetPrecursors(mixedResult, mixedSample, dbOptions, charPeptides.Keys);
-            Dictionary<double, MixedPrecursor> DicOfMixedPrecursor = new Dictionary<double, MixedPrecursor>();
+            //Dictionary<double, MixedPrecursor> DicOfMixedPrecursor = new Dictionary<double, MixedPrecursor>();
+            List<MixedPrecursor> listOfMixedPrec = new List<MixedPrecursor>();
             foreach (double key in DicOfSpectrumMasses.Keys)
             {
                 if (charPeptides.ContainsKey(key))
                 {
-                    MixedPrecursor mixedPrecursor = new MixedPrecursor(mixedSample, DicOfSpectrumMasses[key], key);
+                    foreach (PrecursorIon precIon in DicOfSpectrumMasses[key].SplitBasedOnTime(dbOptions))
+                    {
+                        MixedPrecursor mixedPrecursor = new MixedPrecursor(mixedSample, precIon, key);
 
-                    //Don't try to characterize mixed precursors if there is less than three scans
-                    if (mixedPrecursor.Queries.Count >= 3)
-                        DicOfMixedPrecursor.Add(key, mixedPrecursor);
+                        //Don't try to characterize mixed precursors if there is less than five scans
+                        if (mixedPrecursor.Queries.Count > 4)
+                            listOfMixedPrec.Add(mixedPrecursor);
+                            //DicOfMixedPrecursor.Add(key, mixedPrecursor);
+                    }
                 }
             }
-            return DicOfMixedPrecursor;
+            return listOfMixedPrec;
         }
 
         public Dictionary<CharacterizedPrecursor, ElutionCurve> ComputePeptideRatios(Dictionary<Dictionary<CharacterizedPrecursor, MaxFlowElutionCurve>, double> dicOfCurveErrorsP)
@@ -138,9 +144,14 @@ namespace Trinity.Structures.PositionnalIsomer
         public static Dictionary<CharacterizedPrecursor, double> GetAreas(Dictionary<CharacterizedPrecursor, MaxFlowElutionCurve> curves)
         {
             Dictionary<CharacterizedPrecursor, double> newCurves = new Dictionary<CharacterizedPrecursor, double>();
-            foreach (CharacterizedPrecursor cPep in curves.Keys)
-                newCurves.Add(cPep, curves[cPep].Area * cPep.PrecursorLossNormalizeFactor[curves[cPep].nbProducts]);// * cPep.FragmentLossNormalizeFactor);
-
+            try
+            {
+                foreach (CharacterizedPrecursor cPep in curves.Keys)
+                    newCurves.Add(cPep, curves[cPep].Area * cPep.PrecursorLossNormalizeFactor[curves[cPep].nbProducts]);// * cPep.FragmentLossNormalizeFactor);
+            }catch(Exception ex)
+            {
+                Console.WriteLine("ssss");
+            }
             return newCurves;
         }
     }

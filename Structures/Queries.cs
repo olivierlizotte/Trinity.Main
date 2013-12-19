@@ -328,6 +328,11 @@ namespace Trinity
             return otherPrecursor;
         }
 
+        public static int AscendingRetentionTimeComparison(Query left, Query right)
+        {
+            return left.spectrum.RetentionTimeInMin.CompareTo(right.spectrum.RetentionTimeInMin);
+        }
+
         public static int AscendingPrecursorMassComparison(Query left, Query right)
         {
             return left.precursor.Mass.CompareTo(right.precursor.Mass);

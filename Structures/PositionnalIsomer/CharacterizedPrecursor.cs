@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Trinity.Methods;
+using Proteomics.Utilities.Methods;
 
 namespace Trinity.Structures.PositionnalIsomer
 {
@@ -54,6 +55,11 @@ namespace Trinity.Structures.PositionnalIsomer
                         DicOfFragments[cPrec.AllFragments[i].theoMz]++;
             }
             return DicOfFragments;
+        }
+
+        public bool IsValid(int nbProductsToKeep)
+        {
+            return Fragments.ContainsKey(nbProductsToKeep) && NormalizedFragments.ContainsKey(nbProductsToKeep) && PrecursorLossNormalizeFactor.ContainsKey(nbProductsToKeep);
         }
 
         private List<ProductMatch> GetCombinedMatches(Dictionary<double, int> dicOfCommonFragments, DBOptions dbOptions)
@@ -156,7 +162,7 @@ namespace Trinity.Structures.PositionnalIsomer
             return PrecursorLossNormalizeFactor;
         }
 
-        private double GetNbTimesFit(DBOptions dbOptions, int nbProductsToKeep, long precision, out double area)
+        private double GetNbTimesFit(DBOptions dbOptions, int nbProductsToKeep, double precision, out double area)
         {
             long nbRatios = 0;
             double nbTimes = 0;
@@ -180,7 +186,7 @@ namespace Trinity.Structures.PositionnalIsomer
                     nbRatios++;
                 }
             }
-            if (nbRatios > 2 && curve.intensityCount.Count > this.Queries.Count * 0.5)
+            if (nbRatios > 2 && curve.GetNbPoints() > this.Queries.Count * 0.5)
             {
                 curve.Compute();
                 if (curve.Area > 0)
@@ -189,7 +195,7 @@ namespace Trinity.Structures.PositionnalIsomer
             return nbTimes / (double)nbRatios;
         }
 
-        public static void Update(IEnumerable<CharacterizedPrecursor> isomers, int minNbProducts, int maxNbProducts, DBOptions dbOptions, long precision)
+        public static void Update(IEnumerable<CharacterizedPrecursor> isomers, int minNbProducts, int maxNbProducts, DBOptions dbOptions, double precision)
         {
             foreach (CharacterizedPrecursor prec in isomers)
                 prec.NormalizedFragments = new Dictionary<int,Dictionary<double,double>>();
@@ -199,13 +205,7 @@ namespace Trinity.Structures.PositionnalIsomer
                 Dictionary<double, int> dicOfFrags = GetCommonFragmentMz(isomers, nbProduct);
                 foreach (CharacterizedPrecursor prec in isomers)
                     prec.Fragments.Add(nbProduct, prec.GetCombinedMatches(dicOfFrags, dbOptions));
-
-                foreach (CharacterizedPrecursor prec in isomers)
-                {
-                    if (!prec.NormalizeFragments(isomers, nbProduct, dbOptions, true, false, precision))//If normalization fails, ignore this product
-                        prec.Fragments.Remove(nbProduct);
-                }
-                
+                                
                 foreach (CharacterizedPrecursor prec in isomers)
                 {
                     if (prec.Fragments.ContainsKey(nbProduct))
@@ -220,6 +220,12 @@ namespace Trinity.Structures.PositionnalIsomer
                         }
                         prec.NormalizedFragments.Add(nbProduct, dic);
                     }
+                }
+
+                foreach (CharacterizedPrecursor prec in isomers)
+                {
+                    if (!prec.NormalizeFragments(isomers, nbProduct, dbOptions, false, true, precision))//If normalization fails, ignore this product
+                        prec.Fragments.Remove(nbProduct);
                 }
             }
         }
@@ -308,14 +314,15 @@ namespace Trinity.Structures.PositionnalIsomer
             return spikes;
         }
 
-        private bool NormalizeFragments(IEnumerable<CharacterizedPrecursor> allCorrespondingPrec, int nbProductsToKeep, DBOptions dbOptions, bool normalizePrecursor, bool normalizeFragments, long precision)
+        private bool NormalizeFragments(IEnumerable<CharacterizedPrecursor> allCorrespondingPrec, int nbProductsToKeep, DBOptions dbOptions, bool normalizePrecursor, bool normalizeFragments, double precision)
         {
-            bool keepNbProds = false;
+            bool keepNbProds = true;
             double FragmentLossNormalizeFactor = 1.0;
             if (eCurve.Area > 0)
             {
                 if (normalizeFragments)
                 {
+                    List<double> keys = new List<double>(NormalizedFragments[nbProductsToKeep].Keys);
                     double area = this.eCurve.Area;
                     int nbIter = 3;
                     while (nbIter > 0)
@@ -329,6 +336,8 @@ namespace Trinity.Structures.PositionnalIsomer
                             pm.normalizedIntensity /= FragmentLossNormalizeFactor;
                             pm.obsIntensity /= FragmentLossNormalizeFactor;
                         }
+                        foreach(double key in keys)
+                            NormalizedFragments[nbProductsToKeep][key] /= FragmentLossNormalizeFactor;
                     }
                 }
                 else
@@ -337,10 +346,10 @@ namespace Trinity.Structures.PositionnalIsomer
                 if (normalizePrecursor)
                 {
                     double average = 0;
-                    PrecursorLossNormalizeFactor[nbProductsToKeep] = GetNormalizePrecursorFactor(allCorrespondingPrec, out average, out keepNbProds);
+                    PrecursorLossNormalizeFactor.Add(nbProductsToKeep, GetNormalizePrecursorFactor(allCorrespondingPrec, out average, out keepNbProds));                    
                 }
                 else
-                    PrecursorLossNormalizeFactor[nbProductsToKeep] = 1.0;
+                    PrecursorLossNormalizeFactor.Add(nbProductsToKeep, 1.0);
             }
             return keepNbProds;
         }

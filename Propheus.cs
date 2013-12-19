@@ -18,13 +18,13 @@ namespace Trinity
     /// </summary>
     public class Propheus
     {
-        public static Result Start(DBOptions dbOptions, Samples project, bool loadMS1 = true, bool filterMS2 = true, bool optimize = true)
+        public static Result Start(DBOptions dbOptions, Samples project, bool loadMS1 = true, bool filterMS2 = true, bool optimize = true, bool runcluster = true)
         {
             Propheus propheus = new Propheus(dbOptions, project);
             propheus.Preload(loadMS1, filterMS2);
             propheus.PrepareQueries();
 
-            return propheus.SearchLatestVersion(propheus.AllQueries, optimize);
+            return propheus.SearchLatestVersion(propheus.AllQueries, optimize, runcluster);
         }
 
         public DBOptions dbOptions;
@@ -120,8 +120,8 @@ namespace Trinity
             for (int i = 0; i < Project.Count; i++)
             {
                 Sample sample = Project[i];
-                string trackFile = dbOptions.OutputFolder + vsCSV.GetFileName_NoExtension(sample.sSDF) + "_Tracks.csv";
-                string msmsIonFile = dbOptions.OutputFolder + vsCSV.GetFileName_NoExtension(sample.sSDF) + "_MSMSIons.csv";
+                string trackFile = vsCSV.GetFolder(sample.sSDF) + vsCSV.GetFileName_NoExtension(sample.sSDF) + "_Tracks.csv";
+                string msmsIonFile = vsCSV.GetFolder(sample.sSDF) + vsCSV.GetFileName_NoExtension(sample.sSDF) + "_MSMSIons.csv";
                 if(dbOptions.LoadSpectraIfFound && System.IO.File.Exists(trackFile)
                                                 && System.IO.File.Exists(msmsIonFile))
                 {
@@ -167,7 +167,7 @@ namespace Trinity
         }
 
 
-        public Result SearchLatestVersion(Queries queries, bool optimize)
+        public Result SearchLatestVersion(Queries queries, bool optimize, bool runCluster = false)
         {
             Result result = new Result();
             result.queries = queries;
@@ -197,7 +197,7 @@ namespace Trinity
 
             //Step 1 : Cluster psms together based on precursor feature //TODO Implement ProteoProfile Scoring based clustering
             //Group in clusters
-            result.clusters = msSearcher.Search(result.matchedPrecursors);
+            result.clusters = msSearcher.Search(result.matchedPrecursors, runCluster);
             //Todo Align retention times 
             //Todo redo clusterization, based on retention time aligned maps
 
@@ -302,7 +302,7 @@ namespace Trinity
 
             //Step 1 : Cluster psms together based on precursor feature //TODO Implement ProteoProfile Scoring based clustering
             //Group in clusters
-            result.clusters = msSearcher.Search(result.matchedPrecursors);
+            result.clusters = msSearcher.Search(result.matchedPrecursors, true);
             //Todo Align retention times 
             //Todo redo clusterization, based on retention time aligned maps
 

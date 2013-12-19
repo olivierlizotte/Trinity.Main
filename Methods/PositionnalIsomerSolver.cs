@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Proteomics.Utilities;
+using Proteomics.Utilities.Methods;
 using Trinity.Structures.PositionnalIsomer;
 
 namespace Trinity.Methods
@@ -26,7 +27,7 @@ namespace Trinity.Methods
         private Samples MixedSamples;
         private Result  mixedResult;
         public Dictionary<double, Dictionary<Sample, CharacterizedPrecursor>> characterizedPeptides;
-        public Dictionary<Sample, Dictionary<double, MixedPrecursor>>         mixedPrecursors;
+        public Dictionary<Sample, List<MixedPrecursor>>         mixedPrecursors;
 
         private DBOptions CreateOptions(string fastaFile, string outputFolder, IConSol consol)
         {
@@ -82,20 +83,20 @@ namespace Trinity.Methods
                 SpikedSamples.Add(new Sample(i + 1, 1, 1, spikedRaws[i], spikedRaws[i], 0, ""));
 
             //Precompute Spiked peptide identifications
-            SpikedResult = Propheus.Start(dbOptions, SpikedSamples, false, false, true);
+            SpikedResult = Propheus.Start(dbOptions, SpikedSamples, false, false, true, false);
             
             MixedSamples = new Samples(dbOptions);
             for (int i = 0; i < mixedRaws.Length; i++)
                 MixedSamples.Add(new Sample(i + 1, 1, 1, mixedRaws[i], mixedRaws[i], 0, ""));
 
             //Precompute Mixed peptide identifications
-            mixedResult = Propheus.Start(dbOptions, MixedSamples, false, false, true);
+            mixedResult = Propheus.Start(dbOptions, MixedSamples, false, false, true, false);
 
             //Compute all usable spiked peptides
             characterizedPeptides = CharacterizedPrecursor.GetSpikedPrecursors(SpikedSamples, SpikedResult, dbOptions, nbMinFragments, nbMaxFragments, precision);
             ExportSpikedSampleResult(characterizedPeptides, dbOptions);
 
-            vsCSVWriter writerCumul = new vsCSVWriter(dbOptions.OutputFolder + @"Combined\Result.csv");
+            vsCSVWriter writerCumul = new vsCSVWriter(dbOptions.OutputFolder + @"Combined\Results.csv");
             string titleCombined = "Mixed Sample,Precursor";
             foreach(double precursor in characterizedPeptides.Keys)
                 foreach(CharacterizedPrecursor charPrec in characterizedPeptides[precursor].Values)
@@ -111,7 +112,8 @@ namespace Trinity.Methods
                         curveStr += ",NA";
             writerCumul.AddLine(curveStr);
 
-            mixedPrecursors = new Dictionary<Sample, Dictionary<double, MixedPrecursor>>();
+            //mixedPrecursors = new Dictionary<Sample, Dictionary<double, MixedPrecursor>>();
+            mixedPrecursors = new Dictionary<Sample, List<MixedPrecursor>>();
 
             foreach (Sample mixedSample in MixedSamples) 
                 mixedPrecursors.Add(mixedSample, MixedPrecursor.GetMixedPrecursors(mixedSample, mixedResult, dbOptions, characterizedPeptides));
@@ -121,45 +123,47 @@ namespace Trinity.Methods
                 //Get the list of precursors to characterize
                 foreach (Sample mixedSample in MixedSamples)
                 {
-                    if (mixedPrecursors[mixedSample].ContainsKey(keyMz))
-                    {
-                        // Compute Max Flow for this precursor
-                        Dictionary<CharacterizedPrecursor, ElutionCurve> ratios = GetRatios(characterizedPeptides, mixedPrecursors[mixedSample][keyMz]);
+                    foreach(MixedPrecursor mPrec in mixedPrecursors[mixedSample])
+                        if(mPrec.MZ == keyMz)
+                        {
+                            // Compute Max Flow for this precursor
+                            Dictionary<CharacterizedPrecursor, ElutionCurve> ratios = GetRatios(characterizedPeptides, mPrec);
 
-                        string resultStr = vsCSV.GetFileName(mixedSample.sSDF) + "," + keyMz;
-                        foreach (double precursor in characterizedPeptides.Keys)
-                            foreach (CharacterizedPrecursor charPrec in characterizedPeptides[precursor].Values)
-                                if (ratios.ContainsKey(charPrec))
-                                    resultStr += "," + ratios[charPrec].Area;
-                                else
-                                    resultStr += ",0";
-                        writerCumul.AddLine(resultStr);
+                            string resultStr = vsCSV.GetFileName(mixedSample.sSDF) + "," + keyMz;
+                            foreach (double precursor in characterizedPeptides.Keys)
+                                foreach (CharacterizedPrecursor charPrec in characterizedPeptides[precursor].Values)
+                                    if (ratios.ContainsKey(charPrec))
+                                        resultStr += "," + ratios[charPrec].Area;
+                                    else
+                                        resultStr += ",0";
+                            writerCumul.AddLine(resultStr);
 
-                        ExportMixedSampleResult(ratios, mixedSample, mixedPrecursors, keyMz, dbOptions);
-                    }
+                            ExportMixedSampleResult(ratios, mixedSample, mPrec, keyMz, dbOptions);
+                        }
                 }
             }
             writerCumul.WriteToFile();
         }
 
-        private static void ExportMixedSampleResult(Dictionary<CharacterizedPrecursor, ElutionCurve> ratios, Sample mixedSample, Dictionary<Sample, Dictionary<double, MixedPrecursor>> mixedPrecursors, double keyMz, DBOptions dbOptions)
+        private static void ExportMixedSampleResult(Dictionary<CharacterizedPrecursor, ElutionCurve> ratios, Sample mixedSample, MixedPrecursor mixedPrecursor, double keyMz, DBOptions dbOptions)
         {
             // Export results in a file
-            vsCSVWriter writerRatio = new vsCSVWriter(dbOptions.OutputFolder + @"Individual\" + vsCSV.GetFileName_NoExtension(mixedSample.sSDF) + "_" + keyMz + "MZ.csv");
+            vsCSVWriter writerRatio = new vsCSVWriter(dbOptions.OutputFolder + @"Individual\" + vsCSV.GetFileName_NoExtension(mixedSample.sSDF) + "_" + keyMz + "MZ_" + mixedPrecursor.Queries[0].spectrum.RetentionTimeInMin + "min.csv");
             string titleIndividual = "Scan time,Total Area";
             foreach (CharacterizedPrecursor charPep in ratios.Keys)
                 titleIndividual += "," + charPep.Peptide.Sequence;
+            writerRatio.AddLine(titleIndividual);
 
-            string line = "Total," + mixedPrecursors[mixedSample][keyMz].eCurve.Area;
+            string line = "Total," + mixedPrecursor.eCurve.Area;
             foreach (CharacterizedPrecursor charPep in ratios.Keys)
                 line += "," + ratios[charPep].Area;
             writerRatio.AddLine(line);
 
-            for (int i = 0; i < mixedPrecursors[mixedSample][keyMz].eCurve.intensityCount.Count; i++)
+            for (int i = 0; i < mixedPrecursor.eCurve.intensityCount.Count; i++)
             {
-                line = mixedPrecursors[mixedSample][keyMz].eCurve.time[i] / (1000.0 * 60.0) + "," + mixedPrecursors[mixedSample][keyMz].eCurve.intensityCount[i];
+                line = mixedPrecursor.eCurve.time[i] / (1000.0 * 60.0) + "," + mixedPrecursor.eCurve.intensityCount[i];
                 foreach (CharacterizedPrecursor charPep in ratios.Keys)
-                    line += "," + ratios[charPep].InterpolateIntensity(mixedPrecursors[mixedSample][keyMz].eCurve.time[i]);
+                    line += "," + ratios[charPep].InterpolateIntensity(mixedPrecursor.eCurve.time[i]);
                 writerRatio.AddLine(line);
             }
             writerRatio.WriteToFile();
@@ -174,7 +178,7 @@ namespace Trinity.Methods
                     vsCSVWriter writerRatio = new vsCSVWriter(dbOptions.OutputFolder + @"Individual\" + vsCSV.GetFileName_NoExtension(sample.sSDF) + "_" + keyMz + "MZ.csv");
                     string titleIndividual = "Scan time,Precursor Intensity,Intensity Per Millisecond";
                     foreach (ProductMatch pm in characterizedPeptides[keyMz][sample].AllFragments)
-                        titleIndividual += "," + pm.Fragment + pm.fragmentPos + "^" + pm.charge;
+                        titleIndividual += "," + pm.Fragment.Name + pm.fragmentPos + "^" + pm.charge;
                     writerRatio.AddLine(titleIndividual);
 
                     foreach (Query query in characterizedPeptides[keyMz][sample].Queries)
@@ -207,10 +211,10 @@ namespace Trinity.Methods
                 foreach (double mz in spikes.Keys)
                     if (Math.Abs(Proteomics.Utilities.Numerics.CalculateMassError(mz, mixedPrecursor.MZ, dbOptions.precursorMassTolerance.Units)) <= dbOptions.precursorMassTolerance.Value)
                         foreach (Sample sample in spikes[mz].Keys)
-                            if (!spikes[mz][sample].Fragments.ContainsKey(nbProductsToKeep))
-                                validProducts = false;
-                            else
+                            if (spikes[mz][sample].IsValid(nbProductsToKeep))
                                 Isomers.Add(spikes[mz][sample]);
+                            else
+                                validProducts = false;
                 if (validProducts)
                 {
                     double cumulError = 0;
@@ -233,7 +237,10 @@ namespace Trinity.Methods
                                     curves.Add(cPep, new MaxFlowElutionCurve(nbProductsToKeep));
 
                                 //curves[cPep].AddPoint(timeInMilliSeconds, finalRatios[cPep].Ratio * query.spectrum.PrecursorIntensityPerMilliSecond);
-                                curves[cPep].AddPoint(timeInMilliSeconds, finalRatios[cPep].Ratio * mixedPrecursor.eCurve.InterpolateIntensity(timeInMilliSeconds));
+                                double intensity = finalRatios[cPep].Ratio * mixedPrecursor.eCurve.InterpolateIntensity(timeInMilliSeconds);
+                                if (intensity < 0)
+                                    intensity = 0;
+                                curves[cPep].AddPoint(timeInMilliSeconds, intensity);
                             }
                         }
                         else
@@ -278,7 +285,7 @@ namespace Trinity.Methods
         }
 
         public static Dictionary<CharacterizedPrecursor, SolvedResult> SolveFromSpectrum(IEnumerable<CharacterizedPrecursor> ratiosToFit, int nbProductsToKeep, 
-                                            long precision, IEnumerable<MsMsPeak> capacity, MassTolerance tolerance, 
+                                            double precision, IEnumerable<MsMsPeak> capacity, MassTolerance tolerance, 
                                             double PrecursorIntensityInCTrap,
                                             out double underFlow, out double percentError, IConSol ConSole)
         {
@@ -324,7 +331,7 @@ namespace Trinity.Methods
                     i++;
                 }
 
-                percentError = underFlow / sumOfIntensities;
+                percentError = (underFlow / sumOfIntensities);
                 return resultPerSample;
             }
             else
@@ -400,17 +407,17 @@ namespace Trinity.Methods
             return resultPerSample;
         }
 
-        private static List<SolvedResult> GetResultList(List<double> solution, long precision, double underFlow, double sumOfIntensities)
+        private static List<SolvedResult> GetResultList(List<double> solution, double precision, double underFlow, double sumOfIntensities)
         {
             List<SolvedResult> rez = new List<SolvedResult>();
-            double sumVal = 0.0;
-            foreach(double val in solution)
-                sumVal += val;
+            //double sumVal = 0.0;
+            //foreach(double val in solution)
+            //    sumVal += val;
             
-            sumVal += (underFlow / sumOfIntensities) * precision;
+            //sumVal += (underFlow / sumOfIntensities) * precision;//Counter intuitive, but according to test samples, it is less precise
 
             foreach (double val in solution)
-                rez.Add(new SolvedResult( val / sumVal, val));
+                rez.Add(new SolvedResult(val / precision, val));
 
             return rez;
         }
