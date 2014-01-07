@@ -306,7 +306,7 @@ namespace Trinity.Structures.PositionnalIsomer
             List<double> tmpKeys = new List<double>(spikes.Keys);
             foreach (double mzKey in tmpKeys)
             {
-                if(spikes[mzKey].Count > 1)
+                if(spikes[mzKey].Count > 0)
                     CharacterizedPrecursor.Update(spikes[mzKey].Values, nbMinFragments, nbMaxFragments, dbOptions, precision);
                 else
                     spikes.Remove(mzKey);

@@ -131,6 +131,15 @@ namespace Trinity
 		public string sPeptideMap;
 		public string sSDF;
 
+        public string Name
+        {
+            get {
+                if (string.IsNullOrEmpty(nameColumn))
+                    return vsCSV.GetFileName_NoExtension(sSDF);
+                else
+                    return nameColumn;
+            }
+        }
         //private vsSDF m_vsSDF;
         //public vsSDF m_vsSDF;
         /*public vsSDF GetSDF()

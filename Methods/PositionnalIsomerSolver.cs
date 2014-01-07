@@ -29,6 +29,7 @@ namespace Trinity.Methods
         public Dictionary<double, Dictionary<Sample, CharacterizedPrecursor>> characterizedPeptides;
         public Dictionary<Sample, List<MixedPrecursor>>         mixedPrecursors;
 
+        public string OutputFolder { get { return dbOptions.OutputFolder + "Combined" + System.IO.Path.DirectorySeparatorChar;  } }
         private DBOptions CreateOptions(string fastaFile, string outputFolder, IConSol consol)
         {
             DBOptions dbOptions = new DBOptions(fastaFile, consol);
@@ -75,9 +76,9 @@ namespace Trinity.Methods
             return dbOptions;
         }
 
-        public void Solve(string[] spikedRaws, string[] mixedRaws, string fastaFile, string outputFolder, IConSol conSol)
+        public void Solve(string[] spikedRaws, string[] mixedRaws, string fastaFile, string folderToOutputTo, IConSol conSol)
         {
-            dbOptions = CreateOptions(fastaFile, outputFolder, conSol);
+            dbOptions = CreateOptions(fastaFile, folderToOutputTo, conSol);
             SpikedSamples = new Samples(dbOptions);
             for (int i = 0; i < spikedRaws.Length; i++)
                 SpikedSamples.Add(new Sample(i + 1, 1, 1, spikedRaws[i], spikedRaws[i], 0, ""));
@@ -96,21 +97,25 @@ namespace Trinity.Methods
             characterizedPeptides = CharacterizedPrecursor.GetSpikedPrecursors(SpikedSamples, SpikedResult, dbOptions, nbMinFragments, nbMaxFragments, precision);
             ExportSpikedSampleResult(characterizedPeptides, dbOptions);
 
-            vsCSVWriter writerCumul = new vsCSVWriter(dbOptions.OutputFolder + @"Combined\Results.csv");
-            string titleCombined = "Mixed Sample,Precursor";
+            vsCSVWriter writerCumul = new vsCSVWriter(OutputFolder + "Results.csv");
+            string titleCombined = "Mixed Sample,Precursor";            
+            string curveStr = "Polynomial Curve,";
+            string spikedIntensityStr = "Area under the curve,";
             foreach(double precursor in characterizedPeptides.Keys)
-                foreach(CharacterizedPrecursor charPrec in characterizedPeptides[precursor].Values)
-                    titleCombined += "," + charPrec.Peptide.Sequence + " Charge " + charPrec.Charge;
-            writerCumul.AddLine(titleCombined);
-
-            string curveStr = "Polynomial Curve";
-            foreach (double precursor in characterizedPeptides.Keys)
                 foreach (CharacterizedPrecursor charPrec in characterizedPeptides[precursor].Values)
+                {
+                    titleCombined += "," + charPrec.Peptide.Sequence + " Charge " + charPrec.Charge;
+
                     if (charPrec.eCurve.Coefficients != null && charPrec.eCurve.Coefficients.Length == 3)
                         curveStr += "," + charPrec.eCurve.Coefficients[0] + "x^2 + " + charPrec.eCurve.Coefficients[1] + "x" + charPrec.eCurve.Coefficients[2];
                     else
                         curveStr += ",NA";
+
+                    spikedIntensityStr += "," + charPrec.eCurve.Area;
+                }
+            writerCumul.AddLine(titleCombined);
             writerCumul.AddLine(curveStr);
+            writerCumul.AddLine(spikedIntensityStr);
 
             //mixedPrecursors = new Dictionary<Sample, Dictionary<double, MixedPrecursor>>();
             mixedPrecursors = new Dictionary<Sample, List<MixedPrecursor>>();
@@ -118,28 +123,35 @@ namespace Trinity.Methods
             foreach (Sample mixedSample in MixedSamples) 
                 mixedPrecursors.Add(mixedSample, MixedPrecursor.GetMixedPrecursors(mixedSample, mixedResult, dbOptions, characterizedPeptides));
 
-            foreach(double keyMz in characterizedPeptides.Keys)
-            {
                 //Get the list of precursors to characterize
-                foreach (Sample mixedSample in MixedSamples)
+            foreach (Sample mixedSample in MixedSamples)
+            {
+                foreach (double keyMz in characterizedPeptides.Keys)
                 {
+                    List<Dictionary<CharacterizedPrecursor, ElutionCurve>> listOfRatios = new List<Dictionary<CharacterizedPrecursor, ElutionCurve>>();
                     foreach(MixedPrecursor mPrec in mixedPrecursors[mixedSample])
                         if(mPrec.MZ == keyMz)
                         {
                             // Compute Max Flow for this precursor
                             Dictionary<CharacterizedPrecursor, ElutionCurve> ratios = GetRatios(characterizedPeptides, mPrec);
-
-                            string resultStr = vsCSV.GetFileName(mixedSample.sSDF) + "," + keyMz;
-                            foreach (double precursor in characterizedPeptides.Keys)
-                                foreach (CharacterizedPrecursor charPrec in characterizedPeptides[precursor].Values)
-                                    if (ratios.ContainsKey(charPrec))
-                                        resultStr += "," + ratios[charPrec].Area;
-                                    else
-                                        resultStr += ",0";
-                            writerCumul.AddLine(resultStr);
+                            listOfRatios.Add(ratios);
 
                             ExportMixedSampleResult(ratios, mixedSample, mPrec, keyMz, dbOptions);
                         }
+
+                    string resultStr = vsCSV.GetFileName(mixedSample.sSDF) + "," + keyMz;
+                    foreach (double precursor in characterizedPeptides.Keys)
+                    {
+                        foreach (CharacterizedPrecursor charPrec in characterizedPeptides[precursor].Values)
+                        {
+                            double cumulArea = 0.0;
+                            foreach (Dictionary<CharacterizedPrecursor, ElutionCurve> ratios in listOfRatios)
+                                if (ratios.ContainsKey(charPrec))
+                                    cumulArea += ratios[charPrec].Area;
+                            resultStr += "," + cumulArea;
+                        }
+                    }
+                    writerCumul.AddLine(resultStr);
                 }
             }
             writerCumul.WriteToFile();

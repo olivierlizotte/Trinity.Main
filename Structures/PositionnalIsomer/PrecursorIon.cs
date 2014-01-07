@@ -36,7 +36,7 @@ namespace Trinity.Structures.PositionnalIsomer
             this.Queries.Sort(Query.AscendingRetentionTimeComparison);
             Dictionary<double, double> dicOfTimeInMsVsIntensityPerMs = new Dictionary<double, double>();
             foreach (Query query in this.Queries)
-                dicOfTimeInMsVsIntensityPerMs.Add(query.spectrum.RetentionTimeInMin * 60.0 * 1000.0, query.spectrum.PrecursorIntensityPerMilliSecond);
+                dicOfTimeInMsVsIntensityPerMs.Add(query.spectrum.RetentionTimeInMin * 60.0 * 1000.0, query.spectrum.PrecursorIntensity);//query.spectrum.PrecursorIntensityPerMilliSecond);
             this.eCurve = ElutionCurve.Create(dicOfTimeInMsVsIntensityPerMs);
             this.Sample = sample;
         }
