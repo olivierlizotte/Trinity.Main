@@ -29,7 +29,7 @@ namespace Trinity
         {
             PeptideSpectrumMatch psm = new PeptideSpectrumMatch(query, modified_peptide, options);
 
-            if (psm.MatchingProducts > 1)
+            if (psm.MatchingProducts > options.fragments.Count)
             {
                 //DicOfProteins.GetOrAdd(psm.Peptide.BaseSequence, new List<Protein>()).Add(psm.Peptide.Parent);
 //                if (!DicOfProteins.ContainsKey(psm.Peptide.BaseSequence))

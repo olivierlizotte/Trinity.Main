@@ -17,7 +17,7 @@ namespace Trinity
         public string FragmentationMethod { get;  set; }
         public double PrecursorMZ { get; set; }
         public double PrecursorIntensity { get; set; }
-        public double PrecursorIntensityPerMilliSecond { get; set; }
+        public double PrecursorIntensityPerMilliSecond { get; set; }        
         public int PrecursorCharge { get; set; }
         public double PrecursorMass { get; set; }
         public GraphML_List<MsMsPeak> Peaks { get; set; }// Masses;

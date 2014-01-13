@@ -612,5 +612,11 @@ namespace Trinity
                 }
             }
         }
+
+        public void ExportPSMs(int nbPsmPerQuery, string filename)
+        {
+            //List<Query> qs = queries.ComputeAtFDR(1);
+            MSSearcher.Export(filename, queries);
+        }
     }    
 }

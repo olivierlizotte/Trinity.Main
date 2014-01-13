@@ -109,8 +109,8 @@ namespace Trinity
             this.precursorMassTolerance = new MassTolerance(0.005, MassToleranceUnits.Da);//2.1
             //TODO Add precision to the product masses by reading corresponding MS part of raw file
             this.productMassTolerance = new MassTolerance(0.005, MassToleranceUnits.Da);
-            
-            this.PSMFalseDiscoveryRate = 0.05;
+
+            this.PSMFalseDiscoveryRate = 0.25;// 0.05;
 
             this.OutputFolder = @"C:\_IRIC\DATA\Test2";//C:\Documents and Settings\ProteoAdmin\Desktop\AEffacer\Morpheus\Output";
             this.MinimumPSMScore = 0.0001;         

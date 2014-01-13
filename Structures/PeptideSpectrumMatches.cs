@@ -11,8 +11,195 @@ using Proteomics.Utilities;
 
 namespace Trinity
 {
+    public class PSMScoreThreshold
+    {
+        public double minProductScore = 0.0;
+        public double minPrecursorScore = 0.0;
+        public double minMatchingProductFractionScore = 0.0;
+        public double minMatchingProductScore = 0.0;
+        public double minIntensityFractionScore = 0.0;
+        public double minIntensityScore = 0.0;
+        public double minProteinScore = 0.0;
+        public double minPeptideScore = 0.0;
+        public double minFragmentScore = 0.0;
+        public double minProbabilityScore = 0.0;
+        public double ComputeFDR(PeptideSpectrumMatches matches, out long nbTarget, out long nbDecoy)
+        {
+            nbTarget = 0;
+            nbDecoy = 0;
+            foreach(PeptideSpectrumMatch psm in matches)
+            {
+                if (KeepPSM(psm))
+                    if (psm.Target)
+                        nbTarget++;
+                    else
+                        nbDecoy++;
+            }
+            if (nbTarget == 0)
+                return 1;
+            else
+                return (double)nbDecoy / (double)nbTarget;
+        }
+        public bool KeepPSM(PeptideSpectrumMatch psm)
+        {
+            return psm.MatchingIntensity >= minIntensityScore &&
+                   psm.MatchingIntensityFraction >= minIntensityFractionScore &&
+                   psm.ProductScore >= minProductScore &&
+                   psm.PrecursorScore >= minPrecursorScore &&
+                   psm.MatchingProductsFraction >= minMatchingProductFractionScore &&
+                   psm.MatchingProducts >= minMatchingProductScore &&
+                   psm.ProteinScore >= minProteinScore &&
+                   psm.PeptideScore >= minPeptideScore &&
+                   psm.FragmentScore >= minFragmentScore &&
+                   psm.ProbabilityScore() >= minProbabilityScore;
+        }
+    }
+
     public class PeptideSpectrumMatches : GraphML_List<PeptideSpectrumMatch>
     {
+        public PSMScoreThreshold ComputeScoreThreshold(double fdr)
+        {
+            PSMScoreThreshold localMinimas = new PSMScoreThreshold();
+            double nbTarget = 0;
+            double nbDecoy = 0;
+            this.Sort(PeptideSpectrumMatches.CompareMatchingProducts);
+            foreach (PeptideSpectrumMatch psm in this)
+            {
+                if (psm.Target) nbTarget += 1; else nbDecoy += 1;
+                if (nbDecoy == 0 || nbDecoy / nbTarget <= fdr)
+                    localMinimas.minMatchingProductScore = psm.MatchingProducts;
+            }
+            this.Sort(PeptideSpectrumMatches.CompareMatchingProductsFraction);
+            nbTarget = 0;            nbDecoy = 0;
+            foreach(PeptideSpectrumMatch psm in this)
+            {
+                if (psm.Target) nbTarget += 1; else nbDecoy += 1;
+                if (nbDecoy == 0 || nbDecoy / nbTarget <= fdr)
+                    localMinimas.minMatchingProductFractionScore = psm.MatchingProductsFraction;
+            }
+            this.Sort(PeptideSpectrumMatches.CompareMatchingIntensity);
+            nbTarget = 0; nbDecoy = 0;
+            foreach (PeptideSpectrumMatch psm in this)
+            {
+                if (psm.Target) nbTarget += 1; else nbDecoy += 1;
+                if (nbDecoy == 0 || nbDecoy / nbTarget <= fdr)
+                    localMinimas.minIntensityScore = psm.MatchingIntensity;
+            }
+            this.Sort(PeptideSpectrumMatches.CompareFragmentScore);
+            nbTarget = 0; nbDecoy = 0;
+            foreach (PeptideSpectrumMatch psm in this)
+            {
+                if (psm.Target) nbTarget += 1; else nbDecoy += 1;
+                if (nbDecoy == 0 || nbDecoy / nbTarget <= fdr)
+                    localMinimas.minFragmentScore = psm.FragmentScore;
+            }
+            this.Sort(PeptideSpectrumMatches.CompareProbabilityScore);
+            nbTarget = 0; nbDecoy = 0;
+            foreach (PeptideSpectrumMatch psm in this)
+            {
+                if (psm.Target) nbTarget += 1; else nbDecoy += 1;
+                if (nbDecoy == 0 || nbDecoy / nbTarget <= fdr)
+                    localMinimas.minProbabilityScore = psm.ProbabilityScore();
+            }
+
+            double iterSize = 0.95;
+            long nbCumulTarget = 0;
+            long nbCumulDecoy = 0;
+            double currentFDR = localMinimas.ComputeFDR(this, out nbCumulTarget, out nbCumulDecoy);
+            do
+            {
+                double previousVal = localMinimas.minMatchingProductScore;
+                localMinimas.minMatchingProductScore *= iterSize;
+                long nbTargetminMatchingProductScore = 0;
+                double currentFDRminMatchingProductScore = localMinimas.ComputeFDR(this, out nbTargetminMatchingProductScore, out nbCumulDecoy);
+                if (currentFDRminMatchingProductScore > fdr || localMinimas.minMatchingProductScore < 0.001)
+                    nbTargetminMatchingProductScore = 0;
+                localMinimas.minMatchingProductScore = previousVal;
+
+                previousVal = localMinimas.minMatchingProductFractionScore;
+                localMinimas.minMatchingProductFractionScore *= iterSize;
+                long nbTargetminMatchingProductFractionScore = 0;
+                double currentFDRminMatchingProductFractionScore = localMinimas.ComputeFDR(this, out nbTargetminMatchingProductFractionScore, out nbCumulDecoy);
+                if (currentFDRminMatchingProductFractionScore > fdr || localMinimas.minMatchingProductFractionScore < 0.001)
+                    nbTargetminMatchingProductFractionScore = 0;
+                localMinimas.minMatchingProductFractionScore = previousVal;
+
+                previousVal = localMinimas.minIntensityScore;
+                localMinimas.minIntensityScore *= iterSize;
+                long nbTargetminIntensityScore = 0;
+                double currentFDRminIntensityScore = localMinimas.ComputeFDR(this, out nbTargetminIntensityScore, out nbCumulDecoy);
+                if (currentFDRminIntensityScore > fdr || localMinimas.minIntensityScore < 0.001)
+                    nbTargetminIntensityScore = 0;
+                localMinimas.minIntensityScore = previousVal;
+
+                previousVal = localMinimas.minFragmentScore;
+                localMinimas.minFragmentScore *= iterSize;
+                long nbTargetminFragmentScore = 0;
+                double currentFDRminFragmentScore = localMinimas.ComputeFDR(this, out nbTargetminFragmentScore, out nbCumulDecoy);
+                if (currentFDRminFragmentScore > fdr || localMinimas.minFragmentScore < 0.001)
+                    nbTargetminFragmentScore = 0;
+                localMinimas.minFragmentScore = previousVal;
+
+                previousVal = localMinimas.minProbabilityScore;
+                localMinimas.minProbabilityScore *= iterSize;
+                long nbTargetminProbabilityScore = 0;
+                double currentFDRminProbabilityScore = localMinimas.ComputeFDR(this, out nbTargetminProbabilityScore, out nbCumulDecoy);
+                if (currentFDRminProbabilityScore > fdr || localMinimas.minProbabilityScore < 0.001)
+                    nbTargetminProbabilityScore = 0;
+                localMinimas.minProbabilityScore = previousVal;
+
+                if (nbTargetminMatchingProductScore > 0 && nbTargetminMatchingProductScore >= nbTargetminMatchingProductFractionScore
+                                                 && nbTargetminMatchingProductScore >= nbTargetminIntensityScore
+                                                 && nbTargetminMatchingProductScore >= nbTargetminFragmentScore
+                                                 && nbTargetminMatchingProductScore >= nbTargetminProbabilityScore)
+                {
+                    iterSize = 0.95;
+                    localMinimas.minMatchingProductScore *= iterSize;
+                }
+                else
+                    if (nbTargetminMatchingProductFractionScore > 0 && nbTargetminMatchingProductFractionScore >= nbTargetminMatchingProductScore
+                                                                   && nbTargetminMatchingProductFractionScore >= nbTargetminIntensityScore
+                                                                   && nbTargetminMatchingProductFractionScore >= nbTargetminFragmentScore
+                                                                   && nbTargetminMatchingProductFractionScore >= nbTargetminProbabilityScore)
+                    {
+                        iterSize = 0.95;
+                        localMinimas.minMatchingProductFractionScore *= iterSize;
+                    }
+                    else
+                        if (nbTargetminIntensityScore > 0 && nbTargetminIntensityScore >= nbTargetminMatchingProductFractionScore
+                                                         && nbTargetminIntensityScore >= nbTargetminMatchingProductScore
+                                                         && nbTargetminIntensityScore >= nbTargetminFragmentScore
+                                                         && nbTargetminIntensityScore >= nbTargetminProbabilityScore)
+                        {
+                            iterSize = 0.95;
+                            localMinimas.minIntensityScore *= iterSize;
+                        }
+                        else
+                            if (nbTargetminFragmentScore > 0 && nbTargetminFragmentScore >= nbTargetminMatchingProductFractionScore
+                                                            && nbTargetminFragmentScore >= nbTargetminIntensityScore
+                                                            && nbTargetminFragmentScore >= nbTargetminMatchingProductScore
+                                                            && nbTargetminFragmentScore >= nbTargetminProbabilityScore)
+                            {
+                                iterSize = 0.95;
+                                localMinimas.minFragmentScore *= iterSize;
+                            }
+                            else
+                                if (nbTargetminProbabilityScore > 0 && nbTargetminProbabilityScore >= nbTargetminMatchingProductFractionScore
+                                                                && nbTargetminProbabilityScore >= nbTargetminIntensityScore
+                                                                && nbTargetminProbabilityScore >= nbTargetminMatchingProductScore
+                                                                && nbTargetminProbabilityScore >= nbTargetminFragmentScore)
+                                {
+                                    iterSize = 0.95;
+                                    localMinimas.minProbabilityScore *= iterSize;
+                                }
+                                else
+                                    iterSize -= 0.05;
+
+                currentFDR = localMinimas.ComputeFDR(this, out nbCumulTarget, out nbCumulDecoy);
+            } while (iterSize > 0.01);// && currentFDR <= fdr);
+            return localMinimas;
+        }
+
         FDRizer<PeptideSpectrumMatch> uptimizer;
         public PeptideSpectrumMatches() { }
         public PeptideSpectrumMatches(IEnumerable<PeptideSpectrumMatch> list) : base(list) { }
@@ -429,6 +616,10 @@ namespace Trinity
         {
             return -left.ProductScore.CompareTo(right.ProductScore);
         }
+        public static int CompareProbabilityScore(PeptideSpectrumMatch left, PeptideSpectrumMatch right)
+        {
+            return -left.ProbabilityScore().CompareTo(right.ProbabilityScore());
+        }
         public static int ComparePrecursorScore(PeptideSpectrumMatch left, PeptideSpectrumMatch right)
         {
             return -left.PrecursorScore.CompareTo(right.PrecursorScore);
@@ -436,6 +627,10 @@ namespace Trinity
         public static int CompareMatchingProductsFraction(PeptideSpectrumMatch left, PeptideSpectrumMatch right)
         {
             return -left.MatchingProductsFraction.CompareTo(right.MatchingProductsFraction);
+        }
+        public static int CompareFragmentScore(PeptideSpectrumMatch left, PeptideSpectrumMatch right)
+        {
+            return -left.FragmentScore.CompareTo(right.FragmentScore);
         }
         public static int CompareMatchingProducts(PeptideSpectrumMatch left, PeptideSpectrumMatch right)
         {

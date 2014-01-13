@@ -183,12 +183,33 @@ namespace Trinity
                 result.SetPrecursors(dbSearcher.Search(queries, ps.DigestProteomeOnTheFly(AllProteins, false, queries)));
             dbOptions.ConSole.WriteLine(result.precursors.Count + " precursors matched !");
                         
+            //Use gradient descent to figure out thresholds on PSMs
             foreach (Precursor precursor in result.precursors)
                 foreach (PeptideSpectrumMatch psm in precursor.psms_AllPossibilities)
-                    precursor.psms.Add(psm);
-
+                        precursor.psms.Add(psm);
             long nbTargets = result.SetPrecursors(result.precursors);
-            dbOptions.ConSole.WriteLine("Targets before Optimizing Score Ratios : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");
+            /*//This approach is unstable ... 
+            dbOptions.ConSole.WriteLine("Targets before Optimizing PSM Thresholds : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");
+
+            PeptideSpectrumMatches allMatches = new PeptideSpectrumMatches();
+            foreach (Precursor precursor in result.precursors)
+                allMatches.AddRange(precursor.psms_AllPossibilities);
+            PSMScoreThreshold threshold = allMatches.ComputeScoreThreshold(dbOptions.PSMFalseDiscoveryRate);            
+            foreach (Precursor precursor in result.precursors)
+            {
+                if (precursor.psms.Count > 0)
+                {
+                    precursor.psms.Clear();
+                    foreach (PeptideSpectrumMatch psm in precursor.psms_AllPossibilities)
+                        if (threshold.KeepPSM(psm))
+                            precursor.psms.Add(psm);
+                }
+            }
+
+            nbTargets = result.SetPrecursors(result.precursors);
+            //*/
+
+            dbOptions.ConSole.WriteLine("Targets after Optimizing PSM Thresholds : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");
 
             //*/
             long bestTargets = nbTargets;
@@ -206,11 +227,10 @@ namespace Trinity
 
             if (optimize)
             {
-
                 //result.peptides = UpdatePsmScores(pepSearcher.SearchAll(result.clusters, result.matchedPrecursors, true), result);
-                dbOptions.ConSole.WriteLine("Found peptides from UpdatePSMScore routine : " + result.peptides);
-                nbTargets = result.SetPrecursors(result.precursors);
-                dbOptions.ConSole.WriteLine("Targets after Updating PSM scores : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");
+                //dbOptions.ConSole.WriteLine("Found peptides from UpdatePSMScore routine : " + result.peptides.Count);
+                //nbTargets = result.SetPrecursors(result.precursors);
+                //dbOptions.ConSole.WriteLine("Targets after Updating PSM scores : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");
                 /*
                 PeptideSpectrumMatches allPSMs = new PeptideSpectrumMatches();
                 foreach (Precursor precursor in result.precursors)
@@ -222,7 +242,7 @@ namespace Trinity
             }
             result.peptides = pepSearcher.SearchClusters(result.clusters, result.matchedPrecursors, true);
             result.peptideSequences = pepSearcher.SearchClusters(result.clusters, result.matchedPrecursors, false);
-            dbOptions.ConSole.WriteLine("Found peptides from Searchclusters routine : " + result.peptides);
+            dbOptions.ConSole.WriteLine("Found peptides from Searchclusters routine : " + result.peptides.Count);
             
             nbTargets = result.SetPrecursors(result.precursors);
             dbOptions.ConSole.WriteLine("Targets after ReRanking peptides : " + nbTargets + " [" + result.matchedPrecursors.Count + "]");//*/

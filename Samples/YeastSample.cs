@@ -61,7 +61,7 @@ namespace Trinity.UnitTest
             
             dbOptions.variableModifications = varMods;
 
-            dbOptions.NbPSMToKeep = 8;
+            dbOptions.NbPSMToKeep = 16;
 
             dbOptions.addFragmentLoss = false;
             dbOptions.addFragmentMods = false;
@@ -72,25 +72,34 @@ namespace Trinity.UnitTest
             dbOptions.fragments.Add(new FragmentX());
             dbOptions.fragments.Add(new FragmentY());
             dbOptions.fragments.Add(new FragmentZ());
+            
+            dbOptions.dProduct = 0.0;
+            dbOptions.dPrecursor = 0.1;// 0.12;
+            dbOptions.dMatchingProductFraction = 0.8;// 0.45;
+            dbOptions.dMatchingProduct = 0.0;// 0.5;
+            dbOptions.dIntensityFraction = 0.1;// 45;// 0.0;//0.13;
+            dbOptions.dIntensity = 0;
+            dbOptions.dProtein = 0;
+            dbOptions.dPeptideScore = 0.0;// 0.3;
+            dbOptions.dFragmentScore = 0.0;// 0.5;
 
             //ClusterOptions clusterOptions = new ClusterOptions(Project, outputDir, 5, true, 90, true);//TODO validate its in seconds for all file types
-            
-            Propheus propheus = new Propheus(dbOptions, Project);
 
             dbOptions.SaveMS1Peaks = true;
             dbOptions.SaveMSMSPeaks = true;
             dbOptions.LoadSpectraIfFound = true;
+            Propheus propheus = new Propheus(dbOptions, Project);
+
             propheus.Preload(false, false);
             propheus.PrepareQueries();
 
+            //To beat : 4653 (MaxQuant) Psm at 2%FDR
             //First pass (used to optimize parameters and score weights)
-            Result tmp = propheus.SearchLatestVersion(propheus.AllQueries, true);//, 1.0, false, false, null);
+            Result tmp = propheus.SearchLatestVersion(propheus.AllQueries, true, false);//, 1.0, false, false, null);
 
             tmp.WriteInfoToCsv(true);
             tmp.Export(0.02, "FirstPass_02_");
 
-            dbOptions.SaveMS1Peaks = true;
-            dbOptions.SaveMSMSPeaks = true;
 
             //Second search
             propheus.Preload(true);

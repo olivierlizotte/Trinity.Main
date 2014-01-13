@@ -20,6 +20,7 @@ namespace Trinity.Structures.PositionnalIsomer
     public class PrecursorIon
     {
         public ElutionCurve eCurve;
+        public ElutionCurve eCurveIntensityPerMS;
         public double MZ;
         public int Charge;
         public Queries Queries;
@@ -35,9 +36,15 @@ namespace Trinity.Structures.PositionnalIsomer
 
             this.Queries.Sort(Query.AscendingRetentionTimeComparison);
             Dictionary<double, double> dicOfTimeInMsVsIntensityPerMs = new Dictionary<double, double>();
+            Dictionary<double, double> dicOfTimeInMsVsIntensityCount = new Dictionary<double, double>();
             foreach (Query query in this.Queries)
-                dicOfTimeInMsVsIntensityPerMs.Add(query.spectrum.RetentionTimeInMin * 60.0 * 1000.0, query.spectrum.PrecursorIntensity);//query.spectrum.PrecursorIntensityPerMilliSecond);
-            this.eCurve = ElutionCurve.Create(dicOfTimeInMsVsIntensityPerMs);
+            {
+                double time = query.spectrum.RetentionTimeInMin * 60.0 * 1000.0;
+                dicOfTimeInMsVsIntensityPerMs.Add(time, query.spectrum.PrecursorIntensityPerMilliSecond);
+                dicOfTimeInMsVsIntensityCount.Add(time, query.spectrum.PrecursorIntensity);
+            }
+            this.eCurve = ElutionCurve.Create(dicOfTimeInMsVsIntensityCount);//dicOfTimeInMsVsIntensityPerMs);
+            this.eCurveIntensityPerMS = ElutionCurve.Create(dicOfTimeInMsVsIntensityPerMs);
             this.Sample = sample;
         }
         

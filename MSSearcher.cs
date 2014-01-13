@@ -445,17 +445,17 @@ namespace Trinity
             writer.WriteToFile();
         }
 
-        public static void Export(string filename, List<Query> queries)
+        public static void Export(string filename, IEnumerable<Query> queries)
         {
             vsCSVWriter writer = new vsCSVWriter(filename);
-            writer.AddLine("Index.Mz,Rt,Charge,Sequence,Precursor Score,Product Score,Intensity Score,Final Score,Precursor Mass Error,Decoy?,Protein Score");
+            writer.AddLine("Spectrum Precursor Mz,Rt,Charge,BaseSequence,Sequence,Precursor Score,Product Score,Intensity Score,Final Score,Precursor Mass Error,Decoy?,Protein Score");
 
             foreach (Query query in queries)
             {
-                string line = query.spectrumIndex + "," + query.precursor.Track.RT + "," + query.precursor.Charge + ",";
+                string line = query.spectrum.PrecursorMZ + "," + query.precursor.Track.RT + "," + query.precursor.Charge + ",";
                 PeptideSpectrumMatch match = query.precursor.OptimizedBestPsm();
                 if(match != null)
-                    line += match.Peptide.BaseSequence + "," + match.PrecursorScore + "," + match.ProductScore + "," + match.IntensityScore + "," + query.ScoreFct(match.Peptide) + "," +
+                    line += match.Peptide.BaseSequence + "," + match.Peptide.Sequence + "," + match.PrecursorScore + "," + match.ProductScore + "," + match.IntensityScore + "," + query.ScoreFct(match.Peptide) + "," +
                         match.PrecursorMzError + "," + match.Decoy + "," + match.ProteinScore;
                 writer.AddLine(line);
             }

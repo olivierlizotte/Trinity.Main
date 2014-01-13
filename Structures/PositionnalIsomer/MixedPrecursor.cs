@@ -9,6 +9,7 @@ namespace Trinity.Structures.PositionnalIsomer
     public class MixedPrecursor : PrecursorIon
     {
         public Dictionary<CharacterizedPrecursor, ElutionCurve> PeptideRatios;
+        public Dictionary<Peptide, ElutionCurve> PeptideRatiosNoSpike;
         public MixedPrecursor(Sample sample, IEnumerable<Query> queries, double mz)
             : base(sample, queries, mz, -1)
         {
@@ -31,10 +32,14 @@ namespace Trinity.Structures.PositionnalIsomer
                     foreach (PrecursorIon precIon in DicOfSpectrumMasses[key].SplitBasedOnTime(dbOptions))
                     {
                         MixedPrecursor mixedPrecursor = new MixedPrecursor(mixedSample, precIon, key);
-
+                        
                         //Don't try to characterize mixed precursors if there is less than five scans
                         if (mixedPrecursor.Queries.Count > 4)
+                        {
+                            foreach (Query q in mixedPrecursor.Queries)
+                                q.spectrum.PrecursorIntensityPerMilliSecond = mixedPrecursor.eCurveIntensityPerMS.InterpolateIntensity(q.spectrum.RetentionTimeInMin * 1000.0 * 60.0 + 0.5 * q.spectrum.InjectionTime);
                             listOfMixedPrec.Add(mixedPrecursor);
+                        }
                             //DicOfMixedPrecursor.Add(key, mixedPrecursor);
                     }
                 }
@@ -139,6 +144,120 @@ namespace Trinity.Structures.PositionnalIsomer
                 PeptideRatios.Add(cPep, cumulDic[cPep].Merge());
 
             return PeptideRatios;
+        }
+
+        public Dictionary<Peptide, ElutionCurve> ComputePeptideRatios(Dictionary<Dictionary<Peptide, MaxFlowElutionCurve>, double> dicOfCurveErrorsP)
+        {
+            Dictionary<Dictionary<Peptide, MaxFlowElutionCurve>, double> dicOfCorrelations = new Dictionary<Dictionary<Peptide, MaxFlowElutionCurve>, double>();
+            foreach (Dictionary<Peptide, MaxFlowElutionCurve> dicOfCurve in dicOfCurveErrorsP.Keys)
+                dicOfCorrelations.Add(dicOfCurve, 1.0 / (double)dicOfCurveErrorsP.Count);
+
+            //Purge worst curves
+            Dictionary<Dictionary<Peptide, MaxFlowElutionCurve>, double> dicOfCurves = new Dictionary<Dictionary<Peptide, MaxFlowElutionCurve>, double>();
+            if (dicOfCurveErrorsP.Count > 1)
+            {
+                double median = MathNet.Numerics.Statistics.Statistics.Median(dicOfCurveErrorsP.Values);
+                double maxMed = median;// +0.5 * MathNet.Numerics.Statistics.Statistics.Variance(dicOfCurveErrorsP.Values);
+                foreach (Dictionary<Peptide, MaxFlowElutionCurve> dic in dicOfCurveErrorsP.Keys)
+                    if (dicOfCurveErrorsP[dic] <= maxMed)
+                        dicOfCurves.Add(dic, dicOfCurveErrorsP[dic]);
+            }
+            else
+                dicOfCurves = dicOfCurveErrorsP;
+
+            Dictionary<Dictionary<Peptide, MaxFlowElutionCurve>, double> lastDicOfCurves = dicOfCurves;
+            int nbRun = 2;
+            while (nbRun > 0)
+            {
+                nbRun--;
+                dicOfCurves = lastDicOfCurves;
+
+                //Normalize already computed correlation factors for the remaning curves (sum must equal 1)
+                double sumOfCorr = 0.0;
+                foreach (Dictionary<Peptide, MaxFlowElutionCurve> dicOfCurve in dicOfCurves.Keys)
+                    sumOfCorr += dicOfCorrelations[dicOfCurve];
+
+                foreach (Dictionary<Peptide, MaxFlowElutionCurve> dicOfCurve in dicOfCurves.Keys)
+                    dicOfCorrelations[dicOfCurve] /= sumOfCorr;
+
+                //Compute average from weighted curves
+                Dictionary<Peptide, double> average = new Dictionary<Peptide, double>();
+                foreach (Dictionary<Peptide, MaxFlowElutionCurve> dicOfCurve in dicOfCurves.Keys)
+                {
+                    Dictionary<Peptide, double> areas = GetAreas(dicOfCurve);
+                    foreach (Peptide cPep in areas.Keys)
+                    {
+                        if (!average.ContainsKey(cPep))
+                            average.Add(cPep, 0);
+                        average[cPep] += areas[cPep] * dicOfCorrelations[dicOfCurve];
+                    }
+                }
+
+                //Compute correlation between average and curves
+                List<double> corrs = new List<double>();
+                foreach (Dictionary<Peptide, MaxFlowElutionCurve> dicOfCurve in dicOfCurves.Keys)
+                {
+                    Dictionary<Peptide, double> elution = new Dictionary<Peptide, double>();
+                    foreach (Peptide cPep in average.Keys)
+                        if (dicOfCurve.ContainsKey(cPep))
+                            elution.Add(cPep, dicOfCurve[cPep].Area);
+                        else
+                            elution.Add(cPep, 0);
+                    double tmp = 1.0;
+                    if (elution.Count > 1)
+                        tmp = Math.Abs(MathNet.Numerics.Statistics.Correlation.Pearson(average.Values, elution.Values));
+
+                    dicOfCorrelations[dicOfCurve] = tmp;
+                    corrs.Add(tmp);
+                }
+
+                //Remove worst curves                
+                if (corrs.Count > 1)
+                {
+                    Dictionary<Dictionary<Peptide, MaxFlowElutionCurve>, double> dicOfCurves2 = new Dictionary<Dictionary<Peptide, MaxFlowElutionCurve>, double>();
+
+                    double medianCorr = MathNet.Numerics.Statistics.Statistics.Median(corrs);
+                    double maxCorr = medianCorr + 0.5 * MathNet.Numerics.Statistics.Statistics.Variance(corrs);
+
+                    foreach (Dictionary<Peptide, MaxFlowElutionCurve> dic in dicOfCurves.Keys)
+                        if (dicOfCorrelations[dic] <= maxCorr)
+                            dicOfCurves2.Add(dic, dicOfCurves[dic]);
+
+                    lastDicOfCurves = dicOfCurves2;
+                }
+            }//End of While nbRun not exhausted
+
+            Dictionary<Peptide, ElutionCurveMerger> cumulDic = new Dictionary<Peptide, ElutionCurveMerger>();
+            foreach (Dictionary<Peptide, MaxFlowElutionCurve> dicOfCurve in lastDicOfCurves.Keys)
+            {
+                foreach (Peptide cPep in dicOfCurve.Keys)
+                {
+                    if (!cumulDic.ContainsKey(cPep))
+                        cumulDic.Add(cPep, new ElutionCurveMerger());
+
+                    cumulDic[cPep].AddCurve(dicOfCurve[cPep], dicOfCorrelations[dicOfCurve]);
+                }
+            }
+            PeptideRatiosNoSpike = new Dictionary<Peptide, ElutionCurve>();
+            foreach (Peptide cPep in cumulDic.Keys)
+                PeptideRatiosNoSpike.Add(cPep, cumulDic[cPep].Merge());
+
+            return PeptideRatiosNoSpike;
+        }
+
+        public static Dictionary<Peptide, double> GetAreas(Dictionary<Peptide, MaxFlowElutionCurve> curves)
+        {
+            Dictionary<Peptide, double> newCurves = new Dictionary<Peptide, double>();
+            try
+            {
+                foreach (Peptide cPep in curves.Keys)
+                    newCurves.Add(cPep, curves[cPep].Area);// * cPep.PrecursorLossNormalizeFactor[curves[cPep].nbProducts]);// * cPep.FragmentLossNormalizeFactor);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("ssss");
+            }
+            return newCurves;
         }
 
         public static Dictionary<CharacterizedPrecursor, double> GetAreas(Dictionary<CharacterizedPrecursor, MaxFlowElutionCurve> curves)

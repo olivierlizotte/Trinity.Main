@@ -11,6 +11,100 @@ using Proteomics.Utilities;
 
 namespace Trinity
 {
+    public static class AllFragmentSearch
+    {        /*
+        private static IEnumerable<double> fragmentsTypesNTerm(double nTermCumul)
+        {
+            yield return nTermCumul - 29.002741 + Constants.PROTON_MASS;//-CHO}//A
+            yield return nTermCumul;// - 1.007276;//-H//B
+            yield return nTermCumul + 17.02654915;// +16.018724;//+NH2//C
+        }    //*/
+        
+        private static IEnumerable<double> fragmentsTypesCTerm(double cTermCumul)
+        {
+            yield return cTermCumul + 43.9898346942;// +15.9949 + 12 + 18.0105646942 - 0.5;//X
+            //yield return cTermCumul + 15.9949 + 12 + 18.0105646942 - 1.007276;
+            //yield return cTermCumul + 26.98708959;//CO-H1.007276
+            //yield return cTermCumul/* + 18.0105646942;// + 1.007276;//+H
+            yield return cTermCumul + Constants.WATER_MONOISOTOPIC_MASS;// + 1.007276;//+H//Y
+            //yield return cTermCumul/* + 1.991840552567;// -16.018724;//-NH2
+            yield return cTermCumul + 1.991840552567 - Constants.PROTON_MASS;// -16.018724;//-NH2//Z
+        }    //*/
+        
+        private static IEnumerable<double> fragmentsTypesNTerm(double nTermCumul)
+        {//http://www.weddslist.com/ms/tables.html#tm4
+
+            yield return nTermCumul - 29.002741 + Constants.PROTON_MASS;//-CHO}//A
+            //yield return nTermCumul + Constants.HYDROGEN_MASS - Constants.CARBON_MASS - Constants.OXYGEN_MASS;//A
+            yield return nTermCumul;// - 1.007276;//-H//B
+            yield return nTermCumul + Constants.HYDROGEN_MASS;//B
+            yield return nTermCumul + Constants.HYDROGEN_MASS * 4 + Constants.NITROGEN_MASS;//C
+            yield return nTermCumul + 17.02654915;// +16.018724;//+NH2//C
+        }//*/
+        /*
+        private static IEnumerable<double> fragmentsTypesCTerm(double cTermCumul)
+        {
+            yield return cTermCumul + Constants.OXYGEN_MASS * 2 + Constants.HYDROGEN_MASS + Constants.CARBON_MASS;//X
+            yield return cTermCumul + Constants.OXYGEN_MASS + Constants.HYDROGEN_MASS * 3;//Y
+            yield return cTermCumul + Constants.OXYGEN_MASS + Constants.HYDROGEN_MASS - Constants.NITROGEN_MASS - Constants.HYDROGEN_MASS;//Z
+        }    //*/
+        public static IEnumerable<ProductMatch> ComputeAllFragments(Peptide peptide, int precursorKnownCharge, DBOptions dbOptions)
+        {
+            int maxCharge;
+            if (precursorKnownCharge > 1)
+                maxCharge = precursorKnownCharge - 1;
+            else
+                maxCharge = 1;
+            FragmentA fragNTerm = new FragmentA();
+            FragmentX fragCTerm = new FragmentX();
+            double[] masses = peptide.GetMasses();
+            ProductMatch match = new ProductMatch();
+            match.weight = 1;
+            double cumulN = 0.0;// Constants.WATER_MONOISOTOPIC_MASS;
+            double cumulC = 0.0;// Constants.WATER_MONOISOTOPIC_MASS;
+            for (int r = 0; r < masses.Length; r++)
+            {
+                cumulN += masses[r];
+                cumulC += masses[masses.Length - r - 1];
+
+                foreach (double product_mass in fragmentsTypesCTerm(cumulC))
+                {
+                    match.fragmentPos = masses.Length - r;
+                    match.Fragment = fragCTerm;
+                    for (int c = maxCharge; c > 0; c--)
+                    {
+                        match.theoMz = Numerics.MZFromMass(product_mass, c);
+                        match.charge = c;
+                        yield return match;
+                        //match.theoMz = Numerics.MZFromMass(product_mass - Constants.WATER_MONOISOTOPIC_MASS, c);
+                        //yield return match;
+                    }
+                }
+
+                foreach (double product_mass in fragmentsTypesNTerm(cumulN))
+                {
+                    match.fragmentPos = r + 1;
+                    match.Fragment = fragNTerm;                    
+                    for (int c = maxCharge; c > 0; c--)
+                    {
+                        match.theoMz = Numerics.MZFromMass(product_mass, c);
+                        match.charge = c;
+                        yield return match;
+                        match.theoMz = Numerics.MZFromMass(product_mass - Constants.WATER_MONOISOTOPIC_MASS, c);
+                        yield return match;
+                        match.theoMz = Numerics.MZFromMass(product_mass - Constants.AMONIA_MASS, c);
+                        yield return match;
+                    }
+                }
+            }
+            //Single charge immonium ions
+            //Water Loss
+            //Amonia Loss
+            //Internal fragments
+            //Fragment types
+        }
+    }
+
     /// <summary>
     /// Abstract class for typicall fragment behavior
     /// </summary>
@@ -20,6 +114,20 @@ namespace Trinity
         public abstract IEnumerable<double> ComputeFragment(double cTermCumul, double nTermCumul);
         public abstract bool IsReverse { get; }
         public abstract double Distribution { get; }
+    }
+
+    public class FragmentLoss : FragmentClass//Modification, IFragment
+    {
+        public override string Name { get { return "loss"; } }
+        override public IEnumerable<double> ComputeFragment(double cTermCumul, double nTermCumul)
+        {
+            yield return 0;
+        }
+        override public bool IsReverse { get { return false; } }
+        public override double Distribution
+        {
+            get { return 1; }
+        }
     }
 
     public class FragmentA : FragmentClass//Modification, IFragment
@@ -42,7 +150,7 @@ namespace Trinity
         override public IEnumerable<double> ComputeFragment(double cTermCumul, double nTermCumul)
         {
             //yield return nTermCumul/* + 0;//*/ - 1.007276;//-H
-            yield return nTermCumul + 0;//*/ - 1.007276;//-H
+            yield return nTermCumul;//*/ - 1.007276;//-H
         }
         override public bool IsReverse { get { return false; } }
         public override double Distribution
@@ -156,15 +264,16 @@ namespace Trinity
             }
         }
 
+        public static FragmentLoss FragLossObject = new FragmentLoss();
         public IEnumerable<ProductMatch> ComputeFragments(Peptide peptide, int precursorKnownCharge, DBOptions dbOptions)
         {
             int maxCharge;
             if (precursorKnownCharge > 1)
                 maxCharge = precursorKnownCharge - 1;
             else
-                 maxCharge = precursorKnownCharge;
+                maxCharge = precursorKnownCharge;
 
-            string sequence = peptide.BaseSequence;            
+            string sequence = peptide.BaseSequence;
             ProductMatch match = new ProductMatch();
 
             double cumulativeNTerminalMass = 0;// 1.007276 + 15.9949;//TODO Add NTerminal modifications here            
@@ -178,11 +287,11 @@ namespace Trinity
                 //TODO Only search for modifications that were seen in the spectrum
                 double tmp = 0;
                 cumulSeq += sequence[r - 1];
-                if (peptide.FixedModifications != null && peptide.FixedModifications.ContainsKey(r+1))
-                    foreach (Modification mod in peptide.FixedModifications[r+1])
+                if (peptide.FixedModifications != null && peptide.FixedModifications.ContainsKey(r + 1))
+                    foreach (Modification mod in peptide.FixedModifications[r + 1])
                         tmp += mod.MonoisotopicMassShift;
-                if (peptide.VariableModifications != null && peptide.VariableModifications.ContainsKey(r+1))
-                    tmp += peptide.VariableModifications[r+1].MonoisotopicMassShift;
+                if (peptide.VariableModifications != null && peptide.VariableModifications.ContainsKey(r + 1))
+                    tmp += peptide.VariableModifications[r + 1].MonoisotopicMassShift;
                 cumulativeNTerminalMass += AminoAcidMasses.GetMonoisotopicMass(sequence[r - 1]) + tmp;
 
                 tmp = 0;
@@ -199,7 +308,7 @@ namespace Trinity
                     match.charge = c;
                     foreach (FragmentClass fragment in this)
                     {
-                        if(fragment.IsReverse)
+                        if (fragment.IsReverse)
                             match.fragmentPos = 1 + sequence.Length - r;
                         else
                             match.fragmentPos = r;
@@ -233,13 +342,13 @@ namespace Trinity
             if (dbOptions.addFragmentLoss)
             {
                 match.charge = 1;
-                match.fragmentPos = -1;
+                match.Fragment = FragLossObject;
                 foreach (Modification mod in FragmentDictionary.AAFragments.Values)
                 {
                     if (peptide.BaseSequence.Contains(mod.AminoAcid))
                     {
-                        //!!!!match.Fragment = mod;
-                        match.theoMz = mod.MonoisotopicMassShift;
+                        match.fragmentPos = peptide.BaseSequence.IndexOf(mod.AminoAcid);
+                        match.theoMz = mod.MonoisotopicMassShift;// Numerics.MZFromMass(mod.MonoisotopicMassShift, 1);
                         match.weight = mod.Probability;
                         yield return match;
                     }

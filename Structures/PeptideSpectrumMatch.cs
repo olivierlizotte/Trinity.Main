@@ -41,21 +41,29 @@ namespace Trinity
         public double MorpheusScore { get;  set; }
         public double PrecursorScore { get;  set; }
         public double ProductScore { get;  set; }
-        public double IntensityScore { get;  set; }
+        public double IntensityScore { get; set; }
+        public double FragmentScore { get; set; }
 
-        private double _fragScore = -1;
-        public double FragmentScore()
+        public double[] ComputeAACoverage()
         {
-            if(_fragScore == -1)
-            {
             double[] aaScoreArray = new double[Peptide.Length];
             foreach (ProductMatch match in AllProductMatches)
-                if (match.Fragment.IsReverse)
-                    for (int i = match.fragmentPos -1; i < Peptide.Length; i++)
+            {
+                if (match.Fragment == null)
+                    aaScoreArray[match.fragmentPos] += match.normalizedIntensity;
+                else if (match.Fragment.IsReverse)
+                    for (int i = match.fragmentPos - 1; i < aaScoreArray.Length; i++)
                         aaScoreArray[i] += match.normalizedIntensity;
                 else
-                    for (int i = 0; i < match.fragmentPos; i++)
+                    for (int i = match.fragmentPos - 1; i >= 0; i--)
                         aaScoreArray[i] += match.normalizedIntensity;
+            }
+            return aaScoreArray;
+        }
+
+        private double ComputeFragmentScore()
+        {
+            double[] aaScoreArray = ComputeAACoverage();
             double score = 0.0;
             for (int i = 0; i < aaScoreArray.Length; i++)
                 if (aaScoreArray[i] <= 1)
@@ -63,12 +71,10 @@ namespace Trinity
                 else
                     if (aaScoreArray[i] < 2)
                         score += 2 - aaScoreArray[i];
-                _fragScore = score / (double) aaScoreArray.Length;
-            }
-            return _fragScore;
+            return score / (double) aaScoreArray.Length;
         }
 
-        //TODO Check if those var are common with Precursor and remove zeroed out var  
+        //TODO Check if those var are common with Precursor and remove zeroed out var
         public double ProbabilityScore()
         {
             DBOptions options = Query.options;
@@ -82,7 +88,7 @@ namespace Trinity
                                 options.dMatchingProduct * MatchingWeightedProducts +
                                 options.dProtein * ProteinScore +
                                 options.dPeptideScore * PeptideScore +
-                                options.dFragmentScore * FragmentScore();//*/
+                                options.dFragmentScore * FragmentScore;//*/
             return score;
         }
 
@@ -172,6 +178,8 @@ namespace Trinity
             TotalTheoreticalProducts = 0;
             TotalWeightedProducts = 0;
             //New version that should include charged ions
+
+            //foreach (ProductMatch matchTheo in AllFragmentSearch.ComputeAllFragments(Peptide, Query.precursor.Charge, options))         
             foreach (ProductMatch matchTheo in options.fragments.ComputeFragmentsFast(Peptide.GetMasses(), Query.precursor.Charge, options))         
             //foreach (ProductMatch matchTheo in options.fragments.ComputeFragments(Peptide, Query.precursor.Charge, options))         
             {
@@ -266,6 +274,7 @@ namespace Trinity
             ProductScore                = 1.0 - (cumulDiff / (double)(MatchingProducts * options.productMassTolerance.Value));
             IntensityScore              = MatchingIntensityFraction / (double)Query.spectrum.Peaks.Count;
             MorpheusScore               = MatchingProducts + MatchingIntensityFraction;
+            FragmentScore               = ComputeFragmentScore();
         }
         
         public static int AscendingSpectrumNumberComparison(PeptideSpectrumMatch left, PeptideSpectrumMatch right)
